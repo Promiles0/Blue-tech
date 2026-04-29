@@ -6,14 +6,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#6366f1", // Indigo
-        secondary: "#1e293b", // Slate
-        accent: "#f43f5e", // Rose
-        background: "#0f172a", // Deep Navy
+        'noir-bg':      '#0a0a0a',
+        'noir-surface': '#141414',
+        'noir-card':    '#1c1c1c',
+        'noir-border':  '#262626',
+        'noir-accent':  '#7c5cf0',
+        'noir-price':   '#f59e0b',
+        'noir-muted':   '#888888',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-      }
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
     },
   },
   plugins: [],
