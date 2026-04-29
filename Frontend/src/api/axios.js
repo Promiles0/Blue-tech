@@ -1,21 +1,23 @@
-import axios from 'axios';
+import axios from 'axios'
 
 const api = axios.create({
-    baseURL: 'http://localhost:8080/api',
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
+  baseURL: 'http://localhost:8080/api',
+  headers: { 'Content-Type': 'application/json' },
+})
 
-// Automatically attach JWT token to every request if it exists in localStorage
+// Attach JWT token to every request
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-}, (error) => {
-    return Promise.reject(error);
-});
+  const token = localStorage.getItem('token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
-export default api;
+// Automatically unwrap ApiResponse<T>: { success, message, data } → data
+api.interceptors.response.use((response) => {
+  if (response.data && typeof response.data === 'object' && 'success' in response.data && 'data' in response.data) {
+    return { ...response, data: response.data.data }
+  }
+  return response
+})
+
+export default api
