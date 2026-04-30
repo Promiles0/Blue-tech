@@ -19,19 +19,24 @@ export default function Account() {
   const [loadingOrders, setLoadingOrders] = useState(false)
 
   useEffect(() => {
-    if (!user) { navigate('/login'); return }
-    if (tab === 'orders') {
-      setLoadingOrders(true)
-      // Admin analytics endpoint for orders; for customers use /orders/my if available
-      api.get('/admin/analytics/orders').then(({ data }) => {
-        const list = data?.content ?? (Array.isArray(data) ? data : [])
-        setOrders(list.filter(o => o.userId === user?.id || o.user?.id === user?.id))
-      }).catch(() => setOrders([])).finally(() => setLoadingOrders(false))
+    if (tab === 'orders' && user) {
+      let cancelled = false
+      api.get('/admin/analytics/orders')
+        .then(({ data }) => {
+          if (cancelled) return
+          const list = data?.content ?? (Array.isArray(data) ? data : [])
+          setOrders(list.filter(o => o.userId === user.id || o.user?.id === user.id))
+        })
+        .catch(() => { if (!cancelled) setOrders([]) })
+        .finally(() => { if (!cancelled) setLoadingOrders(false) })
+      return () => { cancelled = true }
     }
     if (tab === 'address') {
-      api.get('/addresses').then(({ data }) => setAddresses(Array.isArray(data) ? data : [])).catch(() => setAddresses([]))
+      api.get('/addresses')
+        .then(({ data }) => setAddresses(Array.isArray(data) ? data : []))
+        .catch(() => setAddresses([]))
     }
-  }, [tab, user, navigate])
+  }, [tab, user])
 
   const handleLogout = () => { logout(); navigate('/') }
 
@@ -58,7 +63,10 @@ export default function Account() {
             {/* Nav */}
             <nav style={{ padding: 8 }}>
               {TABS.map(({ id, label, icon: Icon }) => (
-                <button key={id} onClick={() => setTab(id)}
+                <button key={id} onClick={() => {
+                  if (id === 'orders') { setLoadingOrders(true); setOrders([]) }
+                  setTab(id)
+                }}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 8,

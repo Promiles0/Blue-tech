@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import api from '../api/axios'
 import { useAuth } from './AuthContext'
 
@@ -27,15 +28,15 @@ export function CartProvider({ children }) {
   }, [user, fetchCart])
 
   const addToCart = async (variantId, quantity = 1) => {
-    // POST /api/cart  body: { variantId, quantity }
     await api.post('/cart', { variantId, quantity })
     await fetchCart()
+    toast.success('Added to cart')
   }
 
   const removeFromCart = async (itemId) => {
-    // DELETE /api/cart/{id}
     await api.delete(`/cart/${itemId}`)
     await fetchCart()
+    toast('Item removed')
   }
 
   const updateQuantity = async (itemId, quantity) => {

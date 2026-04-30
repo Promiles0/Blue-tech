@@ -1,105 +1,108 @@
-import { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useState } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
-function LoginPage() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || "/";
-
-  const [form, setForm] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+export default function Login() {
+  const [email, setEmail]           = useState('')
+  const [password, setPassword]     = useState('')
+  const [showPass, setShowPass]     = useState(false)
+  const [error, setError]           = useState('')
+  const [loading, setLoading]       = useState(false)
+  const { login }                   = useAuth()
+  const navigate                    = useNavigate()
+  const location                    = useLocation()
+  const from                        = location.state?.from ?? '/'
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+    e.preventDefault()
+    setError('')
+    setLoading(true)
     try {
-      await login(form.email, form.password);
-      navigate(from, { replace: true });
+      await login(email, password)
+      navigate(from, { replace: true })
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid email or password.");
+      setError(err.response?.data?.message ?? 'Invalid email or password.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-6">
-      <div className="w-full max-w-sm">
-        {/* Header */}
-        <div className="mb-10">
-          <p className="text-[11px] font-display font-semibold tracking-[0.2em] text-[#444] uppercase mb-3">
-            Welcome back
-          </p>
-          <h1 className="font-display font-bold text-3xl text-white/90">Sign in</h1>
-        </div>
+    <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <div className="fade-in" style={{ width: '100%', maxWidth: 400 }}>
 
-        {/* Error */}
+        {/* Logo */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 44 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c5cf0', display: 'block' }} />
+          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: '#fff' }}>NOIR</span>
+        </Link>
+
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 8 }}>WELCOME BACK</p>
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: '#fff', marginBottom: 36, letterSpacing: '-0.02em' }}>Sign in</h1>
+
         {error && (
-          <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">
+          <div style={{
+            background: 'var(--error-dim)', border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: 8, padding: '12px 16px', fontSize: 13,
+            color: '#f87171', marginBottom: 20,
+          }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <div>
-            <label className="block text-[12px] text-[#555] mb-2 tracking-wide">
-              Email
-            </label>
+        <form onSubmit={handleSubmit}>
+          <Field label="Email">
             <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              required
+              type="email" value={email} required
+              onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full px-4 py-3 bg-[#111] border border-white/[0.07] rounded-xl text-[14px] text-white placeholder-[#444] focus:border-primary/40 focus:outline-none transition-colors"
+              className="noir-input"
             />
-          </div>
+          </Field>
 
-          <div>
-            <label className="block text-[12px] text-[#555] mb-2 tracking-wide">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              placeholder="••••••••"
-              className="w-full px-4 py-3 bg-[#111] border border-white/[0.07] rounded-xl text-[14px] text-white placeholder-[#444] focus:border-primary/40 focus:outline-none transition-colors"
-            />
-          </div>
+          <Field label="Password" style={{ marginBottom: 28 }}>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPass ? 'text' : 'password'} value={password} required
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="noir-input"
+                style={{ paddingRight: 44 }}
+              />
+              <button
+                type="button" onClick={() => setShowPass(p => !p)}
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#888', display: 'flex', padding: 4 }}
+              >
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </Field>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 w-full py-3.5 bg-white text-black font-display font-semibold text-[14px] rounded-full hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <span className="w-4 h-4 border border-black/30 border-t-black/80 rounded-full animate-spin" />
-            ) : (
-              "Sign in"
-            )}
+          <button type="submit" disabled={loading} className="noir-btn-primary" style={{ width: '100%', padding: '13px', fontSize: 15 }}>
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
-        <p className="mt-8 text-center text-[13px] text-[#555]">
-          Don't have an account?{" "}
-          <Link to="/register" className="text-[#888] hover:text-white transition-colors">
+        <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#888' }}>
+          Don't have an account?{' '}
+          <Link to="/register" style={{ color: '#7c5cf0', fontWeight: 500 }}
+            onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+            onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+          >
             Create one
           </Link>
         </p>
       </div>
     </div>
-  );
+  )
 }
 
-export default LoginPage;
+function Field({ label, children, style }) {
+  return (
+    <div style={{ marginBottom: 16, ...style }}>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#888', marginBottom: 6 }}>{label}</label>
+      {children}
+    </div>
+  )
+}

@@ -1,189 +1,213 @@
-import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, ShoppingBag } from "lucide-react";
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, Truck, Shield, RotateCcw } from 'lucide-react'
+import ProductCard from '../components/ProductCard'
+import { Reveal } from '../lib/motion'
+import api from '../api/axios'
 
-// ─── Mock featured products (replace with API data later) ────────────────────
-const FEATURED = [
-  {
-    id: 1,
-    name: "Arc Headphones",
-    category: "Audio",
-    price: 349,
-    badge: "New",
-  },
-  {
-    id: 2,
-    name: "Onyx Watch",
-    category: "Wearables",
-    price: 529,
-    badge: "Bestseller",
-  },
-  {
-    id: 3,
-    name: "Lumix View",
-    category: "Cameras",
-    price: 799,
-    badge: "Limited",
-  },
-];
+const CATEGORIES = ['Audio', 'Wearables', 'Cameras', 'Computing', 'Gaming', 'Accessories']
 
-const CATEGORIES = [
-  { label: "Audio", desc: "Sound without distraction", slug: "audio" },
-  { label: "Wearables", desc: "Worn with intention", slug: "wearables" },
-  { label: "Cameras", desc: "Light captured carefully", slug: "cameras" },
-];
+const MOCK_PRODUCTS = [
+  { id: 1, name: 'Pulse Pro Earbuds',    price: 189,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=500&q=80', variants: [{ id: 1 }] },
+  { id: 2, name: 'Vox Studio Monitor',   price: 459,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80', variants: [{ id: 2 }] },
+  { id: 3, name: 'Atlas Smartwatch',     price: 599,  categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', variants: [{ id: 3 }] },
+  { id: 4, name: 'Trail Sport Band',     price: 49,   categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1575311373937-040b8e1fd6b0?w=500&q=80', variants: [{ id: 4 }] },
+  { id: 5, name: 'Lumen X1 Mirrorless', price: 2199, categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80', variants: [{ id: 5 }] },
+  { id: 6, name: 'Prism Action Cam',    price: 429,  categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80', variants: [{ id: 6 }] },
+  { id: 7, name: 'Stratos Ultrabook 14',price: 1499, categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&q=80', variants: [{ id: 7 }] },
+  { id: 8, name: 'Mecha 75 Keyboard',   price: 179,  categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&q=80', variants: [{ id: 8 }] },
+]
 
-function ProductCard({ product }) {
-  return (
-    <Link to={`/products/${product.id}`} className="group block">
-      <div className="glass-card rounded-2xl overflow-hidden">
-        {/* Image area */}
-        <div className="relative aspect-square bg-[#111] flex items-center justify-center overflow-hidden">
-          <ShoppingBag className="w-16 h-16 text-white/10" />
-          {product.badge && (
-            <span className="absolute top-4 left-4 text-[10px] font-display font-semibold tracking-[0.12em] uppercase px-2.5 py-1 rounded-full bg-primary/20 text-primary border border-primary/20">
-              {product.badge}
-            </span>
-          )}
-          {/* Hover overlay */}
-          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-5">
-            <span className="flex items-center gap-2 text-white text-sm font-medium">
-              View Product <ArrowRight className="w-4 h-4" />
-            </span>
-          </div>
-        </div>
+export default function Home() {
+  const [products, setProducts]             = useState([])
+  const [activeCategory, setActiveCategory] = useState(null)
+  const [loading, setLoading]               = useState(true)
 
-        {/* Info */}
-        <div className="p-5">
-          <p className="text-[11px] text-[#555] font-display tracking-widest uppercase mb-1.5">
-            {product.category}
-          </p>
-          <div className="flex items-center justify-between">
-            <h3 className="text-[15px] font-display font-semibold text-[#ddd] group-hover:text-white transition-colors">
-              {product.name}
-            </h3>
-            <span className="text-[15px] font-semibold text-white">${product.price}</span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
+  useEffect(() => {
+    let cancelled = false
+    api.get('/products?page=0&size=8')
+      .then(({ data }) => {
+        if (!cancelled) {
+          const content  = data?.content ?? (Array.isArray(data) ? data : [])
+          const filtered = activeCategory
+            ? content.filter(p => (p.category?.name ?? p.categoryName) === activeCategory)
+            : content
+          setProducts(filtered)
+        }
+      })
+      .catch(() => { if (!cancelled) setProducts(MOCK_PRODUCTS) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [activeCategory])
 
-function HomePage() {
+  const displayProducts = products.length ? products : MOCK_PRODUCTS
+
   return (
     <div>
-      {/* ── HERO ──────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[92vh] flex items-center">
-        {/* Atmospheric glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-150 h-150 bg-primary/10 rounded-full blur-[160px] pointer-events-none" />
-
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="max-w-3xl">
-            {/* Label */}
-            <div className="inline-flex items-center gap-2.5 mb-10">
-              <span className="w-1 h-1 rounded-full bg-primary animate-pulse" />
-              <span className="text-[11px] font-display font-semibold tracking-[0.22em] text-[#555] uppercase">
-                New Collection — 2026
-              </span>
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section style={{ padding: '72px 0 48px' }}>
+        <div className="container-noir" style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr',
+          gap: 64, alignItems: 'center',
+        }}>
+          {/* Left copy */}
+          <Reveal>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              border: '1px solid #2a2a2a', borderRadius: 100,
+              padding: '6px 14px', marginBottom: 28,
+              fontSize: 13, color: '#888',
+            }}>
+              <span>🚀</span>
+              <span>New season — late autumn 2026</span>
             </div>
 
-            <h1 className="font-display font-extrabold leading-[0.92] tracking-tight mb-8">
-              <span className="block text-[clamp(3.5rem,10vw,8rem)] text-white/90">Considered</span>
-              <span className="block text-[clamp(3.5rem,10vw,8rem)] text-white/30">Objects.</span>
+            <h1 style={{
+              fontSize: 'clamp(38px, 4.5vw, 66px)',
+              fontWeight: 900, lineHeight: 1.05,
+              color: '#fff', marginBottom: 22,
+              letterSpacing: '-0.02em',
+            }}>
+              Considered<br />
+              objects.<br />
+              <span style={{ color: '#7c5cf0' }}>Quietly<br />engineered.</span>
             </h1>
 
-            <p className="text-[#666] text-lg md:text-xl max-w-md leading-relaxed mb-12">
-              Carefully selected tools for a quieter, more deliberate digital life.
+            <p style={{ color: '#888', fontSize: 16, lineHeight: 1.75, maxWidth: 420, marginBottom: 36 }}>
+              A curated collection of audio, wearables, and computing —
+              selected for the people who choose what surrounds them with care.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link
                 to="/products"
-                className="inline-flex items-center gap-3 px-7 py-3.5 bg-white text-black font-display font-semibold text-[14px] tracking-wide rounded-full hover:bg-white/90 transition-colors group"
+                className="noir-btn-primary"
+                style={{ fontSize: 15, padding: '13px 24px' }}
               >
-                Shop now
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                Shop the collection <ArrowRight size={16} />
               </Link>
               <Link
-                to="/products"
-                className="inline-flex items-center gap-3 px-7 py-3.5 border border-white/10 text-[#888] font-display font-semibold text-[14px] tracking-wide rounded-full hover:border-white/20 hover:text-white transition-all"
+                to="/products?category=Audio"
+                className="noir-btn-outline"
+                style={{ fontSize: 15, padding: '13px 24px' }}
               >
-                Browse categories
+                Explore audio
               </Link>
             </div>
-          </div>
-        </div>
+          </Reveal>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-30">
-          <span className="text-[9px] uppercase tracking-[0.35em]">Scroll</span>
-          <div className="w-px h-10 bg-linear-to-b from-white/50 to-transparent" />
+          {/* Right hero image */}
+          <Reveal delay={0.15}>
+            <div style={{ position: 'relative' }}>
+              <div style={{ borderRadius: 16, overflow: 'hidden', aspectRatio: '4/3', background: '#d4a83c' }}>
+                <img
+                  src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80"
+                  alt="Aurora Wireless headphones"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={e => { e.target.parentElement.style.background = '#1a1a1a' }}
+                />
+              </div>
+              {/* Featured badge */}
+              <div style={{
+                position: 'absolute', bottom: -18, left: -18,
+                background: '#0f0f0f', border: '1px solid #2a2a2a',
+                borderRadius: 12, padding: '14px 20px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              }}>
+                <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#888', marginBottom: 4 }}>FEATURED</p>
+                <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 3 }}>Aurora Wireless</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>$349</p>
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ── CATEGORIES ────────────────────────────────────────────────── */}
-      <section className="border-t border-white/6 py-20">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/6">
-            {CATEGORIES.map((cat) => (
-              <Link
-                key={cat.slug}
-                to={`/products?category=${cat.slug}`}
-                className="group flex items-center justify-between px-8 py-10 hover:bg-white/2 transition-colors first:pl-0 last:pr-0"
-              >
-                <div>
-                  <p className="font-display font-semibold text-lg text-white/80 group-hover:text-white transition-colors mb-1">
-                    {cat.label}
-                  </p>
-                  <p className="text-[13px] text-[#555]">{cat.desc}</p>
-                </div>
-                <ArrowUpRight className="w-5 h-5 text-[#444] group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURED PRODUCTS ─────────────────────────────────────────── */}
-      <section className="py-24">
-        <div className="container mx-auto px-6">
-          <div className="flex items-end justify-between mb-14">
-            <div>
-              <p className="text-[11px] font-display font-semibold tracking-[0.2em] text-[#444] uppercase mb-3">
-                Curated
-              </p>
-              <h2 className="font-display font-bold text-3xl text-white/90 tracking-tight">
-                Featured Objects
-              </h2>
-            </div>
-            <Link
-              to="/products"
-              className="hidden sm:flex items-center gap-2 text-[13px] text-[#555] hover:text-white transition-colors"
+      {/* ── Category tabs ──────────────────────────────────────── */}
+      <section style={{ borderTop: '1px solid #1a1a1a', borderBottom: '1px solid #1a1a1a', overflowX: 'auto' }}>
+        <div className="container-noir" style={{ display: 'flex', minWidth: 600 }}>
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(prev => prev === cat ? null : cat)}
+              style={{
+                flex: 1, padding: '18px 8px',
+                fontSize: 14, fontWeight: 500,
+                color: activeCategory === cat ? '#fff' : '#888',
+                background: 'none', border: 'none',
+                borderBottom: `2px solid ${activeCategory === cat ? '#7c5cf0' : 'transparent'}`,
+                cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => { if (activeCategory !== cat) e.currentTarget.style.color = '#bbb' }}
+              onMouseLeave={e => { if (activeCategory !== cat) e.currentTarget.style.color = '#888' }}
             >
-              All products <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {FEATURED.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+              {cat}
+            </button>
+          ))}
         </div>
       </section>
 
-      {/* ── BRAND STATEMENT ───────────────────────────────────────────── */}
-      <section className="border-t border-white/6 py-28">
-        <div className="container mx-auto px-6 text-center max-w-2xl">
-          <p className="font-display font-light text-3xl md:text-4xl text-white/40 leading-relaxed tracking-tight">
-            "We make things that are{" "}
-            <span className="text-white/80">worth owning</span> — built to last,
-            designed to disappear into your life."
-          </p>
-        </div>
-      </section>
+      {/* ── Product grid ───────────────────────────────────────── */}
+      <Reveal>
+        <section style={{ padding: '56px 0 48px' }}>
+          <div className="container-noir">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 6 }}>
+                  LATEST ARRIVALS
+                </p>
+                <h2 style={{ fontSize: 28, fontWeight: 800, color: '#fff' }}>New this season</h2>
+              </div>
+              <Link
+                to="/products"
+                style={{ fontSize: 14, color: '#888', display: 'flex', alignItems: 'center', gap: 4, transition: 'color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                onMouseLeave={e => e.currentTarget.style.color = '#888'}
+              >
+                View all <ArrowRight size={14} />
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="grid-4">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="skeleton" style={{ height: 300, borderRadius: 12 }} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid-4">
+                {displayProducts.map(p => <ProductCard key={p.id} product={p} />)}
+              </div>
+            )}
+          </div>
+        </section>
+      </Reveal>
+
+      {/* ── Trust badges ───────────────────────────────────────── */}
+      <Reveal>
+        <section style={{ padding: '0 0 80px' }}>
+          <div className="container-noir">
+            <div style={{
+              background: '#141414', border: '1px solid #1e1e1e',
+              borderRadius: 16, padding: '44px 48px',
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32,
+            }}>
+              {[
+                { icon: <Truck size={22} />,     title: 'Free shipping',   desc: 'On all orders over $100.' },
+                { icon: <Shield size={22} />,    title: '2-year warranty', desc: 'Quietly confident craftsmanship.' },
+                { icon: <RotateCcw size={22} />, title: '30-day returns',  desc: "If it isn't right, send it back." },
+              ].map(({ icon, title, desc }) => (
+                <div key={title}>
+                  <div style={{ color: '#7c5cf0', marginBottom: 12 }}>{icon}</div>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{title}</p>
+                  <p style={{ fontSize: 13, color: '#888', lineHeight: 1.5 }}>{desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </Reveal>
     </div>
-  );
+  )
 }
-
-export default HomePage;
