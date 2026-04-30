@@ -1,108 +1,150 @@
 @import "tailwindcss";
 
+/* ── NOIR Design System ────────────────────────────────────── */
 :root {
-  --color-bg: #080808;
-  --color-surface: #111111;
-  --color-surface2: #1a1a1a;
-  --color-primary: #8472f5;
-  --color-accent: #f0c060;
-  --color-border: rgba(255, 255, 255, 0.07);
-  --color-text: #eeeeee;
-  --color-muted: #888888;
+  --bg:           #0a0a0a;
+  --surface:      #141414;
+  --card:         #1c1c1c;
+  --border:       #262626;
+  --border-hover: #3a3a3a;
+  --text:         #ffffff;
+  --muted:        #888888;
+  --muted-dark:   #555555;
+  --accent:       #7c5cf0;
+  --accent-hover: #6b4fd8;
+  --accent-dim:   rgba(124, 92, 240, 0.12);
+  --price:        #f59e0b;
+  --error:        #ef4444;
+  --error-dim:    rgba(239, 68, 68, 0.1);
+  --success:      #22c55e;
 }
 
-* {
-  box-sizing: border-box;
-}
+/* ── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  margin: 0;
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-family: "DM Sans", system-ui, sans-serif;
+html, body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: var(--color-bg);
-}
-::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 2px;
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+img { display: block; max-width: 100%; }
+input, textarea, select { font-family: inherit; }
+
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-dark); }
+
+/* ── Utility classes ───────────────────────────────────────── */
+.container-noir {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
-/* ── Utilities ── */
-.glass {
-  background: rgba(255, 255, 255, 0.03);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--color-border);
+/* Responsive grid helpers */
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  transition: border-color 0.2s ease, background 0.2s ease;
+@media (max-width: 1024px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  .container-noir { padding: 0 16px; }
 }
 
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.12);
+/* ── Input styles ──────────────────────────────────────────── */
+.noir-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
 }
+.noir-input:focus { border-color: var(--accent); }
+.noir-input::placeholder { color: var(--muted-dark); }
 
-.font-display {
-  font-family: "Syne", sans-serif;
-}
-
-/* ── Focus styles ── */
-*:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
-
-/* ── Selection ── */
-::selection {
-  background: rgba(132, 114, 245, 0.25);
+/* ── Button styles ─────────────────────────────────────────── */
+.noir-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--accent);
   color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
 }
+.noir-btn-primary:hover { background: var(--accent-hover); }
+.noir-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* ── Input reset ── */
-input,
-textarea,
-select {
+.noir-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   background: transparent;
-  color: var(--color-text);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.noir-btn-outline:hover { border-color: var(--border-hover); }
+
+/* ── Skeleton loader ───────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--card) 50%, var(--surface) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 8px;
 }
 
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--color-text);
-  -webkit-box-shadow: 0 0 0px 1000px #111111 inset;
-  transition: background-color 5000s ease-in-out 0s;
-}
-
-/* ── Page transition ── */
-.page-enter {
-  animation: fadeIn 0.4s ease forwards;
-}
-
+/* ── Fade-in animation ─────────────────────────────────────── */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.3s ease forwards; }
+
+/* ── Navbar hide on mobile ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .nav-links { display: none !important; }
 }

@@ -1,65 +1,39 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import { CartProvider } from './context/CartContext'
+import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+import Home          from './pages/Home'
+import Login         from './pages/Login'
+import Register      from './pages/Register'
+import Products      from './pages/Products'
+import ProductDetail from './pages/ProductDetail'
+import Cart          from './pages/Cart'
+import Wishlist      from './pages/Wishlist'
+import Account       from './pages/Account'
 
-import HomePage from "./pages/HomePage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import ProductsPage from "./pages/ProductsPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import CartPage from "./pages/CartPage";
-import CheckoutPage from "./pages/CheckoutPage";
-import OrderHistoryPage from "./pages/OrderHistoryPage";
-
-function App() {
+export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen flex flex-col" style={{ background: "#080808" }}>
-          <Navbar />
-          <main className="flex-1 page-enter">
+    <BrowserRouter>
+      <AuthProvider>
+        <CartProvider>
+          <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
+            <Navbar />
             <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/products" element={<ProductsPage />} />
-              <Route path="/products/:id" element={<ProductDetailPage />} />
-
-              {/* Protected routes — require authentication */}
-              <Route
-                path="/cart"
-                element={
-                  <ProtectedRoute>
-                    <CartPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/checkout"
-                element={
-                  <ProtectedRoute>
-                    <CheckoutPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/orders"
-                element={
-                  <ProtectedRoute>
-                    <OrderHistoryPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/"            element={<Home />} />
+              <Route path="/login"       element={<Login />} />
+              <Route path="/register"    element={<Register />} />
+              <Route path="/products"    element={<Products />} />
+              <Route path="/products/:id" element={<ProductDetail />} />
+              <Route path="/cart"        element={<Cart />} />
+              <Route path="/wishlist"    element={<Wishlist />} />
+              <Route path="/account"     element={<Account />} />
+              <Route path="*"            element={<Navigate to="/" replace />} />
             </Routes>
-          </main>
-          <Footer />
-        </div>
-      </Router>
-    </AuthProvider>
-  );
+            <Footer />
+          </div>
+        </CartProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  )
 }
-
-export default App;
