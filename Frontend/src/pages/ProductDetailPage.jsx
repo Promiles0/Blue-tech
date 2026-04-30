@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ShoppingBag, ArrowLeft, Plus, Minus } from "lucide-react";
 import productService from "../services/productService";
 import cartService from "../services/cartService";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 function ProductDetailPage() {
   const { id } = useParams();
