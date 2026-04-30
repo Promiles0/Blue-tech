@@ -1,6 +1,31 @@
 @import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
 
-/* ── NOIR Design System ────────────────────────────────────── */
+/* ── Tailwind v4 Design Tokens ─────────────────────────────── */
+@theme {
+  /* Colors — oklch */
+  --color-background:   oklch(7.8%  0    0);
+  --color-surface:      oklch(11.5% 0    0);
+  --color-card:         oklch(15%   0    0);
+  --color-border:       oklch(19%   0    0);
+  --color-border-hover: oklch(27%   0    0);
+  --color-foreground:   oklch(100%  0    0);
+  --color-muted:        oklch(57%   0    0);
+  --color-muted-dark:   oklch(40%   0    0);
+  --color-primary:      oklch(55%   0.22 280);
+  --color-primary-hover:oklch(49%   0.22 280);
+  --color-primary-dim:  oklch(55%   0.22 280 / 0.12);
+  --color-price:        oklch(76%   0.18  70);
+  --color-danger:       oklch(63%   0.22  25);
+  --color-danger-dim:   oklch(63%   0.22  25 / 0.1);
+  --color-success:      oklch(72%   0.19 145);
+
+  /* Typography */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-sans:    "Inter",         system-ui, sans-serif;
+}
+
+/* ── Legacy CSS vars (used by inline-styled components) ─────── */
 :root {
   --bg:           #0a0a0a;
   --surface:      #141414;
@@ -42,37 +67,97 @@ input, textarea, select { font-family: inherit; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-dark); }
 
-/* ── Utility classes ───────────────────────────────────────── */
+/* ── Layout utilities ──────────────────────────────────────── */
 .container-noir {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 24px;
 }
 
-/* Responsive grid helpers */
-.grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-.grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-.grid-2 {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-}
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
 
-@media (max-width: 1024px) {
-  .grid-4 { grid-template-columns: repeat(2, 1fr); }
-}
+@media (max-width: 1024px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) {
   .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
   .container-noir { padding: 0 16px; }
 }
+
+@media (max-width: 768px) { .nav-links { display: none !important; } }
+
+/* ── Spec utility classes ──────────────────────────────────── */
+
+/* Glass — frosted surface */
+.glass {
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Shine — diagonal highlight sweep on hover */
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.08) 50%, transparent 60%);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+.shine:hover::after { transform: translateX(100%); }
+
+/* Noise — subtle grain overlay */
+.noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  opacity: 0.04;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Shimmer — skeleton loading (GPU: translateX, not background-position) */
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+.shimmer, .skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: 8px;
+}
+.shimmer::after, .skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--card) 50%, transparent 100%);
+  animation: shimmer 1.4s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* Story-link — underline-grow affordance */
+.story-link {
+  position: relative;
+  display: inline-block;
+}
+.story-link::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -2px;
+  width: 0; height: 1px;
+  background: currentColor;
+  transition: width 0.25s ease;
+}
+.story-link:hover::after { width: 100%; }
 
 /* ── Input styles ──────────────────────────────────────────── */
 .noir-input {
@@ -105,7 +190,7 @@ input, textarea, select { font-family: inherit; }
   cursor: pointer;
   transition: background 0.2s, opacity 0.2s;
 }
-.noir-btn-primary:hover { background: var(--accent-hover); }
+.noir-btn-primary:hover   { background: var(--accent-hover); }
 .noir-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .noir-btn-outline {
@@ -125,18 +210,6 @@ input, textarea, select { font-family: inherit; }
 }
 .noir-btn-outline:hover { border-color: var(--border-hover); }
 
-/* ── Skeleton loader ───────────────────────────────────────── */
-@keyframes shimmer {
-  0% { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
-}
-.skeleton {
-  background: linear-gradient(90deg, var(--surface) 25%, var(--card) 50%, var(--surface) 75%);
-  background-size: 800px 100%;
-  animation: shimmer 1.4s infinite;
-  border-radius: 8px;
-}
-
 /* ── Fade-in animation ─────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
@@ -144,7 +217,38 @@ input, textarea, select { font-family: inherit; }
 }
 .fade-in { animation: fadeIn 0.3s ease forwards; }
 
-/* ── Navbar hide on mobile ─────────────────────────────────── */
-@media (max-width: 768px) {
-  .nav-links { display: none !important; }
+/* ── Background grain texture ── */
+.bg-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+}
+
+/* ── Animated orbs ─────────────────────────────────────────── */
+@keyframes orb-drift-1 {
+  0%, 100% { transform: translate(0px, 0px)   scale(1); }
+  33%       { transform: translate(60px, -50px) scale(1.1); }
+  66%       { transform: translate(-30px, 40px) scale(0.95); }
+}
+@keyframes orb-drift-2 {
+  0%, 100% { transform: translate(0px, 0px)    scale(1); }
+  40%       { transform: translate(-60px, 35px) scale(1.08); }
+  70%       { transform: translate(45px, -55px) scale(1.04); }
+}
+@keyframes orb-drift-3 {
+  0%, 100% { transform: translate(0px, 0px)  scale(1); }
+  50%       { transform: translate(35px, 50px) scale(1.06); }
+}
+.orb-1 { animation: orb-drift-1 20s ease-in-out infinite; }
+.orb-2 { animation: orb-drift-2 25s ease-in-out infinite; }
+.orb-3 { animation: orb-drift-3 17s ease-in-out infinite; }
+
+/* ── Infinite marquee strip ────────────────────────────────── */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.marquee-track { animation: marquee 28s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
 }

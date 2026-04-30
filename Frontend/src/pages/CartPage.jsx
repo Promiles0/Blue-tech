@@ -1,174 +1,133 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
-import cartService from "../services/cartService";
+import { Link, useNavigate } from 'react-router-dom'
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
+import { useCart } from '../context/CartContext'
 
-function CartPage() {
-  const navigate = useNavigate();
-  const [cart, setCart] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+export default function Cart() {
+  const { items, count, total, updateQuantity, removeFromCart } = useCart()
+  const navigate  = useNavigate()
 
-  const fetchCart = async () => {
-    setError("");
-    const data = await cartService.getCart();
-    setCart(data);
-    setLoading(false);
-  };
+  if (items.length === 0) return (
+    <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, padding: 24 }}>
+      <ShoppingBag size={48} style={{ color: '#2a2a2a' }} />
+      <p style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>Your cart is empty</p>
+      <p style={{ fontSize: 14, color: '#888' }}>Add something beautiful to get started.</p>
+      <Link to="/products" className="noir-btn-primary" style={{ padding: '12px 24px' }}>Shop now</Link>
+    </div>
+  )
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadCart = async () => {
-      try {
-        const data = await cartService.getCart();
-        if (!isMounted) return;
-        setError("");
-        setCart(data);
-      } catch (err) {
-        if (!isMounted) return;
-        setError(err.response?.data?.message || "Failed to load cart.");
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadCart();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const handleUpdateQty = async (itemId, qty) => {
-    if (qty < 1) {
-      await handleRemove(itemId);
-      return;
-    }
-    try {
-      await cartService.updateItem(itemId, qty);
-      await fetchCart();
-    } catch (err) {
-      setError(err.response?.data?.message || "Could not update quantity.");
-      setLoading(false);
-    }
-  };
-
-  const handleRemove = async (itemId) => {
-    try {
-      await cartService.removeItem(itemId);
-      await fetchCart();
-    } catch (err) {
-      setError(err.response?.data?.message || "Could not remove item.");
-      setLoading(false);
-    }
-  };
-
-  const items = cart?.items || [];
-  const total = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-6 py-20 flex items-center justify-center">
-        <div className="w-5 h-5 border border-primary/40 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const shipping = total >= 100 ? 0 : 9.99
+  const tax      = total * 0.08
+  const orderTotal = total + shipping + tax
 
   return (
-    <div className="container mx-auto px-6 py-16 max-w-3xl">
-      <div className="mb-12">
-        <p className="text-[11px] font-display font-semibold tracking-[0.2em] text-[#444] uppercase mb-3">
-          Review
-        </p>
-        <h1 className="font-display font-bold text-3xl text-white/90">Your Cart</h1>
-      </div>
+    <div style={{ padding: '48px 0 80px' }}>
+      <div className="container-noir">
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', marginBottom: 8, letterSpacing: '-0.02em' }}>Your cart</h1>
+        <p style={{ fontSize: 14, color: '#888', marginBottom: 40 }}>{count} item{count !== 1 ? 's' : ''}</p>
 
-      {error && (
-        <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">
-          {error}
-        </div>
-      )}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 40, alignItems: 'start' }}>
 
-      {items.length === 0 ? (
-        <div className="text-center py-24 flex flex-col items-center gap-6">
-          <ShoppingBag className="w-12 h-12 text-white/10" />
-          <p className="text-[#555]">Your cart is empty.</p>
-          <Link
-            to="/products"
-            className="px-6 py-3 bg-white text-black font-display font-semibold text-[13px] rounded-full hover:bg-white/90 transition-colors"
-          >
-            Shop now
-          </Link>
-        </div>
-      ) : (
-        <>
-          <div className="flex flex-col divide-y divide-white/5">
-            {items.map((item) => (
-              <div key={item.id} className="py-6 flex items-center gap-5">
-                <div className="w-20 h-20 rounded-xl bg-[#111] border border-white/6 shrink-0 flex items-center justify-center overflow-hidden">
-                  {item.product.imageUrl ? (
-                    <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <ShoppingBag className="w-7 h-7 text-white/10" />
-                  )}
-                </div>
+          {/* Items */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {items.map(item => {
+              const img  = item.variant?.product?.images?.[0]?.imageUrl ?? item.imageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80'
+              const name = item.variant?.product?.name ?? item.productName ?? 'Product'
+              const opts = item.variant?.sizeOrColor
+              const price = parseFloat(item.unitPrice ?? item.price ?? 0)
 
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display font-semibold text-[14px] text-white/80 truncate">
-                    {item.product.name}
-                  </h3>
-                  <p className="text-[12px] text-[#555] mt-0.5">${item.product.price}</p>
-                </div>
+              return (
+                <div key={item.id} style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 12, padding: 20, display: 'flex', gap: 20, alignItems: 'center' }}>
+                  <div style={{ width: 88, height: 88, borderRadius: 10, overflow: 'hidden', background: '#1a1a1a', flexShrink: 0 }}>
+                    <img src={img} alt={name} onError={e => { e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80' }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
 
-                <div className="flex items-center gap-2 border border-white/[0.07] rounded-full px-3 py-1.5">
-                  <button
-                    onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
-                    className="text-[#666] hover:text-white transition-colors"
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</p>
+                    {opts && <p style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>{opts}</p>}
+                    <p style={{ fontSize: 15, fontWeight: 700, color: '#f59e0b' }}>${(price * item.quantity).toFixed(2)}</p>
+                  </div>
+
+                  {/* Quantity controls */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2, background: '#1c1c1c', border: '1px solid #2a2a2a', borderRadius: 8, padding: '2px 4px' }}>
+                    <QtyBtn onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus size={14} /></QtyBtn>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#fff', width: 28, textAlign: 'center' }}>{item.quantity}</span>
+                    <QtyBtn onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus size={14} /></QtyBtn>
+                  </div>
+
+                  <button onClick={() => removeFromCart(item.id)}
+                    style={{ background: 'none', border: 'none', color: '#888', padding: 8, cursor: 'pointer', borderRadius: 6, transition: 'color 0.2s' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#888'}
                   >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <span className="text-[13px] w-4 text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
-                    className="text-[#666] hover:text-white transition-colors"
-                  >
-                    <Plus className="w-3 h-3" />
+                    <Trash2 size={16} />
                   </button>
                 </div>
+              )
+            })}
 
-                <span className="text-[14px] font-semibold text-white w-20 text-right">
-                  ${(item.product.price * item.quantity).toFixed(2)}
-                </span>
-
-                <button
-                  onClick={() => handleRemove(item.id)}
-                  className="text-[#444] hover:text-red-400 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 pt-8 border-t border-white/6 flex items-center justify-between">
-            <div>
-              <p className="text-[12px] text-[#555] mb-1">Total</p>
-              <p className="font-display font-bold text-2xl text-white">${total.toFixed(2)}</p>
-            </div>
             <button
-              onClick={() => navigate("/checkout")}
-              className="px-8 py-3.5 bg-white text-black font-display font-semibold text-[14px] rounded-full hover:bg-white/90 transition-colors"
+              onClick={() => items.forEach(i => removeFromCart(i.id))}
+              style={{ background: 'none', border: 'none', color: '#888', fontSize: 13, cursor: 'pointer', alignSelf: 'flex-start', padding: '4px 0', transition: 'color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+              onMouseLeave={e => e.currentTarget.style.color = '#888'}
             >
-              Checkout
+              Clear cart
             </button>
           </div>
-        </>
-      )}
+
+          {/* Summary */}
+          <div style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 16, padding: 28, position: 'sticky', top: 80 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 24 }}>Order summary</h2>
+            <Row label="Subtotal"  value={`$${total.toFixed(2)}`} />
+            <Row label="Shipping"  value={shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`} />
+            <Row label="Tax (8%)"  value={`$${tax.toFixed(2)}`} />
+            <div style={{ borderTop: '1px solid #2a2a2a', margin: '16px 0' }} />
+            <Row label="Total" value={`$${orderTotal.toFixed(2)}`} bold />
+
+            {shipping > 0 && (
+              <p style={{ fontSize: 12, color: '#888', marginTop: 12, lineHeight: 1.5 }}>
+                Add ${(100 - total).toFixed(2)} more to get free shipping.
+              </p>
+            )}
+
+            <button
+              onClick={() => navigate('/checkout')}
+              className="noir-btn-primary"
+              style={{ width: '100%', padding: '14px', fontSize: 15, marginTop: 20 }}
+            >
+              Checkout <ArrowRight size={16} />
+            </button>
+
+            <Link to="/products" style={{ display: 'block', textAlign: 'center', marginTop: 14, fontSize: 13, color: '#888', transition: 'color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+              onMouseLeave={e => e.currentTarget.style.color = '#888'}
+            >
+              Continue shopping
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
-  );
+  )
 }
 
-export default CartPage;
+function QtyBtn({ children, onClick }) {
+  return (
+    <button onClick={onClick} style={{ background: 'none', border: 'none', color: '#888', padding: '6px 8px', cursor: 'pointer', display: 'flex', borderRadius: 6, transition: 'color 0.2s' }}
+      onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+      onMouseLeave={e => e.currentTarget.style.color = '#888'}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Row({ label, value, bold }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+      <span style={{ fontSize: 14, color: bold ? '#fff' : '#888', fontWeight: bold ? 700 : 400 }}>{label}</span>
+      <span style={{ fontSize: 14, color: '#fff', fontWeight: bold ? 800 : 500 }}>{value}</span>
+    </div>
+  )
+}

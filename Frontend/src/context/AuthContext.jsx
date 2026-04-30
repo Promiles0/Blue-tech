@@ -39,7 +39,15 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      login,
+      register,
+      logout,
+      isAuthenticated: !!user,
+      isAdmin: user?.role === 'ADMIN',
+    }}>
       {children}
     </AuthContext.Provider>
   )
@@ -50,3 +58,5 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
   return ctx
 }
+
+export default AuthContext

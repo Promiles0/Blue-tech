@@ -1,16 +1,28 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, Heart, ShoppingBag, User, X } from 'lucide-react'
+import { Search, Heart, ShoppingBag, User, X, Package, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 
 export default function Navbar() {
-  const { user }             = useAuth()
+  const { user, logout }     = useAuth()
   const { count }            = useCart()
   const navigate             = useNavigate()
   const location             = useLocation()
-  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchOpen, setSearchOpen]   = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -90,7 +102,40 @@ export default function Navbar() {
             )}
           </Link>
 
-          <Link to={user ? '/account' : '/login'}><IconBtn><User size={18} /></IconBtn></Link>
+          {user ? (
+            <div ref={userMenuRef} style={{ position: 'relative' }}>
+              <IconBtn onClick={() => setUserMenuOpen(o => !o)}>
+                <User size={18} />
+              </IconBtn>
+
+              {userMenuOpen && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                  background: '#141414', border: '1px solid #2a2a2a',
+                  borderRadius: 12, padding: '6px', minWidth: 160,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                  zIndex: 100,
+                }}>
+                  <DropdownItem to="/account" icon={<User size={14} />} onClick={() => setUserMenuOpen(false)}>
+                    My account
+                  </DropdownItem>
+                  <DropdownItem to="/orders" icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>
+                    My orders
+                  </DropdownItem>
+                  <div style={{ height: 1, background: '#2a2a2a', margin: '4px 6px' }} />
+                  <DropdownItem
+                    icon={<LogOut size={14} />}
+                    onClick={() => { logout(); setUserMenuOpen(false); navigate('/') }}
+                    danger
+                  >
+                    Sign out
+                  </DropdownItem>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link to="/login"><IconBtn><User size={18} /></IconBtn></Link>
+          )}
         </div>
       </div>
     </nav>
@@ -128,6 +173,37 @@ function IconBtn({ children, onClick }) {
       onMouseLeave={e => e.currentTarget.style.color = '#888'}
     >
       {children}
+    </button>
+  )
+}
+
+function DropdownItem({ to, icon, onClick, danger, children }) {
+  const base = {
+    display: 'flex', alignItems: 'center', gap: 9,
+    width: '100%', padding: '9px 10px', borderRadius: 8,
+    fontSize: 13, fontWeight: 500, border: 'none', background: 'none',
+    color: danger ? '#f87171' : '#aaa',
+    cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
+    textDecoration: 'none',
+  }
+  const hover = { background: danger ? 'rgba(239,68,68,0.08)' : '#1e1e1e', color: danger ? '#f87171' : '#fff' }
+
+  if (to) {
+    return (
+      <Link to={to} onClick={onClick} style={base}
+        onMouseEnter={e => Object.assign(e.currentTarget.style, hover)}
+        onMouseLeave={e => Object.assign(e.currentTarget.style, { background: 'none', color: base.color })}
+      >
+        {icon}{children}
+      </Link>
+    )
+  }
+  return (
+    <button onClick={onClick} style={base}
+      onMouseEnter={e => Object.assign(e.currentTarget.style, hover)}
+      onMouseLeave={e => Object.assign(e.currentTarget.style, { background: 'none', color: base.color })}
+    >
+      {icon}{children}
     </button>
   )
 }
