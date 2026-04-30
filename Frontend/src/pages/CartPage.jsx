@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 import cartService from "../services/cartService";
@@ -9,22 +9,38 @@ function CartPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // useCallback so it's stable and can be called from multiple places
-  const fetchCart = useCallback(async () => {
+  const fetchCart = async () => {
     setError("");
-    try {
-      const data = await cartService.getCart();
-      setCart(data);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load cart.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    const data = await cartService.getCart();
+    setCart(data);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    fetchCart();
-  }, [fetchCart]);
+    let isMounted = true;
+
+    const loadCart = async () => {
+      try {
+        const data = await cartService.getCart();
+        if (!isMounted) return;
+        setError("");
+        setCart(data);
+      } catch (err) {
+        if (!isMounted) return;
+        setError(err.response?.data?.message || "Failed to load cart.");
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadCart();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleUpdateQty = async (itemId, qty) => {
     if (qty < 1) {
@@ -36,6 +52,7 @@ function CartPage() {
       await fetchCart();
     } catch (err) {
       setError(err.response?.data?.message || "Could not update quantity.");
+      setLoading(false);
     }
   };
 
@@ -45,6 +62,7 @@ function CartPage() {
       await fetchCart();
     } catch (err) {
       setError(err.response?.data?.message || "Could not remove item.");
+      setLoading(false);
     }
   };
 
@@ -87,10 +105,10 @@ function CartPage() {
         </div>
       ) : (
         <>
-          <div className="flex flex-col divide-y divide-white/[0.05]">
+          <div className="flex flex-col divide-y divide-white/5">
             {items.map((item) => (
               <div key={item.id} className="py-6 flex items-center gap-5">
-                <div className="w-20 h-20 rounded-xl bg-[#111] border border-white/[0.06] shrink-0 flex items-center justify-center overflow-hidden">
+                <div className="w-20 h-20 rounded-xl bg-[#111] border border-white/6 shrink-0 flex items-center justify-center overflow-hidden">
                   {item.product.imageUrl ? (
                     <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
                   ) : (
@@ -135,7 +153,7 @@ function CartPage() {
             ))}
           </div>
 
-          <div className="mt-8 pt-8 border-t border-white/[0.06] flex items-center justify-between">
+          <div className="mt-8 pt-8 border-t border-white/6 flex items-center justify-between">
             <div>
               <p className="text-[12px] text-[#555] mb-1">Total</p>
               <p className="font-display font-bold text-2xl text-white">${total.toFixed(2)}</p>

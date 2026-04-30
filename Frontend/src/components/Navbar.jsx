@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useNavigate, } from "react-router-dom";
 import { ShoppingBag, User, Search, Menu, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 function Navbar() {
   const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -19,7 +19,6 @@ function Navbar() {
   }, []);
 
   // Close menus on route change — use a ref comparison, no setState in effect body
-  const pathname = location.pathname;
   // Menus close via closeMenus() called on Link/button clicks below.
   // This avoids calling setState synchronously inside a useEffect.
 
@@ -55,7 +54,7 @@ function Navbar() {
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "border-b border-white/[0.06] bg-[#080808]/90 backdrop-blur-xl"
+            ? "border-b border-white/6 bg-[#080808]/90 backdrop-blur-xl"
             : "bg-transparent"
         }`}
       >
@@ -88,7 +87,7 @@ function Navbar() {
               className="p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5"
               aria-label="Search"
             >
-              <Search className="w-[18px] h-[18px]" />
+              <Search className="w-4.5 h-4.5" />
             </button>
 
             <Link
@@ -97,16 +96,16 @@ function Navbar() {
               className="p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5"
               aria-label="Cart"
             >
-              <ShoppingBag className="w-[18px] h-[18px]" />
+              <ShoppingBag className="w-4.5 h-4.5" />
             </Link>
 
             {isAuthenticated ? (
               <div className="relative group">
                 <button className="p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5">
-                  <User className="w-[18px] h-[18px]" />
+                  <User className="w-4.5 h-4.5" />
                 </button>
                 <div className="absolute right-0 top-full mt-2 w-44 glass rounded-xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-1 group-hover:translate-y-0">
-                  <div className="px-4 py-2 border-b border-white/[0.06]">
+                  <div className="px-4 py-2 border-b border-white/6">
                     <p className="text-[12px] text-[#888]">Signed in as</p>
                     <p className="text-[13px] font-medium truncate">{user?.name}</p>
                   </div>
@@ -130,7 +129,7 @@ function Navbar() {
                 className="p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5"
                 aria-label="Sign In"
               >
-                <User className="w-[18px] h-[18px]" />
+                <User className="w-4.5 h-4.5" />
               </Link>
             )}
 
@@ -138,14 +137,14 @@ function Navbar() {
               onClick={() => setMenuOpen((v) => !v)}
               className="md:hidden p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5 ml-1"
             >
-              {menuOpen ? <X className="w-[18px] h-[18px]" /> : <Menu className="w-[18px] h-[18px]" />}
+              {menuOpen ? <X className="w-4.5 h-4.5" /> : <Menu className="w-4.5 h-4.5" />}
             </button>
           </div>
         </div>
 
         {/* Search bar */}
         {searchOpen && (
-          <div className="border-t border-white/[0.06] bg-[#080808]/95 backdrop-blur-xl">
+          <div className="border-t border-white/6 bg-[#080808]/95 backdrop-blur-xl">
             <form onSubmit={handleSearch} className="container mx-auto px-6 py-4">
               <input
                 autoFocus
@@ -161,7 +160,7 @@ function Navbar() {
 
         {/* Mobile menu */}
         {menuOpen && (
-          <div className="md:hidden border-t border-white/[0.06] bg-[#080808]/95 backdrop-blur-xl">
+          <div className="md:hidden border-t border-white/6 bg-[#080808]/95 backdrop-blur-xl">
             <div className="container mx-auto px-6 py-6 flex flex-col gap-4">
               {navLinks.map((link) => (
                 <Link
@@ -173,7 +172,7 @@ function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <div className="border-t border-white/[0.06] pt-4 mt-2 flex flex-col gap-3">
+                <div className="border-t border-white/6 pt-4 mt-2 flex flex-col gap-3">
                 {isAuthenticated ? (
                   <>
                     <Link to="/orders" onClick={closeMenus} className="text-[15px] text-[#888] hover:text-white transition-colors">

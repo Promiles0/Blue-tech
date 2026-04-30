@@ -51,12 +51,12 @@ function ProductDetailPage() {
   if (loading) {
     return (
       <div className="container mx-auto px-6 py-20 grid md:grid-cols-2 gap-16 animate-pulse">
-        <div className="aspect-square bg-white/[0.03] rounded-2xl" />
+        <div className="aspect-square bg-white/3 rounded-2xl" />
         <div className="space-y-4 pt-4">
-          <div className="h-3 bg-white/[0.04] rounded w-24" />
-          <div className="h-8 bg-white/[0.04] rounded w-64" />
-          <div className="h-4 bg-white/[0.03] rounded w-full" />
-          <div className="h-4 bg-white/[0.03] rounded w-3/4" />
+          <div className="h-3 bg-white/4 rounded w-24" />
+          <div className="h-8 bg-white/4 rounded w-64" />
+          <div className="h-4 bg-white/3 rounded w-full" />
+          <div className="h-4 bg-white/3 rounded w-3/4" />
         </div>
       </div>
     );
@@ -84,7 +84,7 @@ function ProductDetailPage() {
 
       <div className="grid md:grid-cols-2 gap-16 items-start">
         {/* Image */}
-        <div className="aspect-square rounded-2xl bg-[#111] border border-white/[0.06] flex items-center justify-center overflow-hidden">
+        <div className="aspect-square rounded-2xl bg-[#111] border border-white/6 flex items-center justify-center overflow-hidden">
           {product.imageUrl ? (
             <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
           ) : (
@@ -103,7 +103,7 @@ function ProductDetailPage() {
           </div>
 
           {/* Price */}
-          <div className="border-t border-white/[0.06] pt-6">
+          <div className="border-t border-white/6 pt-6">
             <span className="font-display font-bold text-3xl text-white">${product.price}</span>
           </div>
 

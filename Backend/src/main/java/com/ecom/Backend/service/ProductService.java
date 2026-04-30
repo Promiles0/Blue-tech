@@ -74,6 +74,14 @@ public class ProductService {
         return buildProductDetailResponse(product, product.getVariants(), product.getImages());
     }
 
+    @Transactional(readOnly = true)
+    public ProductDetailResponse getProductById(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        return buildProductDetailResponse(product, product.getVariants(), product.getImages());
+    }
+
     // @Transactional acts as our Safety Bubble. If variants or images fail to save, the Product is rolled back.
     @Transactional
     public ProductDetailResponse createProduct(ProductCreateRequest request) {

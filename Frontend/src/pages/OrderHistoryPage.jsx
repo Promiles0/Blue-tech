@@ -65,7 +65,7 @@ function OrderHistoryPage() {
               {/* Order header */}
               <button
                 onClick={() => setExpanded(expanded === order.id ? null : order.id)}
-                className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-white/[0.02] transition-colors"
+                className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-white/2 transition-colors"
               >
                 <div className="flex items-center gap-5">
                   <div>
@@ -91,7 +91,7 @@ function OrderHistoryPage() {
 
               {/* Expanded items */}
               {expanded === order.id && order.items?.length > 0 && (
-                <div className="border-t border-white/[0.05] px-6 py-4 flex flex-col gap-3">
+                <div className="border-t border-white/5 px-6 py-4 flex flex-col gap-3">
                   {order.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between text-[13px]">
                       <span className="text-[#888]">{item.product?.name}</span>
@@ -101,7 +101,7 @@ function OrderHistoryPage() {
                     </div>
                   ))}
                   {order.shippingAddress && (
-                    <p className="text-[12px] text-[#444] mt-2 pt-3 border-t border-white/[0.04]">
+                    <p className="text-[12px] text-[#444] mt-2 pt-3 border-t border-white/4">
                       Ships to: {order.shippingAddress}
                     </p>
                   )}

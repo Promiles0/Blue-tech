@@ -1,5 +1,32 @@
 import api from "../api/axios";
 
+const unwrapApiData = (payload) => payload?.data ?? payload;
+
+const normalizeProductDetail = (product) => {
+  if (!product) return product;
+
+  const primaryImage =
+    product.images?.find((image) => image.isPrimary)?.imageUrl ||
+    product.images?.[0]?.imageUrl ||
+    null;
+
+  const stock = Array.isArray(product.variants)
+    ? product.variants.reduce((sum, variant) => sum + (variant.stockQuantity || 0), 0)
+    : 0;
+
+  return {
+    id: product.productId ?? product.id,
+    name: product.name,
+    description: product.description,
+    price: product.price,
+    imageUrl: product.imageUrl ?? primaryImage,
+    stock: product.stock ?? stock,
+    category: product.category ?? (product.categoryName ? { name: product.categoryName } : null),
+    variants: product.variants ?? [],
+    images: product.images ?? [],
+  };
+};
+
 const productService = {
   /**
    * GET /products — supports optional query params: search, category, page, size
@@ -12,8 +39,9 @@ const productService = {
     params.set("size", size);
 
     const res = await api.get(`/products?${params.toString()}`);
+    const payload = unwrapApiData(res.data);
     // Handle both paginated { content: [] } and plain array responses
-    return Array.isArray(res.data) ? res.data : res.data.content ?? res.data;
+    return Array.isArray(payload) ? payload : payload.content ?? payload;
   },
 
   /**
@@ -21,7 +49,7 @@ const productService = {
    */
   getById: async (id) => {
     const res = await api.get(`/products/${id}`);
-    return res.data;
+    return normalizeProductDetail(unwrapApiData(res.data));
   },
 
   /**
@@ -29,7 +57,7 @@ const productService = {
    */
   getCategories: async () => {
     const res = await api.get("/products/categories");
-    return res.data;
+    return unwrapApiData(res.data);
   },
 };
 
