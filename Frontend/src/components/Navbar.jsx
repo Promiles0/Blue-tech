@@ -1,208 +1,133 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate, } from "react-router-dom";
-import { ShoppingBag, User, Search, Menu, X } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
+import { useState } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Search, Heart, ShoppingBag, User, X } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { useCart } from '../context/CartContext'
 
-function Navbar() {
-  const { isAuthenticated, logout, user } = useAuth();
-  const navigate = useNavigate();
-  // const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // Close menus on route change — use a ref comparison, no setState in effect body
-  // Menus close via closeMenus() called on Link/button clicks below.
-  // This avoids calling setState synchronously inside a useEffect.
-
-  const closeMenus = () => {
-    setMenuOpen(false);
-    setSearchOpen(false);
-  };
-
-  const handleLogout = () => {
-    logout();
-    closeMenus();
-    navigate("/");
-  };
+export default function Navbar() {
+  const { user }             = useAuth()
+  const { count }            = useCart()
+  const navigate             = useNavigate()
+  const location             = useLocation()
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchOpen(false);
-      setSearchQuery("");
-    }
-  };
+    e.preventDefault()
+    if (!searchQuery.trim()) return
+    navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
+    setSearchOpen(false)
+    setSearchQuery('')
+  }
 
-  const navLinks = [
-    { label: "Shop", to: "/products" },
-    { label: "Audio", to: "/products?category=audio" },
-    { label: "Wearables", to: "/products?category=wearables" },
-    { label: "Cameras", to: "/products?category=cameras" },
-  ];
+  const isActive = (path) => location.pathname === path
 
   return (
-    <>
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled
-            ? "border-b border-white/6 bg-[#080808]/90 backdrop-blur-xl"
-            : "bg-transparent"
-        }`}
-      >
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" onClick={closeMenus} className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-            <span className="font-display font-bold text-[15px] tracking-[0.2em] text-white uppercase">
-              Noir
-            </span>
-          </Link>
+    <nav style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      background: 'rgba(10,10,10,0.92)',
+      borderBottom: '1px solid #1a1a1a',
+      backdropFilter: 'blur(16px)',
+      WebkitBackdropFilter: 'blur(16px)',
+    }}>
+      <div className="container-noir" style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className="text-[13px] font-medium text-[#888] hover:text-white transition-colors tracking-wide"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
+        {/* Logo */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c5cf0', display: 'block', flexShrink: 0 }} />
+          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: '#fff' }}>NOIR</span>
+        </Link>
 
-          {/* Icons */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setSearchOpen((v) => !v)}
-              className="p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5"
-              aria-label="Search"
-            >
-              <Search className="w-4.5 h-4.5" />
-            </button>
-
-            <Link
-              to="/cart"
-              onClick={closeMenus}
-              className="p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5"
-              aria-label="Cart"
-            >
-              <ShoppingBag className="w-4.5 h-4.5" />
-            </Link>
-
-            {isAuthenticated ? (
-              <div className="relative group">
-                <button className="p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5">
-                  <User className="w-4.5 h-4.5" />
-                </button>
-                <div className="absolute right-0 top-full mt-2 w-44 glass rounded-xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 translate-y-1 group-hover:translate-y-0">
-                  <div className="px-4 py-2 border-b border-white/6">
-                    <p className="text-[12px] text-[#888]">Signed in as</p>
-                    <p className="text-[13px] font-medium truncate">{user?.name}</p>
-                  </div>
-                  <Link
-                    to="/orders"
-                    className="flex items-center px-4 py-2 text-[13px] text-[#888] hover:text-white hover:bg-white/5 transition-colors"
-                  >
-                    My Orders
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left flex items-center px-4 py-2 text-[13px] text-[#888] hover:text-white hover:bg-white/5 transition-colors"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5"
-                aria-label="Sign In"
-              >
-                <User className="w-4.5 h-4.5" />
-              </Link>
-            )}
-
-            <button
-              onClick={() => setMenuOpen((v) => !v)}
-              className="md:hidden p-2.5 text-[#888] hover:text-white transition-colors rounded-lg hover:bg-white/5 ml-1"
-            >
-              {menuOpen ? <X className="w-4.5 h-4.5" /> : <Menu className="w-4.5 h-4.5" />}
-            </button>
-          </div>
+        {/* Center links */}
+        <div className="nav-links" style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
+          {[
+            { label: 'Shop',       to: '/products' },
+            { label: 'Audio',      to: '/products?category=Audio' },
+            { label: 'Wearables',  to: '/products?category=Wearables' },
+            { label: 'Computing',  to: '/products?category=Computing' },
+          ].map(({ label, to }) => (
+            <NavLink key={label} to={to} active={location.pathname + location.search === to || (to === '/products' && isActive('/products') && !location.search)}>
+              {label}
+            </NavLink>
+          ))}
         </div>
 
-        {/* Search bar */}
-        {searchOpen && (
-          <div className="border-t border-white/6 bg-[#080808]/95 backdrop-blur-xl">
-            <form onSubmit={handleSearch} className="container mx-auto px-6 py-4">
+        {/* Right icons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {searchOpen ? (
+            <form onSubmit={handleSearch} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input
                 autoFocus
-                type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                className="w-full bg-transparent text-white placeholder-[#555] text-lg outline-none border-b border-white/10 pb-2 focus:border-primary/50 transition-colors"
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search products…"
+                style={{
+                  background: '#1c1c1c', border: '1px solid #2a2a2a',
+                  borderRadius: 6, padding: '7px 12px', color: '#fff',
+                  fontSize: 13, outline: 'none', width: 200,
+                }}
               />
+              <IconBtn onClick={() => setSearchOpen(false)}><X size={16} /></IconBtn>
             </form>
-          </div>
-        )}
+          ) : (
+            <IconBtn onClick={() => setSearchOpen(true)}><Search size={18} /></IconBtn>
+          )}
 
-        {/* Mobile menu */}
-        {menuOpen && (
-          <div className="md:hidden border-t border-white/6 bg-[#080808]/95 backdrop-blur-xl">
-            <div className="container mx-auto px-6 py-6 flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  onClick={closeMenus}
-                  className="text-[15px] text-[#888] hover:text-white transition-colors py-1"
-                >
-                  {link.label}
-                </Link>
-              ))}
-                <div className="border-t border-white/6 pt-4 mt-2 flex flex-col gap-3">
-                {isAuthenticated ? (
-                  <>
-                    <Link to="/orders" onClick={closeMenus} className="text-[15px] text-[#888] hover:text-white transition-colors">
-                      My Orders
-                    </Link>
-                    <button onClick={handleLogout} className="text-left text-[15px] text-[#888] hover:text-white transition-colors">
-                      Sign Out
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link to="/login" onClick={closeMenus} className="text-[15px] text-[#888] hover:text-white transition-colors">
-                      Sign In
-                    </Link>
-                    <Link to="/register" onClick={closeMenus} className="text-[15px] text-[#888] hover:text-white transition-colors">
-                      Create Account
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </nav>
-      <div className="h-16" />
-    </>
-  );
+          <Link to="/wishlist"><IconBtn><Heart size={18} /></IconBtn></Link>
+
+          <Link to="/cart" style={{ position: 'relative' }}>
+            <IconBtn><ShoppingBag size={18} /></IconBtn>
+            {count > 0 && (
+              <span style={{
+                position: 'absolute', top: 0, right: 0,
+                background: '#7c5cf0', color: '#fff', borderRadius: '50%',
+                width: 16, height: 16, fontSize: 9, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}>
+                {count > 9 ? '9+' : count}
+              </span>
+            )}
+          </Link>
+
+          <Link to={user ? '/account' : '/login'}><IconBtn><User size={18} /></IconBtn></Link>
+        </div>
+      </div>
+    </nav>
+  )
 }
 
-// Suppress unused variable warning — pathname is kept for route-awareness context
-void (function () { return typeof pathname; });
+function NavLink({ to, active, children }) {
+  return (
+    <Link
+      to={to}
+      style={{
+        fontSize: 14, fontWeight: 400,
+        color: active ? '#fff' : '#888',
+        transition: 'color 0.2s',
+        textDecoration: 'none',
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#ccc' }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#888' }}
+    >
+      {children}
+    </Link>
+  )
+}
 
-export default Navbar;
+function IconBtn({ children, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        background: 'none', border: 'none', color: '#888',
+        padding: 8, display: 'flex', alignItems: 'center',
+        transition: 'color 0.2s', borderRadius: 6,
+      }}
+      onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+      onMouseLeave={e => e.currentTarget.style.color = '#888'}
+    >
+      {children}
+    </button>
+  )
+}

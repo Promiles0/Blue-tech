@@ -1,82 +1,57 @@
-import { Link } from "react-router-dom";
+import { Link } from 'react-router-dom'
 
-const shopLinks = [
-  { label: "All products", to: "/products" },
-  { label: "Audio", to: "/products?category=audio" },
-  { label: "Wearables", to: "/products?category=wearables" },
-  { label: "Cameras", to: "/products?category=cameras" },
-];
+const SHOP_LINKS    = [['All products', '/products'], ['Audio', '/products?category=Audio'], ['Wearables', '/products?category=Wearables'], ['Cameras', '/products?category=Cameras']]
+const ACCOUNT_LINKS = [['Profile', '/account'], ['Orders', '/account'], ['Wishlist', '/wishlist'], ['Sign in', '/login']]
+const COMPANY_LINKS = [['About', '#'], ['Press', '#'], ['Contact', '#'], ['Sustainability', '#']]
 
-const accountLinks = [
-  { label: "Profile", to: "/profile" },
-  { label: "Orders", to: "/orders" },
-  { label: "Wishlist", to: "/wishlist" },
-  { label: "Sign in", to: "/login" },
-];
-
-const companyLinks = [
-  { label: "About", to: "/about" },
-  { label: "Press", to: "/press" },
-  { label: "Contact", to: "/contact" },
-  { label: "Sustainability", to: "/sustainability" },
-];
-
-function FooterColumn({ title, links }) {
+export default function Footer() {
   return (
-    <div>
-      <p className="text-[11px] font-display font-semibold tracking-[0.16em] text-[#444] uppercase mb-5">
-        {title}
-      </p>
-      <ul className="flex flex-col gap-3">
-        {links.map((link) => (
-          <li key={link.label}>
-            <Link
-              to={link.to}
-              className="text-[13px] text-[#666] hover:text-[#bbb] transition-colors"
-            >
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
+    <footer style={{ borderTop: '1px solid #1a1a1a', marginTop: 80 }}>
+      <div className="container-noir" style={{ padding: '60px 24px 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '48px 32px', marginBottom: 48 }}>
 
-function Footer() {
-  return (
-    <footer className="border-t border-white/[0.06] mt-auto">
-      {/* Main footer content */}
-      <div className="container mx-auto px-6 py-16 grid grid-cols-2 md:grid-cols-4 gap-12">
-        {/* Brand */}
-        <div className="col-span-2 md:col-span-1">
-          <Link to="/" className="flex items-center gap-2 mb-4">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-            <span className="font-display font-bold text-[15px] tracking-[0.2em] text-white uppercase">
-              Noir
-            </span>
-          </Link>
-          <p className="text-[13px] text-[#555] leading-relaxed max-w-[200px]">
-            Considered objects for a quieter, more deliberate digital life.
-          </p>
+          {/* Brand */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c5cf0', display: 'block' }} />
+              <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: '#fff' }}>NOIR</span>
+            </div>
+            <p style={{ color: '#888', fontSize: 14, lineHeight: 1.7, maxWidth: 220 }}>
+              Considered objects for a quieter, more deliberate digital life.
+            </p>
+          </div>
+
+          <FooterCol title="SHOP"    links={SHOP_LINKS} />
+          <FooterCol title="ACCOUNT" links={ACCOUNT_LINKS} />
+          <FooterCol title="COMPANY" links={COMPANY_LINKS} />
         </div>
 
-        <FooterColumn title="Shop" links={shopLinks} />
-        <FooterColumn title="Account" links={accountLinks} />
-        <FooterColumn title="Company" links={companyLinks} />
-      </div>
-
-      {/* Bottom bar */}
-      <div className="border-t border-white/[0.04]">
-        <div className="container mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-[12px] text-[#444]">
-            © 2026 NOIR Studio. All rights reserved.
-          </p>
-          <p className="text-[12px] text-[#444]">Crafted with deliberate care.</p>
+        <div style={{ borderTop: '1px solid #1a1a1a', padding: '24px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          <p style={{ color: '#555', fontSize: 13 }}>© 2026 NOIR Studio. All rights reserved.</p>
+          <p style={{ color: '#555', fontSize: 13 }}>Crafted with deliberate care.</p>
         </div>
       </div>
     </footer>
-  );
+  )
 }
 
-export default Footer;
+function FooterCol({ title, links }) {
+  return (
+    <div>
+      <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: '#555', marginBottom: 16 }}>{title}</h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {links.map(([label, to]) => (
+          <Link
+            key={label}
+            to={to}
+            style={{ fontSize: 14, color: '#888', transition: 'color 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+            onMouseLeave={e => e.currentTarget.style.color = '#888'}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
