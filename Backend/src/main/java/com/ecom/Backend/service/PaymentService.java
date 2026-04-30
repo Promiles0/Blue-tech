@@ -42,7 +42,7 @@ public class PaymentService {
         requestBody.put("tx_ref", txRef);
         requestBody.put("amount", order.getTotalAmount().toString());
         requestBody.put("currency", "RWF");
-        requestBody.put("redirect_url", "http://localhost:3000/payment-success"); // Frontend Success Page
+        requestBody.put("redirect_url", "http://localhost:5173/payment-success"); // Updated for your new Vite frontend
         
         Map<String, String> customer = new HashMap<>();
         customer.put("email", order.getUser().getEmail());
@@ -67,8 +67,8 @@ public class PaymentService {
             Map<String, Object> body = response.getBody();
             if (response.getStatusCode() == HttpStatus.OK && body != null) {
                 @SuppressWarnings("unchecked")
-                Map<String, String> data = (Map<String, String>) body.get("data");
-                String link = data.get("link");
+                Map<String, Object> data = (Map<String, Object>) body.get("data");
+                String link = (String) data.get("link");
 
                 // Save Payment Record
                 PaymentRecord paymentRecord = PaymentRecord.builder()
@@ -96,6 +96,7 @@ public class PaymentService {
     public void processWebhook(Map<String, Object> payload) {
         // 1. Verify payment status from payload
         String status = (String) payload.get("status");
+        @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) payload.get("data");
         String txRef = (String) data.get("tx_ref");
 

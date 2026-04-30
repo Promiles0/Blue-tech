@@ -1,103 +1,103 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
 
-function RegisterPage() {
-  const { register } = useAuth();
-  const navigate = useNavigate();
-
-  const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) =>
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+export default function Register() {
+  const [name, setName]         = useState('')
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm]   = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const { register }            = useAuth()
+  const navigate                = useNavigate()
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-
-    if (form.password !== form.confirm) {
-      setError("Passwords do not match.");
-      return;
-    }
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
-    setLoading(true);
+    e.preventDefault()
+    if (password !== confirm) { setError('Passwords do not match.'); return }
+    if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
+    setError('')
+    setLoading(true)
     try {
-      await register(form.name, form.email, form.password);
-      navigate("/");
+      await register(name, email, password)
+      navigate('/')
     } catch (err) {
-      setError(err.response?.data?.message || "Registration failed. Please try again.");
+      setError(err.response?.data?.message ?? 'Registration failed. Please try again.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-6">
-      <div className="w-full max-w-sm">
-        <div className="mb-10">
-          <p className="text-[11px] font-display font-semibold tracking-[0.2em] text-[#444] uppercase mb-3">
-            Get started
-          </p>
-          <h1 className="font-display font-bold text-3xl text-white/90">Create account</h1>
-        </div>
+    <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <div className="fade-in" style={{ width: '100%', maxWidth: 400 }}>
+
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 44 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c5cf0', display: 'block' }} />
+          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: '#fff' }}>NOIR</span>
+        </Link>
+
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 8 }}>GET STARTED</p>
+        <h1 style={{ fontSize: 34, fontWeight: 900, color: '#fff', marginBottom: 36, letterSpacing: '-0.02em' }}>Create account</h1>
 
         {error && (
-          <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-[13px]">
+          <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '12px 16px', fontSize: 13, color: '#f87171', marginBottom: 20 }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          {[
-            { label: "Full name", name: "name", type: "text", placeholder: "Ada Lovelace" },
-            { label: "Email", name: "email", type: "email", placeholder: "you@example.com" },
-            { label: "Password", name: "password", type: "password", placeholder: "Min. 8 characters" },
-            { label: "Confirm password", name: "confirm", type: "password", placeholder: "••••••••" },
-          ].map((field) => (
-            <div key={field.name}>
-              <label className="block text-[12px] text-[#555] mb-2 tracking-wide">
-                {field.label}
-              </label>
-              <input
-                type={field.type}
-                name={field.name}
-                value={form[field.name]}
-                onChange={handleChange}
-                required
-                placeholder={field.placeholder}
-                className="w-full px-4 py-3 bg-[#111] border border-white/[0.07] rounded-xl text-[14px] text-white placeholder-[#444] focus:border-primary/40 focus:outline-none transition-colors"
-              />
+        <form onSubmit={handleSubmit}>
+          <Field label="Full name">
+            <input type="text" value={name} required onChange={e => setName(e.target.value)}
+              placeholder="Jane Doe" className="noir-input" />
+          </Field>
+          <Field label="Email">
+            <input type="email" value={email} required onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com" className="noir-input" />
+          </Field>
+          <Field label="Password">
+            <div style={{ position: 'relative' }}>
+              <input type={showPass ? 'text' : 'password'} value={password} required
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Min. 8 characters" className="noir-input" style={{ paddingRight: 44 }} />
+              <button type="button" onClick={() => setShowPass(p => !p)}
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#888', display: 'flex', padding: 4 }}>
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
-          ))}
+          </Field>
+          <Field label="Confirm password" style={{ marginBottom: 28 }}>
+            <input type={showPass ? 'text' : 'password'} value={confirm} required
+              onChange={e => setConfirm(e.target.value)}
+              placeholder="Repeat password" className="noir-input" />
+          </Field>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 w-full py-3.5 bg-white text-black font-display font-semibold text-[14px] rounded-full hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <span className="w-4 h-4 border border-black/30 border-t-black/80 rounded-full animate-spin" />
-            ) : (
-              "Create account"
-            )}
+          <button type="submit" disabled={loading} className="noir-btn-primary" style={{ width: '100%', padding: '13px', fontSize: 15 }}>
+            {loading ? 'Creating account…' : 'Create account'}
           </button>
         </form>
 
-        <p className="mt-8 text-center text-[13px] text-[#555]">
-          Already have an account?{" "}
-          <Link to="/login" className="text-[#888] hover:text-white transition-colors">
+        <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#888' }}>
+          Already have an account?{' '}
+          <Link to="/login" style={{ color: '#7c5cf0', fontWeight: 500 }}
+            onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+            onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+          >
             Sign in
           </Link>
         </p>
       </div>
     </div>
-  );
+  )
 }
 
-export default RegisterPage;
+function Field({ label, children, style }) {
+  return (
+    <div style={{ marginBottom: 16, ...style }}>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#888', marginBottom: 6 }}>{label}</label>
+      {children}
+    </div>
+  )
+}
