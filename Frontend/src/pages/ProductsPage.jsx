@@ -5,6 +5,20 @@ import productService from "../services/productService";
 
 const CATEGORIES = ["All", "Audio", "Wearables", "Cameras"];
 
+function FilterPanel({ onClose }) {
+  return (
+    <div className="mb-8 p-6 glass-card rounded-2xl">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[14px] font-display font-semibold text-white">Filters</h3>
+        <button onClick={onClose} className="text-[#666] hover:text-white">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <p className="text-[13px] text-[#555]">Filter options coming soon.</p>
+    </div>
+  );
+}
+
 function ProductCard({ product }) {
   return (
     <Link to={`/products/${product.id}`} className="group block">
@@ -91,9 +105,9 @@ function ProductsPage() {
     CATEGORIES.find((c) => c.toLowerCase() === categoryFilter) || "All";
 
   return (
-    <div className="container mx-auto px-6 py-16">
+    <div className="container mx-auto px-4 sm:px-6 py-10 sm:py-16">
       {/* Header */}
-      <div className="flex items-end justify-between mb-12">
+      <div className="flex items-end justify-between mb-8 sm:mb-12">
         <div>
           <p className="text-[11px] font-display font-semibold tracking-[0.2em] text-[#444] uppercase mb-3">
             Catalogue
@@ -109,6 +123,9 @@ function ProductsPage() {
         </button>
       </div>
 
+      {/* Filter panel */}
+      {showFilters && <FilterPanel onClose={() => setShowFilters(false)} />}
+
       {/* Active search badge */}
       {searchQuery && (
         <div className="mb-8 flex items-center gap-3">
@@ -123,7 +140,7 @@ function ProductsPage() {
       )}
 
       {/* Category tabs */}
-      <div className="flex items-center gap-2 mb-12 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2 mb-8 sm:mb-12 overflow-x-auto pb-1 -mx-1 px-1">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}
@@ -141,13 +158,13 @@ function ProductsPage() {
 
       {/* Grid */}
       {loading ? (
-        <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="glass-card rounded-2xl overflow-hidden animate-pulse">
-              <div className="aspect-square bg-white/[0.03]" />
+              <div className="aspect-square bg-white/3" />
               <div className="p-5 space-y-2">
-                <div className="h-2 bg-white/[0.05] rounded w-16" />
-                <div className="h-3 bg-white/[0.05] rounded w-32" />
+                <div className="h-2 bg-white/5 rounded w-16" />
+                <div className="h-3 bg-white/5 rounded w-32" />
               </div>
             </div>
           ))}
@@ -159,7 +176,7 @@ function ProductsPage() {
           <p className="text-[#555] text-[15px]">No products found.</p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
