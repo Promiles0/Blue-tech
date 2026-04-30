@@ -19,7 +19,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-
 @RequiredArgsConstructor
 @SuppressWarnings("all")
 public class ReviewService {
@@ -80,6 +79,32 @@ public class ReviewService {
         return mapToResponse(updatedReview);
     }
 
+    @Transactional
+    public void deleteReview(User user, Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
+
+        if (!review.getUser().getUserId().equals(user.getUserId()) && !user.getRole().name().equals("ADMIN")) {
+            throw new RuntimeException("You cannot delete this review.");
+        }
+
+        Product product = review.getProduct();
+        int currentCount = product.getReviewCount();
+        if (currentCount > 0) {
+            double currentAvg = product.getAverageRating();
+            if (currentCount == 1) {
+                product.setAverageRating(0.0);
+            } else {
+                double newAvg = ((currentAvg * currentCount) - review.getRating()) / (currentCount - 1);
+                product.setAverageRating(newAvg);
+            }
+            product.setReviewCount(currentCount - 1);
+            productRepository.save(product);
+        }
+
+        reviewRepository.delete(review);
+    }
+
     public List<ReviewResponse> getProductReviews(Long productId) {
         return reviewRepository.findByProduct_ProductId(productId)
                 .stream()
@@ -120,4 +145,3 @@ public class ReviewService {
                 .build();
     }
 }
-
