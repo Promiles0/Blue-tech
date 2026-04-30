@@ -29,6 +29,24 @@ public class OrderService {
     private final AuthService authService;
     private final EmailService emailService;
 
+    public List<OrderResponse> getAllOrders() {
+        return orderRepository.findAll().stream()
+                .map(this::mapToOrderResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<OrderResponse> getUserOrders(User user) {
+        return orderRepository.findByUser_UserId(user.getUserId()).stream()
+                .map(this::mapToOrderResponse)
+                .collect(Collectors.toList());
+    }
+
+    public OrderResponse getOrderById(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
+        return mapToOrderResponse(order);
+    }
+
     @Transactional
     public OrderResponse checkout(User user) {
         // 1. Fetch Cart and Items
@@ -116,6 +134,14 @@ public class OrderService {
     public void cancelOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        User currentUser = authService.getCurrentAuthenticatedUser();
+        boolean isOwner = order.getUser().getUserId().equals(currentUser.getUserId());
+        boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
+
+        if (!isOwner && !isAdmin) {
+            throw new RuntimeException("Unauthorized to cancel this order.");
+        }
 
         if (order.getStatus() == OrderStatus.DELIVERED) {
             throw new RuntimeException("Cannot cancel an order that has already been delivered");

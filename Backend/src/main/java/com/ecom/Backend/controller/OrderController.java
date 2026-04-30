@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/orders")
 @RequiredArgsConstructor
@@ -27,6 +29,19 @@ public class OrderController {
                 ApiResponse.success("Order placed successfully!", response),
                 HttpStatus.CREATED
         );
+    }
+
+    // GET /api/orders
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getMyOrders() {
+        User user = authService.getCurrentAuthenticatedUser();
+        return ResponseEntity.ok(ApiResponse.success("Order history fetched", orderService.getUserOrders(user)));
+    }
+
+    // GET /api/orders/{id}
+    @GetMapping("/{orderId}")
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrderById(@PathVariable Long orderId) {
+        return ResponseEntity.ok(ApiResponse.success("Order details fetched", orderService.getOrderById(orderId)));
     }
 
     // PUT /api/orders/{id}/cancel
