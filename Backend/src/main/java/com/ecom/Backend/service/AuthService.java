@@ -18,6 +18,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -162,6 +163,12 @@ public class AuthService {
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
         userRepository.save(user);
+    }
+
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(this::mapToUserResponse)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     private UserResponse mapToUserResponse(User user) {

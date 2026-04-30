@@ -98,4 +98,24 @@ public class CartService {
         
         cartItemRepository.delete(item);
     }
+
+    @Transactional
+    public CartResponse updateQuantity(User user, Long cartItemId, int quantity) {
+        if (quantity <= 0) {
+            removeFromCart(user, cartItemId);
+            return getCart(user);
+        }
+
+        Cart cart = getOrCreateCart(user);
+        CartItem item = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
+
+        if (!item.getCart().getCartId().equals(cart.getCartId())) {
+            throw new RuntimeException("You cannot update someone else's cart item");
+        }
+
+        item.setQuantity(quantity);
+        cartItemRepository.save(item);
+        return getCart(user);
+    }
 }
