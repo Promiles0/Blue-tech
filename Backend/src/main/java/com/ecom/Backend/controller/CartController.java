@@ -40,4 +40,11 @@ public class CartController {
         cartService.removeFromCart(user, id);
         return ResponseEntity.ok(ApiResponse.success("Item removed from cart", null));
     }
+
+    // PATCH /api/cart/{id}
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<CartResponse>> updateQuantity(@PathVariable Long id, @RequestParam int quantity) {
+        User user = authService.getCurrentAuthenticatedUser();
+        return ResponseEntity.ok(ApiResponse.success("Quantity updated", cartService.updateQuantity(user, id, quantity)));
+    }
 }

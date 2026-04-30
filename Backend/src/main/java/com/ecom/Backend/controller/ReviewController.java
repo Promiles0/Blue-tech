@@ -53,4 +53,12 @@ public class ReviewController {
         List<ReviewResponse> reviews = reviewService.getProductReviews(productId);
         return ResponseEntity.ok(ApiResponse.success("Reviews fetched successfully", reviews));
     }
+
+    // DELETE /api/reviews/{id}
+    @DeleteMapping("/reviews/{reviewId}")
+    public ResponseEntity<ApiResponse<Void>> deleteReview(@PathVariable Long reviewId) {
+        User user = authService.getCurrentAuthenticatedUser();
+        reviewService.deleteReview(user, reviewId);
+        return ResponseEntity.ok(ApiResponse.success("Review deleted successfully", null));
+    }
 }
