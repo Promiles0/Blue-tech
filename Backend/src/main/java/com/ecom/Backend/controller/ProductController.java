@@ -89,4 +89,11 @@ public class ProductController {
         Page<ProductListResponse> products = productService.getProductsPaged(pageable);
         return ResponseEntity.ok(ApiResponse.success("Products fetched successfully", products));
     }
+
+    // GET /api/products/{id}
+    @GetMapping("/{productId}")
+    public ResponseEntity<ApiResponse<ProductDetailResponse>> getProductById(@PathVariable Long productId) {
+        ProductDetailResponse product = productService.getProductById(productId);
+        return ResponseEntity.ok(ApiResponse.success("Product fetched successfully", product));
+    }
 }

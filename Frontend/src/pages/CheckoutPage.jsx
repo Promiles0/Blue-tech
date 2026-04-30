@@ -97,7 +97,7 @@ function CheckoutPage() {
           ))}
         </div>
 
-        <div className="mt-8 pt-6 border-t border-white/[0.06]">
+        <div className="mt-8 pt-6 border-t border-white/6">
           <p className="text-[12px] text-[#555] mb-6">Payment will be handled at delivery (COD).</p>
           <button
             type="submit"

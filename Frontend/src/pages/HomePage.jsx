@@ -75,7 +75,7 @@ function HomePage() {
       {/* ── HERO ──────────────────────────────────────────────────────── */}
       <section className="relative min-h-[92vh] flex items-center">
         {/* Atmospheric glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[160px] pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-150 h-150 bg-primary/10 rounded-full blur-[160px] pointer-events-none" />
 
         <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-3xl">
@@ -117,19 +117,19 @@ function HomePage() {
         {/* Scroll indicator */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-30">
           <span className="text-[9px] uppercase tracking-[0.35em]">Scroll</span>
-          <div className="w-px h-10 bg-gradient-to-b from-white/50 to-transparent" />
+          <div className="w-px h-10 bg-linear-to-b from-white/50 to-transparent" />
         </div>
       </section>
 
       {/* ── CATEGORIES ────────────────────────────────────────────────── */}
-      <section className="border-t border-white/[0.06] py-20">
+      <section className="border-t border-white/6 py-20">
         <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/[0.06]">
+          <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/6">
             {CATEGORIES.map((cat) => (
               <Link
                 key={cat.slug}
                 to={`/products?category=${cat.slug}`}
-                className="group flex items-center justify-between px-8 py-10 hover:bg-white/[0.02] transition-colors first:pl-0 last:pr-0"
+                className="group flex items-center justify-between px-8 py-10 hover:bg-white/2 transition-colors first:pl-0 last:pr-0"
               >
                 <div>
                   <p className="font-display font-semibold text-lg text-white/80 group-hover:text-white transition-colors mb-1">
@@ -173,7 +173,7 @@ function HomePage() {
       </section>
 
       {/* ── BRAND STATEMENT ───────────────────────────────────────────── */}
-      <section className="border-t border-white/[0.06] py-28">
+      <section className="border-t border-white/6 py-28">
         <div className="container mx-auto px-6 text-center max-w-2xl">
           <p className="font-display font-light text-3xl md:text-4xl text-white/40 leading-relaxed tracking-tight">
             "We make things that are{" "}
