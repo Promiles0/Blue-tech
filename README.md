@@ -20,8 +20,7 @@ The system follows a strictly Tiered Micro-Architectural Pattern, ensuring high 
 
 ## Tech Stack
 
-Backend:	Java 17, Spring Boot, Spring Security, Hibernate
-Database	H2 (Development), MySQL (Production)
+Backend:	Java 17, Spring Boot, Spring Security
 
 ## Key Features
 ### Backend Excellence
