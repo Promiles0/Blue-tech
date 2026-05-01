@@ -4,6 +4,7 @@ import { ShoppingBag, Heart, Star, ArrowLeft, Check } from 'lucide-react'
 import api from '../api/axios'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import { trackRecentlyViewed } from '../lib/recentlyViewed'
 
 export default function ProductDetail() {
   const { id }             = useParams()
@@ -25,6 +26,7 @@ export default function ProductDetail() {
         setProduct(data)
         setSelectedVariant(data.variants?.[0] ?? null)
         setReviews(data.reviews ?? [])
+        trackRecentlyViewed(data)
       })
       .catch(() => navigate('/products'))
       .finally(() => setLoading(false))
