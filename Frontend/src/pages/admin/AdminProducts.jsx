@@ -10,6 +10,25 @@ const EMPTY_FORM = {
   images:   [{ ...EMPTY_IMAGE }],
 }
 
+function formFromDetail(p) {
+  return {
+    name:        p.name ?? '',
+    description: p.description ?? '',
+    price:       p.price ?? '',
+    categoryId:  p.categoryId ?? '',
+    variants:    p.variants?.length ? p.variants.map(v => ({
+      skuCode:         v.skuCode ?? '',
+      sizeOrColor:     v.sizeOrColor ?? '',
+      priceAdjustment: v.priceAdjustment ?? '',
+      stockQuantity:   v.stockQuantity ?? 0,
+    })) : [{ ...EMPTY_VARIANT }],
+    images: p.images?.length ? p.images.map(i => ({
+      imageUrl:  i.imageUrl ?? '',
+      isPrimary: i.isPrimary ?? false,
+    })) : [{ ...EMPTY_IMAGE }],
+  }
+}
+
 export default function AdminProducts() {
   const [products, setProducts]     = useState([])
   const [categories, setCategories] = useState([])
@@ -23,6 +42,8 @@ export default function AdminProducts() {
   const [deleting, setDeleting]     = useState(null)
   const [error, setError]           = useState(null)
   const [success, setSuccess]       = useState(null)
+  const [fileUploads, setFileUploads] = useState([]) // [{file, isPrimary}]
+  const [loadingDetail, setLoadingDetail] = useState(false)
 
   const fetchProducts = useCallback(() => {
     setLoading(true)
@@ -43,37 +64,41 @@ export default function AdminProducts() {
 
   const openCreate = () => {
     setForm(EMPTY_FORM)
+    setFileUploads([])
     setEditing(null)
     setError(null)
     setModal('create')
   }
 
-  const openEdit = (product) => {
-    setForm({
-      name:        product.name ?? '',
-      description: product.description ?? '',
-      price:       product.price ?? '',
-      categoryId:  product.category?.categoryId ?? product.categoryId ?? '',
-      variants:    product.variants?.length ? product.variants.map(v => ({
-        skuCode:         v.skuCode ?? '',
-        sizeOrColor:     v.sizeOrColor ?? '',
-        priceAdjustment: v.priceAdjustment ?? '',
-        stockQuantity:   v.stockQuantity ?? 0,
-      })) : [{ ...EMPTY_VARIANT }],
-      images: product.images?.length ? product.images.map(i => ({
-        imageUrl:  i.imageUrl ?? '',
-        isPrimary: i.isPrimary ?? false,
-      })) : [{ ...EMPTY_IMAGE }],
-    })
-    setEditing(product)
+  const openEdit = async (product) => {
     setError(null)
+    setFileUploads([])
+    setForm(EMPTY_FORM)
+    setEditing({ productId: product.productId ?? product.id, name: product.name })
     setModal('edit')
+    setLoadingDetail(true)
+    try {
+      const { data } = await api.get(`/products/${product.productId ?? product.id}`)
+      const p = data?.data ?? data
+      setForm(formFromDetail(p))
+      setEditing(p)
+    } catch {
+      setError('Failed to load product details.')
+    } finally {
+      setLoadingDetail(false)
+    }
   }
 
-  const closeModal = () => { setModal(null); setEditing(null); setError(null) }
+  const closeModal = () => { setModal(null); setEditing(null); setError(null); setFileUploads([]) }
 
   const handleSave = async () => {
     setError(null)
+
+    if (!form.name.trim())                          { setError('Product name is required.'); return }
+    if (!form.price || Number(form.price) <= 0)     { setError('A valid base price is required.'); return }
+    if (!form.categoryId)                           { setError('Please select a category.'); return }
+    if (form.variants.some(v => !v.skuCode.trim())) { setError('All variants must have a SKU code.'); return }
+
     setSaving(true)
     try {
       const payload = {
@@ -92,18 +117,34 @@ export default function AdminProducts() {
           isPrimary: i.isPrimary,
         })),
       }
+      let productId
       if (modal === 'create') {
-        await api.post('/products', payload)
+        const { data } = await api.post('/products', payload)
+        productId = (data?.data ?? data).productId
         setSuccess('Product created!')
       } else {
-        await api.put(`/products/${editing.productId ?? editing.id}`, payload)
+        productId = editing.productId ?? editing.id
+        await api.put(`/products/${productId}`, payload)
         setSuccess('Product updated!')
+      }
+      for (const fu of fileUploads) {
+        const fd = new FormData()
+        fd.append('file', fu.file)
+        fd.append('isPrimary', fu.isPrimary)
+        await api.post(`/products/${productId}/images`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        })
       }
       closeModal()
       fetchProducts()
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
-      setError(err?.response?.data?.message ?? 'Something went wrong.')
+      const fieldErrors = err?.response?.data?.data
+      if (fieldErrors && typeof fieldErrors === 'object') {
+        setError(Object.values(fieldErrors).join(' • '))
+      } else {
+        setError(err?.response?.data?.message ?? 'Something went wrong.')
+      }
     } finally {
       setSaving(false)
     }
@@ -240,6 +281,12 @@ export default function AdminProducts() {
               </div>
             )}
 
+            {loadingDetail && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                {[...Array(4)].map((_, i) => <div key={i} className="skeleton" style={{ height: 38, borderRadius: 8 }} />)}
+              </div>
+            )}
+
             {/* Basic Info */}
             <SectionLabel>Basic Info</SectionLabel>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
@@ -308,7 +355,7 @@ export default function AdminProducts() {
             <SectionLabel style={{ marginTop: 20 }}>
               Images (URLs)
               <button onClick={addImage} style={{ marginLeft: 'auto', fontSize: 11, color: '#7c5cf0', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Plus size={12} /> Add image
+                <Plus size={12} /> Add URL
               </button>
             </SectionLabel>
             {form.images.map((img, i) => (
@@ -319,6 +366,34 @@ export default function AdminProducts() {
                   Primary
                 </label>
                 <button onClick={() => removeImage(i)}
+                  style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#555', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+
+            {/* File uploads */}
+            <div style={{ marginTop: 10, marginBottom: 4 }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7c5cf0', cursor: 'pointer', border: '1px dashed #3a2a6a', borderRadius: 6, padding: '7px 12px' }}>
+                <Plus size={12} /> Upload from computer
+                <input type="file" accept="image/*" multiple style={{ display: 'none' }}
+                  onChange={e => {
+                    const files = Array.from(e.target.files)
+                    setFileUploads(prev => [...prev, ...files.map(f => ({ file: f, isPrimary: false }))])
+                    e.target.value = ''
+                  }}
+                />
+              </label>
+            </div>
+            {fileUploads.map((fu, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fu.file.name}</span>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#555', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={fu.isPrimary}
+                    onChange={e => setFileUploads(prev => prev.map((f, idx) => idx === i ? { ...f, isPrimary: e.target.checked } : f))} />
+                  Primary
+                </label>
+                <button onClick={() => setFileUploads(prev => prev.filter((_, idx) => idx !== i))}
                   style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#555', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
                   <X size={12} />
                 </button>

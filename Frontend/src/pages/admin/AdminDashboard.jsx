@@ -1,143 +1,145 @@
-import { useEffect, useState } from 'react'
-import { DollarSign, ShoppingBag, Users, TrendingUp, AlertTriangle, BarChart2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import {
+  DollarSign, TrendingUp, ShoppingBag, Users,
+  AlertTriangle, Activity, Package,
+} from 'lucide-react'
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  CartesianGrid, ResponsiveContainer,
+} from 'recharts'
 import api from '../../api/axios'
+import { money } from '../../lib/format'
+
+function fetchStats() {
+  return api.get('/admin/dashboard/stats').then(r => r.data)
+}
 
 export default function AdminDashboard() {
-  const [stats, setStats]   = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]   = useState(null)
-
-  useEffect(() => {
-    api.get('/admin/dashboard/stats')
-      .then(({ data }) => setStats(data.data ?? data))
-      .catch(() => setError('Failed to load dashboard stats.'))
-      .finally(() => setLoading(false))
-  }, [])
+  const { data, isLoading, isError } = useQuery({ queryKey: ['admin-overview'], queryFn: fetchStats })
 
   return (
-    <div>
+    <div style={{ padding: 40 }}>
+      {/* Header */}
       <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em' }}>Dashboard</h1>
-        <p style={{ color: '#555', fontSize: 13, marginTop: 4 }}>Overview of your store</p>
+        <h1 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em' }}>
+          Overview
+        </h1>
+        <p style={{ color: 'var(--admin-muted)', fontSize: 13, marginTop: 4 }}>
+          Store performance at a glance
+        </p>
       </div>
 
-      {error && <ErrorBanner msg={error} />}
+      {isError && <ErrorBanner msg="Failed to load dashboard stats." />}
 
-      {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 32 }}>
-        <StatCard
-          icon={DollarSign} color="#7c5cf0"
-          label="Total Revenue"
-          value={loading ? '—' : `$${Number(stats?.totalRevenue ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`}
-        />
-        <StatCard
-          icon={ShoppingBag} color="#f59e0b"
-          label="Total Orders"
-          value={loading ? '—' : (stats?.totalOrders ?? 0).toLocaleString()}
-        />
-        <StatCard
-          icon={Users} color="#22c55e"
-          label="Customers"
-          value={loading ? '—' : (stats?.totalCustomers ?? 0).toLocaleString()}
-        />
-        <StatCard
-          icon={TrendingUp} color="#3b82f6"
-          label="Orders Today"
-          value={loading ? '—' : (stats?.ordersToday ?? 0).toLocaleString()}
-        />
+      {/* KPI Grid — 4 cols × 2 rows */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
+        <KPI icon={DollarSign}  label="Revenue 24h"  value={isLoading ? '—' : money(data?.revenue24h)} />
+        <KPI icon={TrendingUp}  label="Revenue 7d"   value={isLoading ? '—' : money(data?.revenue7d)} />
+        <KPI icon={Activity}    label="Revenue 30d"  value={isLoading ? '—' : money(data?.revenue30d)} />
+        <KPI icon={ShoppingBag} label="AOV (30d)"    value={isLoading ? '—' : money(data?.aov)} />
+        <KPI icon={ShoppingBag} label="Orders 30d"   value={isLoading ? '—' : (data?.orders30d ?? 0).toLocaleString()} />
+        <KPI icon={Users}       label="Customers"    value={isLoading ? '—' : (data?.totalCustomers ?? 0).toLocaleString()} />
+        <KPI icon={AlertTriangle} label="Low Stock"  value={isLoading ? '—' : (data?.lowStockCount ?? 0).toLocaleString()} accent="var(--admin-warning)" />
+        <KPI icon={Package}     label="Variants"     value={isLoading ? '—' : '—'} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        {/* Top sellers */}
-        <Section title="Top Sellers" icon={BarChart2}>
-          {loading ? <Skeleton rows={5} /> : !stats?.topSellers?.length
-            ? <Empty text="No sales data yet" />
-            : stats.topSellers.map((s, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #1a1a1a' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 20, textAlign: 'right', fontSize: 12, color: '#444', fontWeight: 600 }}>#{i + 1}</span>
-                  <span style={{ fontSize: 13, color: '#ccc' }}>{s.productName}</span>
-                </div>
-                <span style={{ fontSize: 13, color: '#7c5cf0', fontWeight: 600 }}>{s.totalQuantitySold} sold</span>
-              </div>
-            ))
-          }
-        </Section>
+      {/* Revenue chart + Low stock */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 20 }}>
+        {/* 14-day revenue chart */}
+        <div className="surface" style={{ borderRadius: 14, padding: '24px 28px' }}>
+          <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 600, marginBottom: 20 }}>
+            Revenue — last 14 days
+          </h2>
+          {isLoading ? (
+            <div style={{ height: 272, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--admin-muted)', fontSize: 13 }}>Loading…</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={272}>
+              <LineChart data={data?.revenueSeries ?? []} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
+                  tickFormatter={v => v.slice(5)}
+                  axisLine={false} tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
+                  tickFormatter={v => `$${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
+                  axisLine={false} tickLine={false} width={50}
+                />
+                <Tooltip
+                  contentStyle={{ background: 'var(--admin-card)', border: '1px solid var(--admin-border)', borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}
+                  formatter={v => [money(v), 'Revenue']}
+                />
+                <Line
+                  type="monotone" dataKey="revenue"
+                  stroke="var(--admin-primary)" strokeWidth={2}
+                  dot={false} activeDot={{ r: 4, fill: 'var(--admin-primary)' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
 
-        {/* Low stock alerts */}
-        <Section title="Low Stock Alerts" icon={AlertTriangle} iconColor="#f59e0b">
-          {loading ? <Skeleton rows={5} /> : !stats?.lowStockAlerts?.length
-            ? <Empty text="All variants are well-stocked" good />
-            : stats.lowStockAlerts.map((a, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #1a1a1a' }}>
-                <div>
-                  <div style={{ fontSize: 13, color: '#ccc' }}>{a.productName}</div>
-                  <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{a.variantInfo}</div>
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: a.currentStock === 0 ? '#ef4444' : '#f59e0b' }}>
-                  {a.currentStock === 0 ? 'Out of stock' : `${a.currentStock} left`}
-                </span>
-              </div>
-            ))
-          }
-        </Section>
+        {/* Low stock list */}
+        <div className="surface" style={{ borderRadius: 14, padding: '24px 24px' }}>
+          <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 600, marginBottom: 18 }}>
+            Low Stock
+          </h2>
+          {isLoading ? (
+            <Skeletons n={5} />
+          ) : !data?.lowStockAlerts?.length ? (
+            <p style={{ fontSize: 13, color: 'var(--admin-success)' }}>All variants well stocked.</p>
+          ) : (
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {data.lowStockAlerts.map((a, i) => (
+                <li key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--admin-border)' }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{a.productName}</div>
+                    {a.skuCode && <div style={{ fontSize: 11, color: 'var(--admin-muted)', marginTop: 1 }}>{a.skuCode}</div>}
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: a.currentStock === 0 ? 'var(--admin-danger)' : 'var(--admin-warning)' }}>
+                    {a.currentStock === 0 ? 'Out' : `${a.currentStock} left`}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
-function StatCard({ icon: Icon, color, label, value }) {
+function KPI({ icon: Icon, label, value, accent }) {
+  const color = accent ?? 'var(--admin-primary)'
   return (
-    <div style={{
-      background: '#111', border: '1px solid #1a1a1a', borderRadius: 12,
-      padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16,
-    }}>
-      <div style={{
-        width: 44, height: 44, borderRadius: 10,
-        background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-      }}>
-        <Icon size={20} color={color} />
+    <div className="surface" style={{ borderRadius: 12, padding: '18px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--admin-muted)', marginBottom: 10 }}>
+        <Icon size={12} style={{ color }} />
+        {label}
       </div>
-      <div>
-        <div style={{ fontSize: 11, color: '#555', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
-        <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em' }}>{value}</div>
+      <div style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>
+        {value}
       </div>
     </div>
   )
 }
 
-function Section({ title, icon: Icon, iconColor = '#7c5cf0', children }) {
+function Skeletons({ n }) {
   return (
-    <div style={{ background: '#111', border: '1px solid #1a1a1a', borderRadius: 12, padding: '22px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-        <Icon size={15} color={iconColor} />
-        <h2 style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', color: '#ccc' }}>{title}</h2>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function Skeleton({ rows }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="skeleton" style={{ height: 14, borderRadius: 4, opacity: 0.5 }} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} className="skeleton" style={{ height: 14, borderRadius: 4 }} />
       ))}
     </div>
   )
 }
 
-function Empty({ text, good }) {
-  return (
-    <p style={{ fontSize: 13, color: good ? '#22c55e' : '#555', padding: '8px 0' }}>{text}</p>
-  )
-}
-
 function ErrorBanner({ msg }) {
   return (
-    <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: '#ef4444' }}>
+    <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: 'var(--admin-danger)' }}>
       {msg}
     </div>
   )

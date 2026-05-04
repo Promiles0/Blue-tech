@@ -14,7 +14,6 @@ export function CartProvider({ children }) {
 
   const fetchCart = useCallback(async () => {
     try {
-      // GET /api/cart → CartResponse (already unwrapped by interceptor)
       const { data } = await api.get('/cart')
       setItems(data?.items ?? [])
     } catch {
@@ -41,12 +40,10 @@ export function CartProvider({ children }) {
 
   const updateQuantity = async (itemId, quantity) => {
     if (quantity < 1) return removeFromCart(itemId)
-    // Backend has no PATCH/PUT for quantity — remove and re-add
-    const item = items.find(i => i.id === itemId)
+    const item = items.find(i => i.cartItemId === itemId)
     if (!item) return
     await removeFromCart(itemId)
-    const variantId = item.variant?.id ?? item.variantId
-    if (variantId) await api.post('/cart', { variantId, quantity })
+    if (item.variantId) await api.post('/cart', { variantId: item.variantId, quantity })
     await fetchCart()
   }
 
