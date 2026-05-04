@@ -1,26 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Search, SlidersHorizontal, ChevronDown, X } from 'lucide-react'
+import { motion, LayoutGroup } from 'framer-motion'
 import ProductCard from '../components/ProductCard'
+import { Reveal } from '../lib/motion'
 import api from '../api/axios'
 
-const CATEGORY_NAMES = ['All', 'Audio', 'Wearables', 'Cameras', 'Computing', 'Gaming', 'Accessories']
-const SORT_OPTIONS   = [
-  { label: 'Newest',          value: 'id,desc' },
+const SORT_OPTIONS = [
+  { label: 'Newest',          value: 'productId,desc' },
   { label: 'Price: Low–High', value: 'price,asc' },
   { label: 'Price: High–Low', value: 'price,desc' },
   { label: 'Name A–Z',        value: 'name,asc' },
-]
-
-const MOCK = [
-  { id: 1, name: 'Pulse Pro Earbuds',    price: 189,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=500&q=80', variants: [{ id: 1 }] },
-  { id: 2, name: 'Vox Studio Monitor',   price: 459,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80', variants: [{ id: 2 }] },
-  { id: 3, name: 'Atlas Smartwatch',     price: 599,  categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', variants: [{ id: 3 }] },
-  { id: 4, name: 'Trail Sport Band',     price: 49,   categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1575311373937-040b8e1fd6b0?w=500&q=80', variants: [{ id: 4 }] },
-  { id: 5, name: 'Lumen X1 Mirrorless', price: 2199, categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80', variants: [{ id: 5 }] },
-  { id: 6, name: 'Prism Action Cam',    price: 429,  categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80', variants: [{ id: 6 }] },
-  { id: 7, name: 'Stratos Ultrabook 14',price: 1499, categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&q=80', variants: [{ id: 7 }] },
-  { id: 8, name: 'Mecha 75 Keyboard',   price: 179,  categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&q=80', variants: [{ id: 8 }] },
 ]
 
 export default function Products() {
@@ -33,7 +23,7 @@ export default function Products() {
 
   const searchQ  = searchParams.get('search') ?? ''
   const category = searchParams.get('category') ?? 'All'
-  const sort     = searchParams.get('sort') ?? 'id,desc'
+  const sort     = searchParams.get('sort') ?? 'productId,desc'
   const page     = parseInt(searchParams.get('page') ?? '0', 10)
 
   // Fetch category list once to get IDs for filtering
@@ -52,7 +42,6 @@ export default function Products() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
 
     const hasFilter = searchQ || (category && category !== 'All')
     const [sortField, sortDir] = sort.split(',')
@@ -64,7 +53,7 @@ export default function Products() {
       if (searchQ) params.set('name', searchQ)
       if (category && category !== 'All') {
         const cat = categories.find(c => c.name === category)
-        if (cat) params.set('categoryId', cat.id)
+        if (cat) params.set('categoryId', cat.categoryId)
       }
       params.set('sort', `${sortField},${sortDir}`)
       params.set('page', page)
@@ -82,18 +71,18 @@ export default function Products() {
     request
       .then(({ data }) => {
         if (!cancelled) {
-          const content = data?.content ?? (Array.isArray(data) ? data : null)
-          setProducts(content ?? MOCK)
+          const content = data?.content ?? (Array.isArray(data) ? data : [])
+          setProducts(content)
           setTotalPages(data?.totalPages ?? 1)
         }
       })
-      .catch(() => { if (!cancelled) setProducts(MOCK) })
+      .catch(() => { if (!cancelled) setProducts([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
   }, [searchQ, category, sort, page, categories])
 
-  const displayProducts = products.length ? products : MOCK
+  const displayProducts = products
   const currentSort     = SORT_OPTIONS.find(o => o.value === sort) ?? SORT_OPTIONS[0]
 
   return (
@@ -128,25 +117,40 @@ export default function Products() {
             )}
           </div>
 
-          {/* Category pills */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {CATEGORY_NAMES.map(cat => {
-              const active = category === cat || (cat === 'All' && (!category || category === 'All'))
-              return (
-                <button key={cat} onClick={() => setParam('category', cat === 'All' ? '' : cat)}
-                  style={{
-                    padding: '7px 14px', borderRadius: 100, fontSize: 13, fontWeight: 500,
-                    background: active ? '#7c5cf0' : 'transparent',
-                    color:      active ? '#fff' : '#888',
-                    border:     `1px solid ${active ? '#7c5cf0' : '#2a2a2a'}`,
-                    cursor: 'pointer', transition: 'all 0.2s',
-                  }}
-                >
-                  {cat}
-                </button>
-              )
-            })}
-          </div>
+          {/* Category pills — sliding active indicator via layoutId */}
+          <LayoutGroup id="cat-pills">
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {['All', ...categories.map(c => c.name)].map(cat => {
+                const active = category === cat || (cat === 'All' && (!category || category === 'All'))
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setParam('category', cat === 'All' ? '' : cat)}
+                    style={{
+                      position: 'relative',
+                      padding: '7px 14px', borderRadius: 100, fontSize: 13, fontWeight: 500,
+                      background: 'transparent',
+                      color: active ? '#fff' : '#888',
+                      border: `1px solid ${active ? 'transparent' : '#2a2a2a'}`,
+                      cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
+                    }}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="active-pill"
+                        style={{
+                          position: 'absolute', inset: 0,
+                          background: '#7c5cf0', borderRadius: 100,
+                        }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+                      />
+                    )}
+                    <span style={{ position: 'relative', zIndex: 1 }}>{cat}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </LayoutGroup>
 
           {/* Sort dropdown */}
           <div style={{ position: 'relative', marginLeft: 'auto' }}>
@@ -180,7 +184,11 @@ export default function Products() {
           </div>
         ) : (
           <div className="grid-4">
-            {displayProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            {displayProducts.map((p, i) => (
+              <Reveal key={p.id} delay={Math.min(i * 0.04, 0.28)}>
+                <ProductCard product={p} />
+              </Reveal>
+            ))}
           </div>
         )}
 

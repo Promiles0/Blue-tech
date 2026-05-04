@@ -30,12 +30,12 @@ export default function Footer() {
             {/* Social */}
             <div style={{ display: 'flex', gap: 12 }}>
               {[
-                { Icon: Globe,        href: '#' },
-                { Icon: Mail,         href: '#' },
-                { Icon: ExternalLink, href: '#' },
-              ].map(({ Icon, href }) => (
+                { Icon: Globe,        href: '#', label: 'website' },
+                { Icon: Mail,         href: '#', label: 'email' },
+                { Icon: ExternalLink, href: '#', label: 'social' },
+              ].map(({ Icon, href, label }) => (
                 <a
-                  key={href + Icon.name}
+                  key={label}
                   href={href}
                   style={{
                     width: 32, height: 32, borderRadius: 8,

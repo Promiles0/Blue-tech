@@ -84,13 +84,13 @@ export default function CartDrawer() {
               ) : (
                 <AnimatePresence initial={false}>
                   {items.map(item => {
-                    const img      = item.product?.images?.find(i => i.primary)?.imageUrl ?? item.product?.images?.[0]?.imageUrl ?? item.product?.imageUrl
-                    const unitPrice = parseFloat(item.unitPrice ?? item.price ?? 0)
+                    const iid       = item.cartItemId ?? item.id
+                    const unitPrice = parseFloat(item.unitPrice ?? 0)
                     const lineTotal = unitPrice * (item.quantity ?? 1)
 
                     return (
                       <motion.div
-                        key={item.id}
+                        key={iid}
                         layout
                         initial={{ opacity: 0, scale: 0.96 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -101,25 +101,18 @@ export default function CartDrawer() {
                           background: '#141414', borderRadius: 12, border: '1px solid #1e1e1e',
                         }}
                       >
-                        {img && (
-                          <div style={{ width: 70, height: 70, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: '#1a1a1a' }}>
-                            <img src={img} alt={item.product?.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          </div>
-                        )}
-
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 14, fontWeight: 500, color: '#fff', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {item.product?.name}
+                            {item.productName}
                           </p>
-                          {item.variant?.sizeOrColor && (
-                            <p style={{ fontSize: 12, color: '#555', marginBottom: 8 }}>{item.variant.sizeOrColor}</p>
+                          {item.sizeOrColor && (
+                            <p style={{ fontSize: 12, color: '#555', marginBottom: 8 }}>{item.sizeOrColor}</p>
                           )}
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            {/* Qty stepper */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #2a2a2a', borderRadius: 8, padding: '4px 10px' }}>
                               <button
-                                onClick={() => item.quantity > 1 ? updateQuantity(item.id, item.quantity - 1) : removeFromCart(item.id)}
+                                onClick={() => item.quantity > 1 ? updateQuantity(iid, item.quantity - 1) : removeFromCart(iid)}
                                 style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', display: 'flex', padding: 2, transition: 'color 0.15s' }}
                                 onMouseEnter={e => e.currentTarget.style.color = '#fff'}
                                 onMouseLeave={e => e.currentTarget.style.color = '#888'}
@@ -128,7 +121,7 @@ export default function CartDrawer() {
                               </button>
                               <span style={{ fontSize: 13, color: '#fff', minWidth: 16, textAlign: 'center' }}>{item.quantity}</span>
                               <button
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(iid, item.quantity + 1)}
                                 style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', display: 'flex', padding: 2, transition: 'color 0.15s' }}
                                 onMouseEnter={e => e.currentTarget.style.color = '#fff'}
                                 onMouseLeave={e => e.currentTarget.style.color = '#888'}
@@ -140,7 +133,7 @@ export default function CartDrawer() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <span style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>${lineTotal.toFixed(2)}</span>
                               <button
-                                onClick={() => removeFromCart(item.id)}
+                                onClick={() => removeFromCart(iid)}
                                 style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', display: 'flex', padding: 4, borderRadius: 6, transition: 'color 0.15s' }}
                                 onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                 onMouseLeave={e => e.currentTarget.style.color = '#333'}
