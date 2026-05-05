@@ -14,7 +14,7 @@ const NAV_ITEMS = [
 
 export default function MobileNav() {
   const { mobileNavOpen, setMobileNavOpen, setPaletteOpen } = useUI()
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
   const navigate         = useNavigate()
 
   const close = () => setMobileNavOpen(false)
@@ -107,9 +107,19 @@ export default function MobileNav() {
 
               {user ? (
                 <>
+                  {isAdmin && (
+                    <Link to="/admin" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#7c5cf0', fontSize: 14, fontWeight: 700 }}>
+                      <User size={15} /> Admin panel
+                    </Link>
+                  )}
                   <Link to="/account" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#888', fontSize: 14 }}>
-                    <User size={15} /> My account
+                    <User size={15} /> Profile
                   </Link>
+                  {!isAdmin && (
+                    <Link to="/orders" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#888', fontSize: 14 }}>
+                      <User size={15} /> My orders
+                    </Link>
+                  )}
                   <button
                     onClick={() => { logout(); close(); navigate('/') }}
                     style={{

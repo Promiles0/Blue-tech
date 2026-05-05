@@ -167,12 +167,14 @@ export default function Header() {
                   borderRadius: 12, padding: '6px', minWidth: 160,
                   boxShadow: '0 8px 32px rgba(0,0,0,0.6)', zIndex: 100,
                 }}>
-                  <DropdownItem to="/account" icon={<User size={14} />} onClick={() => setUserMenuOpen(false)}>My account</DropdownItem>
-                  <DropdownItem to="/orders"  icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>
                   {isAdmin && (
                     <DropdownItem to="/admin" icon={<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#7c5cf0' }}>ADM</span>} onClick={() => setUserMenuOpen(false)}>
                       Admin panel
                     </DropdownItem>
+                  )}
+                  <DropdownItem to="/account" icon={<User size={14} />} onClick={() => setUserMenuOpen(false)}>Profile</DropdownItem>
+                  {!isAdmin && (
+                    <DropdownItem to="/orders"  icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>
                   )}
                   <div style={{ height: 1, background: '#2a2a2a', margin: '4px 6px' }} />
                   <DropdownItem danger icon={<LogOut size={14} />} onClick={() => { logout(); setUserMenuOpen(false); navigate('/') }}>

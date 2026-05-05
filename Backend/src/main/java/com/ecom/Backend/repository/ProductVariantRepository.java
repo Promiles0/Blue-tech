@@ -22,4 +22,5 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     int reduceStockAtomic(@Param("variantId") Long variantId, @Param("quantity") Integer quantity);
 
     List<ProductVariant> findByStockQuantityLessThan(Integer threshold);
+    Long countByStockQuantityLessThan(Integer threshold);
 }
