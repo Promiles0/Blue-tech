@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Eye, Heart } from 'lucide-react'
+import { Heart } from 'lucide-react'
 import { Tilt } from '../lib/motion'
 import { useUI } from '../context/UIContext'
+import { useWishlist } from '../context/WishlistContext'
+import { useAuth } from '../context/AuthContext'
 
 function getStatus(product) {
   if (product.isNew) return 'new'
-  if (product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.price)) return 'sale'
   const qty = product.variants?.[0]?.stockQuantity
   if (qty != null && qty > 0 && qty < 5) return 'low'
   return null
@@ -14,29 +14,35 @@ function getStatus(product) {
 
 const STATUS = {
   new:  { label: 'New',       bg: 'rgba(124,92,240,0.16)',  ring: 'rgba(124,92,240,0.4)',  color: '#a78bfa' },
-  sale: { label: 'Sale',      bg: 'rgba(245,158,11,0.16)',  ring: 'rgba(245,158,11,0.4)',  color: '#fbbf24' },
   low:  { label: 'Low stock', bg: 'rgba(251,146,60,0.16)',  ring: 'rgba(251,146,60,0.4)',  color: '#fb923c' },
 }
 
 export default function ProductCard({ product }) {
   const [hover, setHover] = useState(false)
   const { setQuickViewProduct } = useUI()
+  const { wishlistIds, toggle } = useWishlist()
+  const { user } = useAuth()
+
+  const pid        = product.productId ?? product.id
+  const wishlisted = wishlistIds.has(pid)
+  const price      = parseFloat(product.startingPrice ?? product.price) || 0
 
   const primaryImage =
-    product.images?.find(i => i.primary)?.imageUrl
+    product.images?.find(i => i.isPrimary)?.imageUrl
     ?? product.images?.[0]?.imageUrl
+    ?? product.primaryImageUrl
     ?? product.imageUrl
     ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'
 
-  const hoverImage    = product.images?.[1]?.imageUrl ?? null
-  const categoryName  = product.category?.name ?? product.categoryName ?? ''
-  const price         = parseFloat(product.price) || 0
-  const status        = getStatus(product)
-  const sc            = status ? STATUS[status] : null
+  const hoverImage   = product.images?.[1]?.imageUrl ?? null
+  const categoryName = product.category?.name ?? product.categoryName ?? ''
+  const status       = getStatus(product)
+  const sc           = status ? STATUS[status] : null
 
   return (
     <Tilt max={6} style={{ height: '100%', display: 'block' }}>
       <div
+        onClick={() => setQuickViewProduct(product)}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{
@@ -46,12 +52,12 @@ export default function ProductCard({ product }) {
           transition: 'border-color 0.3s, box-shadow 0.3s',
           boxShadow: hover ? 'var(--shadow-elegant)' : 'none',
           height: '100%', display: 'flex', flexDirection: 'column',
+          cursor: 'pointer',
         }}
       >
         {/* ── Image area ──────────────────────────────────── */}
         <div style={{ position: 'relative', aspectRatio: '4/5', background: '#1a1a1a', overflow: 'hidden', flexShrink: 0 }}>
 
-          {/* Primary image */}
           <img
             src={primaryImage}
             alt={product.name}
@@ -66,7 +72,6 @@ export default function ProductCard({ product }) {
             }}
           />
 
-          {/* Hover / second image cross-fade */}
           {hoverImage && (
             <img
               src={hoverImage}
@@ -81,7 +86,6 @@ export default function ProductCard({ product }) {
             />
           )}
 
-          {/* Bottom gradient revealed on hover */}
           <div style={{
             position: 'absolute', inset: 0,
             background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 50%)',
@@ -90,7 +94,6 @@ export default function ProductCard({ product }) {
             pointerEvents: 'none',
           }} />
 
-          {/* Status badge — top-left */}
           {sc && (
             <div style={{
               position: 'absolute', top: 10, left: 10,
@@ -103,56 +106,30 @@ export default function ProductCard({ product }) {
             </div>
           )}
 
-          {/* Wishlist button — top-right, visible on hover */}
+          {/* Wishlist button — stops propagation so card click doesn't fire */}
           <button
-            onClick={e => { e.preventDefault(); e.stopPropagation() }}
+            onClick={e => { e.stopPropagation(); if (user) toggle(pid) }}
+            title={user ? (wishlisted ? 'Remove from wishlist' : 'Add to wishlist') : 'Sign in to save'}
             style={{
               position: 'absolute', top: 10, right: 10,
-              background: 'rgba(255,255,255,0.08)',
+              background: wishlisted ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.08)',
               backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255,255,255,0.12)',
+              border: `1px solid ${wishlisted ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.12)'}`,
               borderRadius: '50%', width: 34, height: 34,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', cursor: 'pointer',
-              opacity: hover ? 1 : 0,
-              transition: 'opacity 0.25s, background 0.2s',
+              color: wishlisted ? '#f87171' : '#fff', cursor: 'pointer',
+              opacity: hover || wishlisted ? 1 : 0,
+              transition: 'opacity 0.25s, background 0.2s, color 0.2s',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,92,240,0.35)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            onMouseEnter={e => { if (!wishlisted) e.currentTarget.style.background = 'rgba(124,92,240,0.35)' }}
+            onMouseLeave={e => { if (!wishlisted) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
           >
-            <Heart size={14} />
-          </button>
-
-          {/* Quick view pill — slides up on hover */}
-          <button
-            onClick={e => { e.preventDefault(); e.stopPropagation(); setQuickViewProduct(product) }}
-            style={{
-              position: 'absolute',
-              bottom: 12,
-              left: '50%',
-              transform: `translateX(-50%) translateY(${hover ? '0px' : '14px'})`,
-              background: 'rgba(255,255,255,0.12)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              borderRadius: 100,
-              padding: '7px 16px',
-              display: 'flex', alignItems: 'center', gap: 7,
-              color: '#fff', fontSize: 12, fontWeight: 600,
-              cursor: 'pointer',
-              opacity: hover ? 1 : 0,
-              transition: 'opacity 0.25s, transform 0.3s ease',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Eye size={13} /> Quick view
+            <Heart size={14} fill={wishlisted ? 'currentColor' : 'none'} />
           </button>
         </div>
 
         {/* ── Body ─────────────────────────────────────────── */}
-        <Link
-          to={`/products/${product.id}`}
-          style={{ padding: '14px 16px 18px', textDecoration: 'none', display: 'block', flex: 1 }}
-        >
+        <div style={{ padding: '14px 16px 18px', flex: 1 }}>
           {categoryName && (
             <p style={{
               fontSize: 10, fontWeight: 700,
@@ -175,7 +152,7 @@ export default function ProductCard({ product }) {
           <p style={{ fontSize: 15, fontWeight: 700, color: '#f59e0b' }}>
             ${price.toFixed(2)}
           </p>
-        </Link>
+        </div>
       </div>
     </Tilt>
   )

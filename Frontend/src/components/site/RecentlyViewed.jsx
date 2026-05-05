@@ -27,7 +27,7 @@ export default function RecentlyViewed() {
           <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'thin' }}>
             {items.map(p => (
               <Link
-                key={p.id}
+                key={p.id ?? p.productId}
                 to={`/products/${p.id}`}
                 style={{
                   flexShrink: 0, width: 136,

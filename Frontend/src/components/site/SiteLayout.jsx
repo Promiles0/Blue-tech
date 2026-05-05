@@ -1,3 +1,5 @@
+import { useLocation } from 'react-router-dom'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Toaster } from 'sonner'
 import ScrollProgress   from './ScrollProgress'
 import CursorSpotlight  from './CursorSpotlight'
@@ -11,6 +13,9 @@ import MobileNav        from './MobileNav'
 import ProductQuickView from './ProductQuickView'
 
 export default function SiteLayout({ children }) {
+  const location = useLocation()
+  const reduce   = useReducedMotion()
+
   return (
     <>
       <ScrollProgress />
@@ -19,9 +24,20 @@ export default function SiteLayout({ children }) {
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
         <Header />
         <MarqueeStrip />
-        <main style={{ flex: 1 }}>
-          {children}
-        </main>
+
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.main
+            key={location.pathname}
+            style={{ flex: 1 }}
+            initial={reduce ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? {} : { opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            {children}
+          </motion.main>
+        </AnimatePresence>
+
         <NewsletterBand />
         <Footer />
       </div>
