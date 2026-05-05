@@ -31,6 +31,8 @@ public class AuditLog {
     @Column(nullable = false)
     private String targetTable;
 
+    private String targetId;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 

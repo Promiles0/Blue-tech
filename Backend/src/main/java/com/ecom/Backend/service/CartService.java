@@ -6,11 +6,14 @@ import com.ecom.Backend.entity.Cart;
 import com.ecom.Backend.entity.CartItem;
 import com.ecom.Backend.entity.ProductVariant;
 import com.ecom.Backend.entity.User;
+import com.ecom.Backend.enums.NotificationCategory;
+import com.ecom.Backend.enums.NotificationSeverity;
 import com.ecom.Backend.repository.CartItemRepository;
 import com.ecom.Backend.repository.CartRepository;
 import com.ecom.Backend.repository.ProductVariantRepository;
 import com.ecom.Backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +29,8 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final CartRepository cartRepository;
     private final ProductVariantRepository variantRepository;
+    @Lazy
+    private final NotificationService notificationService;
 
     // Helper to find existing cart or create a new one for the user
     private Cart getOrCreateCart(User user) {
@@ -53,17 +58,35 @@ public class CartService {
                         .build());
 
         cartItemRepository.save(cartItem);
+        String productName = variant.getProduct().getName();
+        notificationService.emitUserNotification(user, NotificationCategory.SHOPPING,
+                NotificationSeverity.INFO,
+                productName + " added to cart",
+                "You added " + productName + " to your cart.",
+                "/cart");
         return getCart(user);
     }
 
     public CartResponse getCart(User user) {
         Cart cart = getOrCreateCart(user);
         List<CartItem> items = cartItemRepository.findByCart(cart);
-        
+
         List<CartResponse.CartItemDetail> details = items.stream().map(item -> {
             BigDecimal unitPrice = item.getVariant().getProduct().getPrice()
-                    .add(item.getVariant().getPriceAdjustment());
-            
+                    .add(item.getVariant().getPriceAdjustment() != null
+                            ? item.getVariant().getPriceAdjustment()
+                            : BigDecimal.ZERO);
+
+            String imageUrl = null;
+            var images = item.getVariant().getProduct().getImages();
+            if (images != null && !images.isEmpty()) {
+                imageUrl = images.stream()
+                        .filter(img -> img.getIsPrimary() != null && img.getIsPrimary())
+                        .map(img -> img.getImageUrl())
+                        .findFirst()
+                        .orElse(images.get(0).getImageUrl());
+            }
+
             return CartResponse.CartItemDetail.builder()
                     .cartItemId(item.getCartItemId())
                     .variantId(item.getVariant().getVariantId())
@@ -72,6 +95,7 @@ public class CartService {
                     .quantity(item.getQuantity())
                     .unitPrice(unitPrice)
                     .subTotal(unitPrice.multiply(new BigDecimal(item.getQuantity())))
+                    .productImageUrl(imageUrl)
                     .build();
         }).collect(Collectors.toList());
 
@@ -83,6 +107,25 @@ public class CartService {
                 .items(details)
                 .cartTotal(total)
                 .build();
+    }
+
+    @Transactional
+    public CartResponse updateQuantity(User user, Long cartItemId, int quantity) {
+        Cart cart = getOrCreateCart(user);
+        CartItem item = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
+
+        if (!item.getCart().getCartId().equals(cart.getCartId())) {
+            throw new RuntimeException("You cannot update someone else's cart item");
+        }
+
+        if (quantity < 1) {
+            cartItemRepository.delete(item);
+        } else {
+            item.setQuantity(quantity);
+            cartItemRepository.save(item);
+        }
+        return getCart(user);
     }
 
     @Transactional

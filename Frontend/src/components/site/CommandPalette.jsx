@@ -120,11 +120,13 @@ export default function CommandPalette() {
             {!loading && results.length > 0 && (
               <div style={{ maxHeight: 360, overflowY: 'auto' }}>
                 {results.map(p => {
-                  const img = p.images?.find(i => i.primary)?.imageUrl ?? p.images?.[0]?.imageUrl ?? p.imageUrl
+                  const pid = p.productId ?? p.id
+                  const img = p.primaryImageUrl ?? p.images?.find(i => i.isPrimary)?.imageUrl ?? p.images?.[0]?.imageUrl
+                  const price = parseFloat(p.startingPrice ?? p.price ?? 0)
                   return (
                     <button
-                      key={p.id}
-                      onClick={() => go(p.id)}
+                      key={pid}
+                      onClick={() => go(pid)}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 14,
                         padding: '12px 20px', background: 'none', border: 'none',
@@ -134,12 +136,15 @@ export default function CommandPalette() {
                       onMouseLeave={e => e.currentTarget.style.background = 'none'}
                     >
                       <div style={{ width: 46, height: 46, borderRadius: 8, overflow: 'hidden', background: '#1c1c1c', flexShrink: 0 }}>
-                        {img && <img src={img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        {img
+                          ? <img src={img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : <div style={{ width: '100%', height: '100%', background: '#2a2a2a' }} />
+                        }
                       </div>
                       <div>
                         <p style={{ fontSize: 14, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{p.name}</p>
                         <p style={{ fontSize: 12, color: '#555' }}>
-                          {p.category?.name ?? ''}{p.category?.name ? ' · ' : ''}${parseFloat(p.price ?? 0).toFixed(2)}
+                          {p.categoryName ?? ''}{p.categoryName ? ' · ' : ''}${price.toFixed(2)}
                         </p>
                       </div>
                     </button>

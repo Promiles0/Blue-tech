@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import GoogleLogin from '../components/GoogleLogin'
 
 export default function Register() {
   const [name, setName]         = useState('')
@@ -78,6 +79,10 @@ export default function Register() {
             {loading ? 'Creating account…' : 'Create account'}
           </button>
         </form>
+
+        <div style={{ marginTop: 24, textAlign: 'center' }}>
+          <GoogleLogin />
+        </div>
 
         <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#888' }}>
           Already have an account?{' '}

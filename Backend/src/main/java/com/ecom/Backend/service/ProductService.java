@@ -205,24 +205,30 @@ public class ProductService {
 
     // Fetches products in small "pages" (e.g., 10 at a time) to keep the app fast
     public Page<ProductListResponse> getProductsPaged(Pageable pageable) {
-        return productRepository.findAll(pageable)
-                .map(product -> ProductListResponse.builder()
-                        .productId(product.getProductId())
-                        .name(product.getName())
-                        .categoryName(product.getCategory().getCategoryName())
-                        .startingPrice(product.getPrice()) // Using base price for the list
-                        .build());
+        return productRepository.findAll(pageable).map(this::toListResponse);
     }
 
     public Page<ProductListResponse> searchProducts(String name, Long categoryId, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
         Specification<Product> spec = ProductSpecification.filterBy(name, categoryId, minPrice, maxPrice);
-        return productRepository.findAll(spec, pageable)
-                .map(product -> ProductListResponse.builder()
-                        .productId(product.getProductId())
-                        .name(product.getName())
-                        .categoryName(product.getCategory().getCategoryName())
-                        .startingPrice(product.getPrice())
-                        .build());
+        return productRepository.findAll(spec, pageable).map(this::toListResponse);
+    }
+
+    private ProductListResponse toListResponse(Product product) {
+        String primaryImage = null;
+        if (product.getImages() != null) {
+            primaryImage = product.getImages().stream()
+                    .filter(ProductImage::getIsPrimary)
+                    .map(ProductImage::getImageUrl)
+                    .findFirst()
+                    .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
+        }
+        return ProductListResponse.builder()
+                .productId(product.getProductId())
+                .name(product.getName())
+                .categoryName(product.getCategory().getCategoryName())
+                .startingPrice(product.getPrice())
+                .primaryImageUrl(primaryImage)
+                .build();
     }
 
     // Helper method to convert Entities to DTOs
@@ -241,7 +247,7 @@ public class ProductService {
         List<ProductDetailResponse.ImageResponse> imageDtos = images != null ? images.stream()
                 .map(i -> ProductDetailResponse.ImageResponse.builder()
                         .imageId(i.getImageId())
-                        .imageUrl("/uploads/products/" + i.getImageUrl())
+                        .imageUrl(i.getImageUrl())
                         .isPrimary(i.getIsPrimary())
                         .build())
                 .collect(Collectors.toList()) : null;
@@ -251,6 +257,7 @@ public class ProductService {
                 .name(product.getName())
                 .description(product.getDescription())
                 .price(product.getPrice())
+                .categoryId(product.getCategory().getCategoryId())
                 .categoryName(product.getCategory().getCategoryName())
                 .variants(variantDtos)
                 .images(imageDtos)

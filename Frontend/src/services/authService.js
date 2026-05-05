@@ -20,6 +20,15 @@ const authService = {
   },
 
   /**
+   * Google Login — POST /auth/google
+   * Expected response: { token: string, user: { id, name, email, role } }
+   */
+  googleLogin: async (token) => {
+    const res = await api.post("/auth/google", { token });
+    return res.data;
+  },
+
+  /**
    * Get the logged-in user's profile — GET /auth/me
    */
   getMe: async () => {

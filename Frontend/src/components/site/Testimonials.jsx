@@ -1,18 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Star } from 'lucide-react'
+import { Star, MessageSquare } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
 import api from '../../api/axios'
-
-const FALLBACK = [
-  { name: 'Alex M.',   rating: 5, text: 'The build quality is unlike anything I\'ve owned. Worth every penny.' },
-  { name: 'Jordan L.', rating: 5, text: 'Shipping was fast and the packaging was beautiful. 10/10 experience.' },
-  { name: 'Sam K.',    rating: 5, text: 'Been using the Aurora Wireless for three months. Pristine audio.' },
-  { name: 'Riley C.',  rating: 4, text: 'Elegant, minimal, and performs exactly as described. No surprises.' },
-  { name: 'Morgan T.', rating: 5, text: 'Customer service was outstanding. They helped me pick the perfect gift.' },
-  { name: 'Casey R.',  rating: 5, text: 'The design language is cohesive and beautiful. Love the NOIR aesthetic.' },
-  { name: 'Drew P.',   rating: 4, text: 'Ordered the smartwatch — far exceeded my expectations.' },
-  { name: 'Quinn B.',  rating: 5, text: 'Finally, a tech store that cares about more than specs. Highly recommend.' },
-]
 
 function Card({ name, rating, text }) {
   return (
@@ -54,18 +43,29 @@ function Row({ items, reverse = false, duration = '38s' }) {
 }
 
 export default function Testimonials() {
-  const [items, setItems] = useState(FALLBACK)
+  const [items, setItems]     = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/reviews/recent?limit=8')
+    api.get('/reviews/recent?limit=12')
       .then(({ data }) => {
-        const reviews = data?.data ?? data
-        if (Array.isArray(reviews) && reviews.length >= 4) {
-          setItems(reviews.map(r => ({ name: r.userName, rating: r.rating, text: r.comment })))
-        }
+        const reviews = Array.isArray(data) ? data : []
+        setItems(reviews.map(r => ({ name: r.userName, rating: r.rating, text: r.comment })))
       })
       .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
+
+  // Need at least 2 reviews so each row has content
+  if (!loading && items.length < 2) {
+    return null
+  }
+
+  if (loading) return null
+
+  const mid   = Math.ceil(items.length / 2)
+  const rowA  = items.slice(0, mid)
+  const rowB  = items.slice(mid)
 
   return (
     <section style={{ padding: '72px 0', overflow: 'hidden' }}>
@@ -77,8 +77,8 @@ export default function Testimonials() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <Row items={items.slice(0, Math.ceil(items.length / 2))} duration="42s" />
-        <Row items={items.slice(Math.ceil(items.length / 2))}    duration="38s" reverse />
+        <Row items={rowA} duration="42s" />
+        {rowB.length > 0 && <Row items={rowB} duration="38s" reverse />}
       </div>
     </section>
   )

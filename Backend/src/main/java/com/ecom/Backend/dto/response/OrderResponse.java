@@ -30,16 +30,22 @@ public class OrderResponse {
     private String shippingRecipient;
     
     private List<OrderItemResponse> items;
+    private ShipmentInfo shipmentInfo;
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class OrderItemResponse {
         private String productName;
         private String variantInfo;
         private Integer quantity;
         private BigDecimal priceAtPurchase;
         private BigDecimal subtotal;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class ShipmentInfo {
+        private String carrier;
+        private String trackingNumber;
+        private String status;
+        private LocalDateTime shippedAt;
     }
 }

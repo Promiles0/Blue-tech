@@ -43,7 +43,12 @@ export default function Products() {
   useEffect(() => {
     let cancelled = false
 
-    const hasFilter = searchQ || (category && category !== 'All')
+    const needsCategoryFilter = category && category !== 'All'
+    const hasFilter = searchQ || needsCategoryFilter
+
+    // Wait for categories to load before applying a category filter
+    if (needsCategoryFilter && categories.length === 0) return
+
     const [sortField, sortDir] = sort.split(',')
 
     let request
@@ -51,9 +56,10 @@ export default function Products() {
       // Use search endpoint: GET /api/products/search?name=...&categoryId=...
       const params = new URLSearchParams()
       if (searchQ) params.set('name', searchQ)
-      if (category && category !== 'All') {
+      if (needsCategoryFilter) {
         const cat = categories.find(c => c.name === category)
         if (cat) params.set('categoryId', cat.categoryId)
+        else params.set('name', searchQ || '')  // category not found — fall back to name-only
       }
       params.set('sort', `${sortField},${sortDir}`)
       params.set('page', page)
@@ -185,7 +191,7 @@ export default function Products() {
         ) : (
           <div className="grid-4">
             {displayProducts.map((p, i) => (
-              <Reveal key={p.id} delay={Math.min(i * 0.04, 0.28)}>
+              <Reveal key={p.productId ?? p.id} delay={Math.min(i * 0.04, 0.28)}>
                 <ProductCard product={p} />
               </Reveal>
             ))}

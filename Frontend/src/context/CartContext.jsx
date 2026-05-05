@@ -10,7 +10,7 @@ export function CartProvider({ children }) {
   const { user }          = useAuth()
 
   const count = items.reduce((sum, i) => sum + (i.quantity ?? 1), 0)
-  const total = items.reduce((sum, i) => sum + (parseFloat(i.unitPrice ?? i.price ?? 0)) * (i.quantity ?? 1), 0)
+  const total = items.reduce((sum, i) => sum + parseFloat(i.unitPrice ?? 0) * (i.quantity ?? 1), 0)
 
   const fetchCart = useCallback(async () => {
     try {
@@ -32,23 +32,28 @@ export function CartProvider({ children }) {
     toast.success('Added to cart')
   }
 
-  const removeFromCart = async (itemId) => {
-    await api.delete(`/cart/${itemId}`)
+  const removeFromCart = async (cartItemId) => {
+    await api.delete(`/cart/${cartItemId}`)
     await fetchCart()
-    toast('Item removed')
+    toast('Item removed from cart')
   }
 
-  const updateQuantity = async (itemId, quantity) => {
-    if (quantity < 1) return removeFromCart(itemId)
-    const item = items.find(i => i.cartItemId === itemId)
-    if (!item) return
-    await removeFromCart(itemId)
-    if (item.variantId) await api.post('/cart', { variantId: item.variantId, quantity })
+  const updateQuantity = async (cartItemId, quantity) => {
+    if (quantity < 1) {
+      await api.delete(`/cart/${cartItemId}`)
+      await fetchCart()
+      toast('Item removed from cart')
+      return
+    }
+    await api.patch(`/cart/${cartItemId}`, { quantity })
     await fetchCart()
+    toast.success('Quantity updated')
   }
+
+  const isInCart = (variantId) => items.some(i => i.variantId === variantId)
 
   return (
-    <CartContext.Provider value={{ items, count, total, addToCart, removeFromCart, updateQuantity, fetchCart }}>
+    <CartContext.Provider value={{ items, count, total, addToCart, removeFromCart, updateQuantity, fetchCart, isInCart }}>
       {children}
     </CartContext.Provider>
   )

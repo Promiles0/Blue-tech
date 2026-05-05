@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ShoppingBag, Heart, Star, ArrowLeft, Check } from 'lucide-react'
+import { ShoppingBag, Heart, ArrowLeft, Check, BadgeCheck } from 'lucide-react'
+import { toast } from 'sonner'
+// BadgeCheck used in reviews section below
 import api from '../api/axios'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { trackRecentlyViewed } from '../lib/recentlyViewed'
+import { StarDisplay, StarInput } from '../components/site/StarRating'
 
 export default function ProductDetail() {
   const { id }             = useParams()
@@ -12,7 +15,7 @@ export default function ProductDetail() {
   const { user }           = useAuth()
   const navigate           = useNavigate()
   const [product, setProduct]       = useState(null)
-  const [loading, setLoading]       = useState(true)
+  const [loading, setLoading]       = useState(false)
   const [selectedVariant, setSelectedVariant] = useState(null)
   const [activeImage, setActiveImage]     = useState(0)
   const [adding, setAdding]         = useState(false)
@@ -20,7 +23,7 @@ export default function ProductDetail() {
   const [reviews, setReviews]       = useState([])
 
   useEffect(() => {
-    setLoading(true)
+    setLoading(true)  // eslint-disable-line
     api.get(`/products/${id}`)
       .then(({ data }) => {
         setProduct(data)

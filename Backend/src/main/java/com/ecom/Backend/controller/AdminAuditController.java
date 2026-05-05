@@ -5,9 +5,7 @@ import com.ecom.Backend.service.AuditLogService;
 import com.ecom.Backend.util.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -19,7 +17,9 @@ public class AdminAuditController {
     private final AuditLogService auditLogService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<AuditLog>>> getAllLogs() {
-        return ResponseEntity.ok(ApiResponse.success("Audit logs fetched successfully", auditLogService.getAllLogs()));
+    public ResponseEntity<ApiResponse<List<AuditLog>>> getAllLogs(
+            @RequestParam(defaultValue = "200") int limit) {
+        return ResponseEntity.ok(ApiResponse.success("Audit logs fetched",
+                auditLogService.getAllLogs(limit)));
     }
 }

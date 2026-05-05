@@ -223,8 +223,8 @@ export default function AdminProducts() {
               >
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {p.images?.[0]?.imageUrl && (
-                      <img src={p.images[0].imageUrl} alt=""
+                    {(p.primaryImageUrl ?? p.images?.[0]?.imageUrl) && (
+                      <img src={p.primaryImageUrl ?? p.images[0].imageUrl} alt=""
                         style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', background: '#1c1c1c' }}
                         onError={e => { e.target.style.display = 'none' }}
                       />
@@ -232,8 +232,8 @@ export default function AdminProducts() {
                     <span style={{ fontWeight: 500, color: '#ddd' }}>{p.name}</span>
                   </div>
                 </td>
-                <td style={{ padding: '14px 16px', color: '#555' }}>{p.category?.name ?? p.categoryName ?? '—'}</td>
-                <td style={{ padding: '14px 16px', color: '#f59e0b', fontWeight: 600 }}>${Number(p.price).toFixed(2)}</td>
+                <td style={{ padding: '14px 16px', color: '#555' }}>{p.categoryName ?? p.category?.name ?? '—'}</td>
+                <td style={{ padding: '14px 16px', color: '#f59e0b', fontWeight: 600 }}>${Number(p.startingPrice ?? p.price ?? 0).toFixed(2)}</td>
                 <td style={{ padding: '14px 16px', color: '#555' }}>{p.variants?.length ?? 0}</td>
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', gap: 8 }}>
