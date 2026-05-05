@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShoppingBag, Heart, Truck, Plus, Minus } from 'lucide-react'
+import { X, ShoppingBag, Heart, Truck, Plus, Minus, ArrowRight } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { useUI } from '../../context/UIContext'
+import { useWishlist } from '../../context/WishlistContext'
 import apiService from '../../api/service'
 
 export default function ProductQuickView() {
   const { quickViewProduct, setQuickViewProduct } = useUI()
   const { addToCart }  = useCart()
   const { user }       = useAuth()
+  const { wishlistIds, toggle } = useWishlist()
 
   const [product,         setProduct]         = useState(null)
   const [loading,         setLoading]         = useState(false)
@@ -19,12 +22,13 @@ export default function ProductQuickView() {
   const [adding,          setAdding]          = useState(false)
 
   const isOpen = !!quickViewProduct
+  const pid    = quickViewProduct?.productId ?? quickViewProduct?.id
 
   useEffect(() => {
     if (!quickViewProduct) { setProduct(null); setActiveImage(0); setQty(1); return }
     
     Promise.resolve().then(() => setLoading(true))
-    apiService.products.getOne(quickViewProduct.id)
+    apiService.products.getOne(pid)
       .then(({ data }) => {
         const p = data.data
         setProduct(p)
@@ -35,24 +39,26 @@ export default function ProductQuickView() {
         setSelectedVariant(quickViewProduct.variants?.[0] ?? null)
       })
       .finally(() => setLoading(false))
-  }, [quickViewProduct])
+  }, [quickViewProduct, pid])
 
   const handleAddToCart = async () => {
     if (!user) { window.location.href = '/login'; return }
-    if (!selectedVariant?.id) return
+    const variantId = selectedVariant?.variantId ?? selectedVariant?.id
+    if (!variantId) return
     setAdding(true)
-    try { await addToCart(selectedVariant.id, qty) } finally { setAdding(false) }
+    try { await addToCart(variantId, qty) } finally { setAdding(false) }
   }
 
   const close = () => setQuickViewProduct(null)
 
   const images = product?.images?.length
     ? product.images
-    : [{ imageUrl: quickViewProduct?.imageUrl ?? '' }]
+    : [{ imageUrl: product?.primaryImageUrl ?? quickViewProduct?.primaryImageUrl ?? quickViewProduct?.imageUrl ?? '' }]
 
-  const basePrice = parseFloat(product?.price ?? quickViewProduct?.price ?? 0)
-  const adj       = parseFloat(selectedVariant?.priceAdjustment ?? 0)
-  const price     = basePrice + adj
+  const basePrice  = parseFloat(product?.price ?? quickViewProduct?.startingPrice ?? quickViewProduct?.price ?? 0)
+  const adj        = parseFloat(selectedVariant?.priceAdjustment ?? 0)
+  const price      = basePrice + adj
+  const wishlisted = wishlistIds.has(pid)
 
   return (
     <AnimatePresence>
@@ -144,7 +150,7 @@ export default function ProductQuickView() {
                 <div>
                   <div style={{ aspectRatio: '4/5', background: '#141414', borderRadius: '20px 0 0 20px', overflow: 'hidden' }}>
                     <img
-                      src={images[activeImage]?.imageUrl}
+                      src={images[activeImage]?.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80'}
                       alt={product.name}
                       onError={e => { e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80' }}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -172,7 +178,7 @@ export default function ProductQuickView() {
                 {/* Right — info */}
                 <div style={{ padding: '40px 32px 32px' }}>
                   <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 8 }}>
-                    {product.category?.name ?? ''}
+                    {product.categoryName ?? product.category?.name ?? ''}
                   </p>
                   <h2 style={{
                     fontFamily: '"Space Grotesk",sans-serif',
@@ -192,25 +198,29 @@ export default function ProductQuickView() {
                   )}
 
                   {/* Variants */}
-                  {product.variants?.length > 1 && (
+                  {product.variants?.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
                       <p style={{ fontSize: 12, fontWeight: 600, color: '#aaa', marginBottom: 8 }}>Options</p>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {product.variants.map(v => (
-                          <button
-                            key={v.id}
-                            onClick={() => setSelectedVariant(v)}
-                            style={{
-                              padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                              background: selectedVariant?.id === v.id ? '#7c5cf0' : 'transparent',
-                              color:      selectedVariant?.id === v.id ? '#fff' : '#888',
-                              border:     `1px solid ${selectedVariant?.id === v.id ? '#7c5cf0' : '#2a2a2a'}`,
-                              cursor: 'pointer', transition: 'all 0.18s',
-                            }}
-                          >
-                            {v.sizeOrColor ?? v.skuCode}
-                          </button>
-                        ))}
+                        {product.variants.map(v => {
+                          const vid = v.variantId ?? v.id
+                          const svid = selectedVariant?.variantId ?? selectedVariant?.id
+                          return (
+                            <button
+                              key={vid}
+                              onClick={() => setSelectedVariant(v)}
+                              style={{
+                                padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                                background: svid === vid ? '#7c5cf0' : 'transparent',
+                                color:      svid === vid ? '#fff' : '#888',
+                                border:     `1px solid ${svid === vid ? '#7c5cf0' : '#2a2a2a'}`,
+                                cursor: 'pointer', transition: 'all 0.18s',
+                              }}
+                            >
+                              {v.sizeOrColor ?? v.skuCode}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
                   )}
@@ -233,8 +243,8 @@ export default function ProductQuickView() {
 
                   {/* Stock */}
                   {selectedVariant && (
-                    <p style={{ fontSize: 12, color: selectedVariant.stockQuantity > 0 ? '#22c55e' : '#ef4444', marginBottom: 18 }}>
-                      {selectedVariant.stockQuantity > 0 ? `${selectedVariant.stockQuantity} in stock` : 'Out of stock'}
+                    <p style={{ fontSize: 12, color: (selectedVariant.stockQuantity ?? 0) > 0 ? '#22c55e' : '#ef4444', marginBottom: 18 }}>
+                      {(selectedVariant.stockQuantity ?? 0) > 0 ? `${selectedVariant.stockQuantity} in stock` : 'Out of stock'}
                     </p>
                   )}
 
@@ -249,14 +259,28 @@ export default function ProductQuickView() {
                       <ShoppingBag size={15} />
                       {adding ? 'Adding…' : 'Add to cart'}
                     </button>
-                    <button className="noir-btn-outline" style={{ padding: '13px 14px' }}>
-                      <Heart size={17} />
+                    <button
+                      onClick={() => { if (user) toggle(pid) }}
+                      className="noir-btn-outline"
+                      style={{ padding: '13px 14px', color: wishlisted ? '#f87171' : undefined, borderColor: wishlisted ? 'rgba(239,68,68,0.4)' : undefined }}
+                      title={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+                    >
+                      <Heart size={17} fill={wishlisted ? 'currentColor' : 'none'} />
                     </button>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#444', fontSize: 12 }}>
-                    <Truck size={13} />
-                    Free shipping on orders over $200
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#444', fontSize: 12 }}>
+                      <Truck size={13} />
+                      Free shipping on orders over $200
+                    </div>
+                    <Link
+                      to={`/products/${pid}`}
+                      onClick={close}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#7c5cf0', textDecoration: 'none' }}
+                    >
+                      View full details <ArrowRight size={12} />
+                    </Link>
                   </div>
                 </div>
               </div>
