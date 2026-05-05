@@ -2,10 +2,10 @@ import { useReducedMotion } from 'framer-motion'
 
 const ITEMS = [
   'Free shipping over $200',
-  'New drop: Nocturne collection',
   'Members get 15% off',
   'Free returns within 30 days',
   'Secure checkout · SSL encrypted',
+  'New arrivals added weekly',
 ]
 
 export default function MarqueeStrip() {

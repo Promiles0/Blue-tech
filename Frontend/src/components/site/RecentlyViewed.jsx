@@ -25,10 +25,10 @@ export default function RecentlyViewed() {
 
         <Reveal delay={0.08}>
           <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'thin' }}>
-            {items.map(p => (
+            {items.map((p, i) => (
               <Link
-                key={p.id ?? p.productId}
-                to={`/products/${p.id}`}
+                key={p.productId ?? p.id ?? i}
+                to={`/products/${p.productId ?? p.id}`}
                 style={{
                   flexShrink: 0, width: 136,
                   background: '#141414', border: '1px solid #1e1e1e',

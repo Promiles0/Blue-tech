@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShoppingBag, Heart, Truck, Plus, Minus, ArrowRight } from 'lucide-react'
+import { X, ShoppingBag, Heart, Truck, Plus, Minus, ArrowRight, Check } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { useUI } from '../../context/UIContext'
@@ -10,9 +10,10 @@ import api from '../../api/axios'
 
 export default function ProductQuickView() {
   const { quickViewProduct, setQuickViewProduct } = useUI()
-  const { addToCart }  = useCart()
+  const { addToCart, isInCart }  = useCart()
   const { user }       = useAuth()
   const { wishlistIds, toggle } = useWishlist()
+  const navigate = useNavigate()
 
   const [product,         setProduct]         = useState(null)
   const [loading,         setLoading]         = useState(false)
@@ -53,10 +54,14 @@ export default function ProductQuickView() {
     ? product.images
     : [{ imageUrl: product?.primaryImageUrl ?? quickViewProduct?.primaryImageUrl ?? quickViewProduct?.imageUrl ?? '' }]
 
-  const basePrice  = parseFloat(product?.price ?? quickViewProduct?.startingPrice ?? quickViewProduct?.price ?? 0)
-  const adj        = parseFloat(selectedVariant?.priceAdjustment ?? 0)
-  const price      = basePrice + adj
-  const wishlisted = wishlistIds.has(pid)
+  const basePrice    = parseFloat(product?.price ?? quickViewProduct?.startingPrice ?? quickViewProduct?.price ?? 0)
+  const adj          = parseFloat(selectedVariant?.priceAdjustment ?? 0)
+  const unitPrice    = basePrice + adj
+  const price        = unitPrice * qty
+  const wishlisted   = wishlistIds.has(pid)
+  const variantInCart = selectedVariant
+    ? isInCart(selectedVariant.variantId ?? selectedVariant.id)
+    : false
 
   return (
     <AnimatePresence>
@@ -173,9 +178,14 @@ export default function ProductQuickView() {
                     }}>
                       {product.name}
                     </h2>
-                    <p style={{ fontSize: 28, fontWeight: 900, color: '#f59e0b', marginBottom: 18 }}>
-                      ${price.toFixed(2)}
-                    </p>
+                    <div style={{ marginBottom: 18 }}>
+                      <p style={{ fontSize: 28, fontWeight: 900, color: '#f59e0b' }}>
+                        ${price.toFixed(2)}
+                      </p>
+                      {qty > 1 && (
+                        <p style={{ fontSize: 12, color: '#666', marginTop: 2 }}>${unitPrice.toFixed(2)} each</p>
+                      )}
+                    </div>
 
                     {product.description && (
                       <p style={{ fontSize: 14, color: '#888', lineHeight: 1.7, marginBottom: 22 }}>
@@ -235,17 +245,28 @@ export default function ProductQuickView() {
 
                     {/* CTAs */}
                     <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+                      {variantInCart ? (
+                        <button
+                          onClick={() => { close(); navigate('/cart') }}
+                          className="noir-btn-outline"
+                          style={{ flex: 1, padding: '13px', fontSize: 14, color: '#22c55e', borderColor: 'rgba(34,197,94,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                        >
+                          <Check size={15} />
+                          View in cart
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleAddToCart}
+                          disabled={adding || !selectedVariant || (selectedVariant?.stockQuantity ?? 0) < 1}
+                          className="noir-btn-primary shine"
+                          style={{ flex: 1, padding: '13px', fontSize: 14 }}
+                        >
+                          <ShoppingBag size={15} />
+                          {adding ? 'Adding…' : 'Add to cart'}
+                        </button>
+                      )}
                       <button
-                        onClick={handleAddToCart}
-                        disabled={adding || !selectedVariant}
-                        className="noir-btn-primary shine"
-                        style={{ flex: 1, padding: '13px', fontSize: 14 }}
-                      >
-                        <ShoppingBag size={15} />
-                        {adding ? 'Adding…' : 'Add to cart'}
-                      </button>
-                      <button
-                        onClick={() => { if (user) toggle(pid) }}
+                        onClick={() => { if (user) toggle(pid, product?.name) }}
                         className="noir-btn-outline"
                         style={{ padding: '13px 14px', color: wishlisted ? '#f87171' : undefined, borderColor: wishlisted ? 'rgba(239,68,68,0.4)' : undefined }}
                         title={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}

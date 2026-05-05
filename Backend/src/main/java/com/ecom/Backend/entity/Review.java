@@ -32,6 +32,10 @@ public class Review {
     @Column(columnDefinition = "TEXT")
     private String comment;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean isHidden = false;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

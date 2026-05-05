@@ -97,10 +97,18 @@ export default function CartDrawer() {
                         exit={{ opacity: 0, height: 0, marginBottom: 0, overflow: 'hidden' }}
                         transition={{ duration: 0.22 }}
                         style={{
-                          display: 'flex', gap: 14, padding: 14, marginBottom: 8,
+                          display: 'flex', gap: 12, padding: 14, marginBottom: 8,
                           background: '#141414', borderRadius: 12, border: '1px solid #1e1e1e',
+                          alignItems: 'flex-start',
                         }}
                       >
+                        {item.productImageUrl && (
+                          <div style={{ width: 58, height: 58, borderRadius: 8, overflow: 'hidden', background: '#1a1a1a', flexShrink: 0 }}>
+                            <img src={item.productImageUrl} alt={item.productName}
+                              onError={e => { e.target.style.display = 'none' }}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 14, fontWeight: 500, color: '#fff', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {item.productName}

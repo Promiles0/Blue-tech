@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle } from "lucide-react";
 import orderService from "../services/orderService";
+import CouponInput from "../components/site/CouponInput";
 
 function CheckoutPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState("form"); // "form" | "success"
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [coupon, setCoupon] = useState(null);
 
   const [form, setForm] = useState({
     fullName: "",
@@ -97,8 +99,23 @@ function CheckoutPage() {
           ))}
         </div>
 
-        <div className="mt-8 pt-6 border-t border-white/6">
-          <p className="text-[12px] text-[#555] mb-6">Payment will be handled at delivery (COD).</p>
+        <div className="mt-8 pt-6 border-t border-white/6 flex flex-col gap-4">
+          <div>
+            <label className="block text-[12px] text-[#555] mb-2 tracking-wide">Coupon code</label>
+            <CouponInput
+              applied={coupon}
+              onApply={setCoupon}
+              onRemove={() => setCoupon(null)}
+            />
+          </div>
+
+          {coupon && (
+            <p className="text-[13px] text-[#a78bfa]">
+              Discount applied: {coupon.kind === 'PERCENT' ? `${coupon.value}% off` : `$${parseFloat(coupon.value).toFixed(2)} off`}
+            </p>
+          )}
+
+          <p className="text-[12px] text-[#555]">Payment will be handled at delivery (COD).</p>
           <button
             type="submit"
             disabled={loading}

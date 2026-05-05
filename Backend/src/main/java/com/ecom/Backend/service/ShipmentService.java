@@ -4,6 +4,8 @@ import com.ecom.Backend.dto.request.ShipmentRequest;
 import com.ecom.Backend.dto.response.ShipmentResponse;
 import com.ecom.Backend.entity.Order;
 import com.ecom.Backend.entity.Shipment;
+import com.ecom.Backend.enums.NotificationCategory;
+import com.ecom.Backend.enums.NotificationSeverity;
 import com.ecom.Backend.enums.OrderStatus;
 import com.ecom.Backend.enums.ShipmentStatus;
 import com.ecom.Backend.repository.OrderRepository;
@@ -82,7 +84,14 @@ public class ShipmentService {
 
         if (!message.isEmpty()) {
             orderRepository.save(order);
-            notificationService.createNotification(order.getUser(), title, message);
+            notificationService.emitUserNotification(
+                    order.getUser(),
+                    NotificationCategory.ORDER,
+                    NotificationSeverity.INFO,
+                    title,
+                    message,
+                    null
+            );
             emailService.sendEmail(order.getUser().getEmail(), title, message);
         }
     }
