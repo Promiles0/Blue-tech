@@ -8,18 +8,6 @@ import RecentlyViewed from '../components/site/RecentlyViewed'
 import { Reveal, Parallax, Magnetic } from '../lib/motion'
 import api from '../api/axios'
 
-const CATEGORIES = ['Audio', 'Wearables', 'Cameras', 'Computing', 'Gaming', 'Accessories']
-
-const MOCK_PRODUCTS = [
-  { id: 1, name: 'Pulse Pro Earbuds',     price: 189,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=500&q=80', variants: [{ id: 1 }] },
-  { id: 2, name: 'Vox Studio Monitor',    price: 459,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80', variants: [{ id: 2 }] },
-  { id: 3, name: 'Atlas Smartwatch',      price: 599,  categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', variants: [{ id: 3 }] },
-  { id: 4, name: 'Trail Sport Band',      price: 49,   categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1575311373937-040b8e1fd6b0?w=500&q=80', variants: [{ id: 4 }] },
-  { id: 5, name: 'Lumen X1 Mirrorless',  price: 2199, categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80', variants: [{ id: 5 }] },
-  { id: 6, name: 'Prism Action Cam',     price: 429,  categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80', variants: [{ id: 6 }] },
-  { id: 7, name: 'Stratos Ultrabook 14', price: 1499, categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&q=80', variants: [{ id: 7 }] },
-  { id: 8, name: 'Mecha 75 Keyboard',    price: 179,  categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&q=80', variants: [{ id: 8 }] },
-]
 
 // ── Word-by-word stagger ────────────────────────────────────────────────────
 const containerVariants = {
@@ -35,7 +23,7 @@ function StaggeredHeadline({ lines }) {
   const reduce = useReducedMotion()
   const words  = lines.flatMap((line, li) => [
     ...line.split(' ').map((word, wi) => ({ word, line: li, wi })),
-    { word: null, line: li, wi: -1 }, // line break marker
+    { word: null, line: li, wi: -1 }, // line break marke
   ])
 
   if (reduce) {
@@ -70,19 +58,26 @@ function StaggeredHeadline({ lines }) {
 
 export default function Home() {
   const [products,        setProducts]        = useState([])
+  const [categories,      setCategories]      = useState([])
   const [activeCategory,  setActiveCategory]  = useState(null)
   const [loading,         setLoading]         = useState(true)
+
+  useEffect(() => {
+    api.get('/categories')
+      .then(({ data }) => setCategories(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     let cancelled = false
     api.get('/products?page=0&size=8')
       .then(({ data }) => {
         if (!cancelled) {
-          const content  = data?.content ?? (Array.isArray(data) ? data : [])
+          const content = data?.content ?? (Array.isArray(data) ? data : [])
           setProducts(content)
         }
       })
-      .catch(() => { if (!cancelled) setProducts(MOCK_PRODUCTS) })
+      .catch(() => { if (!cancelled) setProducts([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])
@@ -91,7 +86,7 @@ export default function Home() {
     ? products.filter(p => (p.category?.name ?? p.categoryName) === activeCategory)
     : products
 
-  const displayProducts = filtered.length ? filtered : MOCK_PRODUCTS
+  const displayProducts = filtered
 
   return (
     <div>
@@ -176,10 +171,11 @@ export default function Home() {
               <div style={{ position: 'relative' }}>
                 <div style={{
                   borderRadius: 16, overflow: 'hidden',
-                  aspectRatio: '4/3', background: '#1a1a1a',
+                  aspectRatio: '4/5', background: '#1a1a1a',
                 }}>
                   <img
-                    src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&q=80"
+                    // src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&q=80"
+                    src="https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                     alt="Aurora Wireless headphones"
                     className="ken-burns"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -212,23 +208,23 @@ export default function Home() {
       {/* ── Category tabs ──────────────────────────────────── */}
       <section style={{ borderTop: '1px solid #141414', borderBottom: '1px solid #141414', overflowX: 'auto' }}>
         <div className="container-noir" style={{ display: 'flex', minWidth: 560 }}>
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button
-              key={cat}
-              onClick={() => setActiveCategory(prev => prev === cat ? null : cat)}
+              key={cat.categoryId}
+              onClick={() => setActiveCategory(prev => prev === cat.name ? null : cat.name)}
               style={{
                 flex: 1, padding: '18px 8px',
                 fontSize: 14, fontWeight: 500,
-                color: activeCategory === cat ? '#fff' : '#555',
+                color: activeCategory === cat.name ? '#fff' : '#555',
                 background: 'none', border: 'none',
-                borderBottom: `2px solid ${activeCategory === cat ? '#7c5cf0' : 'transparent'}`,
+                borderBottom: `2px solid ${activeCategory === cat.name ? '#7c5cf0' : 'transparent'}`,
                 cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
                 whiteSpace: 'nowrap',
               }}
-              onMouseEnter={e => { if (activeCategory !== cat) e.currentTarget.style.color = '#bbb' }}
-              onMouseLeave={e => { if (activeCategory !== cat) e.currentTarget.style.color = '#555' }}
+              onMouseEnter={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = '#bbb' }}
+              onMouseLeave={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = '#555' }}
             >
-              {cat}
+              {cat.name}
             </button>
           ))}
         </div>
@@ -307,8 +303,8 @@ export default function Home() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
-                  { img: 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=500&q=80', label: 'Precision audio' },
-                  { img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', label: 'Wearable craft' },
+                  { img: 'https://images.unsplash.com/photo-1655560378428-7605bda51749?q=80&w=2069&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', label: 'Precision audio' },
+                  { img: 'https://images.unsplash.com/photo-1523275335684-378s98b6baf30?w=500&q=80', label: 'Wearable craft' },
                 ].map(({ img, label }) => (
                   <div key={label} style={{ flex: 1, borderRadius: 16, overflow: 'hidden', background: '#141414', position: 'relative', minHeight: 180 }}>
                     <img src={img} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
