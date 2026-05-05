@@ -2,38 +2,27 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Truck, Shield, RotateCcw } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
-import ProductCard    from '../components/ProductCard'
-import Testimonials   from '../components/site/Testimonials'
+import ProductCard from '../components/ProductCard'
+import Testimonials from '../components/site/Testimonials'
 import RecentlyViewed from '../components/site/RecentlyViewed'
 import { Reveal, Parallax, Magnetic } from '../lib/motion'
-import api from '../api/axios'
+import apiService from '../api/service'
 
 const CATEGORIES = ['Audio', 'Wearables', 'Cameras', 'Computing', 'Gaming', 'Accessories']
 
-const MOCK_PRODUCTS = [
-  { id: 1, name: 'Pulse Pro Earbuds',     price: 189,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=500&q=80', variants: [{ id: 1 }] },
-  { id: 2, name: 'Vox Studio Monitor',    price: 459,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80', variants: [{ id: 2 }] },
-  { id: 3, name: 'Atlas Smartwatch',      price: 599,  categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', variants: [{ id: 3 }] },
-  { id: 4, name: 'Trail Sport Band',      price: 49,   categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1575311373937-040b8e1fd6b0?w=500&q=80', variants: [{ id: 4 }] },
-  { id: 5, name: 'Lumen X1 Mirrorless',  price: 2199, categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80', variants: [{ id: 5 }] },
-  { id: 6, name: 'Prism Action Cam',     price: 429,  categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80', variants: [{ id: 6 }] },
-  { id: 7, name: 'Stratos Ultrabook 14', price: 1499, categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&q=80', variants: [{ id: 7 }] },
-  { id: 8, name: 'Mecha 75 Keyboard',    price: 179,  categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&q=80', variants: [{ id: 8 }] },
-]
-
 // ── Word-by-word stagger ────────────────────────────────────────────────────
 const containerVariants = {
-  hidden:  { opacity: 0 },
+  hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.25 } },
 }
 const wordVariants = {
-  hidden:  { y: 20, opacity: 0 },
-  visible: { y: 0,  opacity: 1, transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1] } },
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1] } },
 }
 
 function StaggeredHeadline({ lines }) {
   const reduce = useReducedMotion()
-  const words  = lines.flatMap((line, li) => [
+  const words = lines.flatMap((line, li) => [
     ...line.split(' ').map((word, wi) => ({ word, line: li, wi })),
     { word: null, line: li, wi: -1 }, // line break marker
   ])
@@ -69,20 +58,17 @@ function StaggeredHeadline({ lines }) {
 }
 
 export default function Home() {
-  const [products,        setProducts]        = useState([])
-  const [activeCategory,  setActiveCategory]  = useState(null)
-  const [loading,         setLoading]         = useState(true)
+  const [products, setProducts] = useState([])
+  const [activeCategory, setActiveCategory] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
-    api.get('/products?page=0&size=8')
+    apiService.products.getAllPaginated('page=0&size=8')
       .then(({ data }) => {
-        if (!cancelled) {
-          const content  = data?.content ?? (Array.isArray(data) ? data : [])
-          setProducts(content)
-        }
+        if (!cancelled) setProducts(data.data?.content ?? [])
       })
-      .catch(() => { if (!cancelled) setProducts(MOCK_PRODUCTS) })
+      .catch(() => { if (!cancelled) setProducts([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])
@@ -91,7 +77,7 @@ export default function Home() {
     ? products.filter(p => (p.category?.name ?? p.categoryName) === activeCategory)
     : products
 
-  const displayProducts = filtered.length ? filtered : MOCK_PRODUCTS
+  const displayProducts = filtered
 
   return (
     <div>
@@ -333,9 +319,9 @@ export default function Home() {
               display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32,
             }}>
               {[
-                { icon: <Truck size={22} />,     title: 'Free shipping',   desc: 'On all orders over $200.' },
-                { icon: <Shield size={22} />,    title: '2-year warranty', desc: 'Quietly confident craftsmanship.' },
-                { icon: <RotateCcw size={22} />, title: '30-day returns',  desc: "If it isn't right, send it back." },
+                { icon: <Truck size={22} />, title: 'Free shipping', desc: 'On all orders over $200.' },
+                { icon: <Shield size={22} />, title: '2-year warranty', desc: 'Quietly confident craftsmanship.' },
+                { icon: <RotateCcw size={22} />, title: '30-day returns', desc: "If it isn't right, send it back." },
               ].map(({ icon, title, desc }) => (
                 <div key={title}>
                   <div style={{ color: '#7c5cf0', marginBottom: 12 }}>{icon}</div>

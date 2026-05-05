@@ -103,7 +103,10 @@ export default function Navbar() {
           </Link>
 
           {user ? (
-            <div ref={userMenuRef} style={{ position: 'relative' }}>
+            <div ref={userMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: '#555', marginRight: 4, fontWeight: 500 }}>
+                Hi, {user.name.split(' ')[0]}
+              </span>
               <IconBtn onClick={() => setUserMenuOpen(o => !o)}>
                 <User size={18} />
               </IconBtn>

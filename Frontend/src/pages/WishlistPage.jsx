@@ -1,32 +1,35 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Heart, ShoppingBag } from 'lucide-react'
-import api from '../api/axios'
+import apiService from '../api/service'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 
 export default function Wishlist() {
-  const { user }       = useAuth()
-  const { addToCart }  = useCart()
-  const [items, setItems]     = useState([])
+  const { user } = useAuth()
+  const { addToCart } = useCart()
+  const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState({})
 
-  const fetchWishlist = () => {
-    if (!user) { setLoading(false); return }
-    api.get('/wishlist')
-      .then(({ data }) => setItems(data?.items ?? (Array.isArray(data) ? data : [])))
+  const fetchWishlist = useCallback(() => {
+    if (!user) {
+      Promise.resolve().then(() => setLoading(false))
+      return
+    }
+    apiService.wishlist.get()
+      .then(({ data }) => setItems(data.data?.items ?? (Array.isArray(data.data) ? data.data : [])))
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
-  }
+  }, [user])
 
-  useEffect(() => { fetchWishlist() }, [user])
+  useEffect(() => { fetchWishlist() }, [fetchWishlist])
 
   // Wishlist uses toggle: POST /wishlist/{productId} to add OR remove
   const removeFromWishlist = async (productId) => {
     setToggling(prev => ({ ...prev, [productId]: true }))
     try {
-      await api.post(`/wishlist/${productId}`)
+      await apiService.wishlist.toggle(productId)
       setItems(prev => prev.filter(i => (i.variant?.product?.id ?? i.product?.id ?? i.productId) !== productId))
     } finally {
       setToggling(prev => ({ ...prev, [productId]: false }))
@@ -68,11 +71,11 @@ export default function Wishlist() {
         ) : (
           <div className="grid-4">
             {items.map(item => {
-              const product   = item.variant?.product ?? item.product ?? {}
+              const product = item.variant?.product ?? item.product ?? {}
               const productId = product.id ?? item.productId
-              const img       = product.images?.[0]?.imageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80'
-              const price     = parseFloat(product.price ?? 0)
-              const cat       = product.category?.name ?? ''
+              const img = product.images?.[0]?.imageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80'
+              const price = parseFloat(product.price ?? 0)
+              const cat = product.category?.name ?? ''
 
               return (
                 <div key={item.id} style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 12, overflow: 'hidden' }}>

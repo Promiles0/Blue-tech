@@ -22,9 +22,9 @@ public class OrderController {
 
     // POST /api/orders/checkout
     @PostMapping("/checkout")
-    public ResponseEntity<ApiResponse<OrderResponse>> checkout() {
+    public ResponseEntity<ApiResponse<OrderResponse>> checkout(@RequestBody com.ecom.Backend.dto.request.OrderRequest request) {
         User user = authService.getCurrentAuthenticatedUser();
-        OrderResponse response = orderService.checkout(user);
+        OrderResponse response = orderService.checkout(user, request);
         return new ResponseEntity<>(
                 ApiResponse.success("Order placed successfully!", response),
                 HttpStatus.CREATED

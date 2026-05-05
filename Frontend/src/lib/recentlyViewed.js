@@ -13,7 +13,11 @@ export function trackRecentlyViewed(product) {
   }
   const stored  = getRecentlyViewed()
   const updated = [entry, ...stored.filter(p => p.id !== product.id)].slice(0, MAX)
-  try { localStorage.setItem(KEY, JSON.stringify(updated)) } catch {}
+  try { 
+    localStorage.setItem(KEY, JSON.stringify(updated)) 
+  } catch (e) {
+    console.error('Failed to save recently viewed', e)
+  }
 }
 
 export function getRecentlyViewed() {

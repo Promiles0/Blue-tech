@@ -21,8 +21,11 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @RequiredArgsConstructor
+@Transactional
 @SuppressWarnings("all")
 public class AuthService {
 
@@ -35,9 +38,19 @@ public class AuthService {
 
     // Helper to get the logged-in User entity from the Security Context
     public User getCurrentAuthenticatedUser() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String email;
+        
+        if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+            email = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+        } else if (principal instanceof org.springframework.security.oauth2.core.user.OAuth2User) {
+            email = ((org.springframework.security.oauth2.core.user.OAuth2User) principal).getAttribute("email");
+        } else {
+            email = principal.toString();
+        }
+
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Logged in user not found in database"));
+                .orElseThrow(() -> new RuntimeException("Logged in user not found in database: " + email));
     }
 
     public AuthResponse registerUser(UserRegisterRequest request) {
@@ -51,7 +64,6 @@ public class AuthService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .phone(request.getPhone())
                 .role(RoleType.CUSTOMER) // Default role is customer
                 .build();
 
@@ -71,12 +83,16 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
         String jwtToken = jwtService.generateToken(userDetails);
         
-        // 6. Send Welcome Email
-        emailService.sendEmail(
-            savedUser.getEmail(), 
-            "Welcome to Our Platform!", 
-            "<h1>Welcome " + savedUser.getName() + "!</h1><p>Thank you for joining us. Start shopping now!</p>"
-        );
+        // 6. Send Welcome Email (wrapped in try-catch so registration doesn't fail if email fails)
+        try {
+            emailService.sendEmail(
+                savedUser.getEmail(), 
+                "Welcome to Our Platform!", 
+                "<h1>Welcome " + savedUser.getName() + "!</h1><p>Thank you for joining us. Start shopping now!</p>"
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to send welcome email: " + e.getMessage());
+        }
         
         return AuthResponse.builder()
                 .token(jwtToken)
