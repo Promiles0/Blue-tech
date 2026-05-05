@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Search, SlidersHorizontal, ChevronDown, X } from 'lucide-react'
+import { motion, LayoutGroup } from 'framer-motion'
 import ProductCard from '../components/ProductCard'
+import { Reveal } from '../lib/motion'
 import apiService from '../api/service'
 
-const CATEGORY_NAMES = ['All', 'Audio', 'Wearables', 'Cameras', 'Computing', 'Gaming', 'Accessories']
-const SORT_OPTIONS   = [
-  { label: 'Newest',          value: 'id,desc' },
+const SORT_OPTIONS = [
+  { label: 'Newest',          value: 'productId,desc' },
   { label: 'Price: Low–High', value: 'price,asc' },
   { label: 'Price: High–Low', value: 'price,desc' },
   { label: 'Name A–Z',        value: 'name,asc' },
 ]
-
 
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -23,7 +23,7 @@ export default function Products() {
 
   const searchQ  = searchParams.get('search') ?? ''
   const category = searchParams.get('category') ?? 'All'
-  const sort     = searchParams.get('sort') ?? 'id,desc'
+  const sort     = searchParams.get('sort') ?? 'productId,desc'
   const page     = parseInt(searchParams.get('page') ?? '0', 10)
 
   // Fetch category list once to get IDs for filtering
@@ -42,6 +42,7 @@ export default function Products() {
 
   useEffect(() => {
     let cancelled = false
+    
     const hasFilter = searchQ || (category && category !== 'All')
     const [sortField, sortDir] = sort.split(',')
 
@@ -51,7 +52,7 @@ export default function Products() {
       if (searchQ) params.set('name', searchQ)
       if (category && category !== 'All') {
         const cat = categories.find(c => c.name === category)
-        if (cat) params.set('categoryId', cat.id)
+        if (cat) params.set('categoryId', cat.categoryId)
       }
       params.set('sort', `${sortField},${sortDir}`)
       params.set('page', page)
@@ -69,8 +70,8 @@ export default function Products() {
       .then(({ data }) => {
         if (!cancelled) {
           const resData = data.data
-          const content = resData?.content ?? (Array.isArray(resData) ? resData : null)
-          setProducts(content ?? [])
+          const content = resData?.content ?? (Array.isArray(resData) ? resData : [])
+          setProducts(content)
           setTotalPages(resData?.totalPages ?? 1)
         }
       })
@@ -115,25 +116,40 @@ export default function Products() {
             )}
           </div>
 
-          {/* Category pills */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {CATEGORY_NAMES.map(cat => {
-              const active = category === cat || (cat === 'All' && (!category || category === 'All'))
-              return (
-                <button key={cat} onClick={() => setParam('category', cat === 'All' ? '' : cat)}
-                  style={{
-                    padding: '7px 14px', borderRadius: 100, fontSize: 13, fontWeight: 500,
-                    background: active ? '#7c5cf0' : 'transparent',
-                    color:      active ? '#fff' : '#888',
-                    border:     `1px solid ${active ? '#7c5cf0' : '#2a2a2a'}`,
-                    cursor: 'pointer', transition: 'all 0.2s',
-                  }}
-                >
-                  {cat}
-                </button>
-              )
-            })}
-          </div>
+          {/* Category pills — sliding active indicator via layoutId */}
+          <LayoutGroup id="cat-pills">
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {['All', ...categories.map(c => c.name)].map(cat => {
+                const active = category === cat || (cat === 'All' && (!category || category === 'All'))
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setParam('category', cat === 'All' ? '' : cat)}
+                    style={{
+                      position: 'relative',
+                      padding: '7px 14px', borderRadius: 100, fontSize: 13, fontWeight: 500,
+                      background: 'transparent',
+                      color: active ? '#fff' : '#888',
+                      border: `1px solid ${active ? 'transparent' : '#2a2a2a'}`,
+                      cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
+                    }}
+                  >
+                    {active && (
+                      <motion.span
+                        layoutId="active-pill"
+                        style={{
+                          position: 'absolute', inset: 0,
+                          background: '#7c5cf0', borderRadius: 100,
+                        }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 34 }}
+                      />
+                    )}
+                    <span style={{ position: 'relative', zIndex: 1 }}>{cat}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </LayoutGroup>
 
           {/* Sort dropdown */}
           <div style={{ position: 'relative', marginLeft: 'auto' }}>
@@ -167,7 +183,11 @@ export default function Products() {
           </div>
         ) : (
           <div className="grid-4">
-            {displayProducts.map(p => <ProductCard key={p.id} product={p} />)}
+            {displayProducts.map((p, i) => (
+              <Reveal key={p.id} delay={Math.min(i * 0.04, 0.28)}>
+                <ProductCard product={p} />
+              </Reveal>
+            ))}
           </div>
         )}
 

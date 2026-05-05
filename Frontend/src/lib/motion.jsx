@@ -13,6 +13,48 @@ import {
   animate,
 } from 'framer-motion'
 
+// ── RevealStagger ─────────────────────────────────────────────────────────────
+// Wraps an array of children and staggers their fade+lift on scroll-into-view.
+// The wrapper element inherits any className/style (e.g. "grid-4").
+export function RevealStagger({ children, stagger = 0.06, delay = 0, duration = 0.5, className, style }) {
+  const ref    = useRef(null)
+  const reduce = useReducedMotion()
+  const inView = useInView(ref, { once: true, margin: '-60px' })
+
+  const itemVariants = {
+    hidden:  { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration, ease: [0.25, 0.1, 0.25, 1] } },
+  }
+
+  if (reduce) {
+    return <div ref={ref} className={className} style={style}>{children}</div>
+  }
+
+  const childArray = Array.isArray(children) ? children : (children ? [children] : [])
+
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      style={style}
+      initial="hidden"
+      animate={inView ? 'visible' : 'hidden'}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: stagger, delayChildren: delay } },
+      }}
+    >
+      {childArray.map((child, i) =>
+        child ? (
+          <motion.div key={child?.key ?? i} variants={itemVariants}>
+            {child}
+          </motion.div>
+        ) : null
+      )}
+    </motion.div>
+  )
+}
+
 // ── Reveal ────────────────────────────────────────────────────────────────────
 // Fade + lift on scroll-into-view, fires once.
 export function Reveal({ children, delay = 0, duration = 0.5, className, style }) {
@@ -134,21 +176,22 @@ export function Tilt({ children, max = 12, className, style }) {
 
 // ── CountUp ───────────────────────────────────────────────────────────────────
 // Animated number counter that fires when scrolled into view.
-export function CountUp({ to, duration = 1.5, prefix = '', suffix = '', className }) {
+export function CountUp({ to, duration = 1.5, prefix = '', suffix = '', className, decimals = 0 }) {
   const ref    = useRef(null)
   const reduce = useReducedMotion()
   const inView = useInView(ref, { once: true, margin: '-40px' })
-  const [display, setDisplay] = useState(reduce ? to : 0)
+  const fmt    = v => decimals > 0 ? Number(v).toFixed(decimals) : Math.round(v)
+  const [display, setDisplay] = useState(reduce ? fmt(to) : fmt(0))
 
   useEffect(() => {
     if (!inView || reduce) return
     const controls = animate(0, to, {
       duration,
       ease: 'easeOut',
-      onUpdate: v => setDisplay(Math.round(v)),
+      onUpdate: v => setDisplay(fmt(v)),
     })
     return controls.stop
-  }, [inView, reduce, to, duration])
+  }, [inView, reduce, to, duration]) // eslint-disable-line
 
   return (
     <span ref={ref} className={className}>

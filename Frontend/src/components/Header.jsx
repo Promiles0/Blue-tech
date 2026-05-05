@@ -7,7 +7,7 @@ import { useCart } from '../context/CartContext'
 import { useUI } from '../context/UIContext'
 
 export default function Header() {
-  const { user, logout }                                    = useAuth()
+  const { user, logout, isAdmin }                           = useAuth()
   const { count }                                           = useCart()
   const { setCartOpen, setPaletteOpen, setMobileNavOpen }   = useUI()
   const navigate                                            = useNavigate()
@@ -169,6 +169,11 @@ export default function Header() {
                 }}>
                   <DropdownItem to="/account" icon={<User size={14} />} onClick={() => setUserMenuOpen(false)}>My account</DropdownItem>
                   <DropdownItem to="/orders"  icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>
+                  {isAdmin && (
+                    <DropdownItem to="/admin" icon={<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#7c5cf0' }}>ADM</span>} onClick={() => setUserMenuOpen(false)}>
+                      Admin panel
+                    </DropdownItem>
+                  )}
                   <div style={{ height: 1, background: '#2a2a2a', margin: '4px 6px' }} />
                   <DropdownItem danger icon={<LogOut size={14} />} onClick={() => { logout(); setUserMenuOpen(false); navigate('/') }}>
                     Sign out

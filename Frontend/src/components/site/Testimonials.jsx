@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react'
 import { Star } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
+import api from '../../api/axios'
 
-const TESTIMONIALS = [
+const FALLBACK = [
   { name: 'Alex M.',   rating: 5, text: 'The build quality is unlike anything I\'ve owned. Worth every penny.' },
   { name: 'Jordan L.', rating: 5, text: 'Shipping was fast and the packaging was beautiful. 10/10 experience.' },
   { name: 'Sam K.',    rating: 5, text: 'Been using the Aurora Wireless for three months. Pristine audio.' },
@@ -52,6 +54,19 @@ function Row({ items, reverse = false, duration = '38s' }) {
 }
 
 export default function Testimonials() {
+  const [items, setItems] = useState(FALLBACK)
+
+  useEffect(() => {
+    api.get('/reviews/recent?limit=8')
+      .then(({ data }) => {
+        const reviews = data?.data ?? data
+        if (Array.isArray(reviews) && reviews.length >= 4) {
+          setItems(reviews.map(r => ({ name: r.userName, rating: r.rating, text: r.comment })))
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   return (
     <section style={{ padding: '72px 0', overflow: 'hidden' }}>
       <div className="container-noir" style={{ marginBottom: 40 }}>
@@ -62,8 +77,8 @@ export default function Testimonials() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <Row items={TESTIMONIALS.slice(0, 4)} duration="42s" />
-        <Row items={TESTIMONIALS.slice(4)}   duration="38s" reverse />
+        <Row items={items.slice(0, Math.ceil(items.length / 2))} duration="42s" />
+        <Row items={items.slice(Math.ceil(items.length / 2))}    duration="38s" reverse />
       </div>
     </section>
   )

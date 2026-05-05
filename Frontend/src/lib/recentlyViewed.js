@@ -2,17 +2,19 @@ const KEY = 'noir_recently_viewed'
 const MAX = 12
 
 export function trackRecentlyViewed(product) {
+  const id = product.productId ?? product.id
   const entry = {
-    id:       product.id,
+    id,
     name:     product.name,
-    price:    product.price,
-    imageUrl: product.images?.find(i => i.primary)?.imageUrl
+    price:    product.startingPrice ?? product.price,
+    imageUrl: product.images?.find(i => i.isPrimary)?.imageUrl
               ?? product.images?.[0]?.imageUrl
+              ?? product.primaryImageUrl
               ?? product.imageUrl
               ?? '',
   }
   const stored  = getRecentlyViewed()
-  const updated = [entry, ...stored.filter(p => p.id !== product.id)].slice(0, MAX)
+  const updated = [entry, ...stored.filter(p => p.id !== id)].slice(0, MAX)
   try { 
     localStorage.setItem(KEY, JSON.stringify(updated)) 
   } catch (e) {
