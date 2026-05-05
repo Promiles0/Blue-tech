@@ -29,7 +29,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         // Redirect back to frontend with the token
         // In production, this should be your real frontend URL (e.g., https://mystore.rw)
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/oauth2/redirect")
+        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth2/redirect")
                 .queryParam("token", token)
                 .build().toUriString();
 

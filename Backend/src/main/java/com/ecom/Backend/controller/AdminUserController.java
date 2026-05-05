@@ -1,5 +1,4 @@
 package com.ecom.Backend.controller;
-
 import com.ecom.Backend.dto.response.UserResponse;
 import com.ecom.Backend.service.AuthService;
 import com.ecom.Backend.util.ApiResponse;
@@ -18,9 +17,9 @@ public class AdminUserController {
 
     private final AuthService authService;
 
-    // GET /api/admin/users
     @GetMapping
     public ResponseEntity<ApiResponse<List<UserResponse>>> getAllUsers() {
-        return ResponseEntity.ok(ApiResponse.success("All users fetched", authService.getAllUsers()));
+        List<UserResponse> users = authService.getAllUsers();
+        return ResponseEntity.ok(ApiResponse.success("All users fetched", users));
     }
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Package } from "lucide-react";
-import orderService from "../services/orderService";
+import apiService from "../api/service";
 
 const STATUS_STYLES = {
   PENDING:    "text-yellow-400/70 bg-yellow-400/10 border-yellow-400/20",
@@ -25,15 +25,21 @@ function OrderHistoryPage() {
   const [expanded, setExpanded] = useState(null);
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const data = await orderService.getMyOrders();
-        setOrders(data);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
+    let cancelled = false;
+    Promise.resolve().then(() => setLoading(true));
+    
+    apiService.orders.getUserOrders()
+      .then(({ data }) => {
+        if (!cancelled) setOrders(Array.isArray(data.data) ? data.data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setOrders([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
   }, []);
 
   if (loading) {

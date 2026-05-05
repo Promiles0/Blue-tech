@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import api from '../api/axios'
+import apiService from '../api/service'
 import { useAuth } from './AuthContext'
 
 const CartContext = createContext(null)
@@ -14,40 +14,49 @@ export function CartProvider({ children }) {
 
   const fetchCart = useCallback(async () => {
     try {
-      // GET /api/cart → CartResponse (already unwrapped by interceptor)
-      const { data } = await api.get('/cart')
-      setItems(data?.items ?? [])
+      const { data } = await apiService.cart.get()
+      setItems(data.data?.items ?? [])
     } catch {
       setItems([])
     }
   }, [])
 
   useEffect(() => {
-    if (user) fetchCart()
-    else setItems([])
+    if (user) {
+      Promise.resolve().then(() => fetchCart())
+    } else {
+      Promise.resolve().then(() => setItems([]))
+    }
   }, [user, fetchCart])
 
   const addToCart = async (variantId, quantity = 1) => {
-    await api.post('/cart', { variantId, quantity })
-    await fetchCart()
-    toast.success('Added to cart')
+    try {
+      await apiService.cart.addItem({ variantId, quantity })
+      await fetchCart()
+      toast.success('Added to cart')
+    } catch {
+      toast.error('Failed to add to cart')
+    }
   }
 
   const removeFromCart = async (itemId) => {
-    await api.delete(`/cart/${itemId}`)
-    await fetchCart()
-    toast('Item removed')
+    try {
+      await apiService.cart.removeItem(itemId)
+      await fetchCart()
+      toast('Item removed')
+    } catch {
+      toast.error('Failed to remove item')
+    }
   }
 
   const updateQuantity = async (itemId, quantity) => {
     if (quantity < 1) return removeFromCart(itemId)
-    // Backend has no PATCH/PUT for quantity — remove and re-add
-    const item = items.find(i => i.id === itemId)
-    if (!item) return
-    await removeFromCart(itemId)
-    const variantId = item.variant?.id ?? item.variantId
-    if (variantId) await api.post('/cart', { variantId, quantity })
-    await fetchCart()
+    try {
+      await apiService.cart.updateQuantity(itemId, quantity)
+      await fetchCart()
+    } catch {
+      toast.error('Failed to update quantity')
+    }
   }
 
   return (
@@ -57,6 +66,7 @@ export function CartProvider({ children }) {
   )
 }
 
+/* eslint-disable-next-line react-refresh/only-export-components */
 export const useCart = () => {
   const ctx = useContext(CartContext)
   if (!ctx) throw new Error('useCart must be used inside CartProvider')

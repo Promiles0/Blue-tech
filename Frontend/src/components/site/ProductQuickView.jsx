@@ -4,7 +4,7 @@ import { X, ShoppingBag, Heart, Truck, Plus, Minus } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { useUI } from '../../context/UIContext'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 
 export default function ProductQuickView() {
   const { quickViewProduct, setQuickViewProduct } = useUI()
@@ -22,11 +22,13 @@ export default function ProductQuickView() {
 
   useEffect(() => {
     if (!quickViewProduct) { setProduct(null); setActiveImage(0); setQty(1); return }
-    setLoading(true)
-    api.get(`/products/${quickViewProduct.id}`)
+    
+    Promise.resolve().then(() => setLoading(true))
+    apiService.products.getOne(quickViewProduct.id)
       .then(({ data }) => {
-        setProduct(data)
-        setSelectedVariant(data.variants?.[0] ?? null)
+        const p = data.data
+        setProduct(p)
+        setSelectedVariant(p.variants?.[0] ?? null)
       })
       .catch(() => {
         setProduct(quickViewProduct)

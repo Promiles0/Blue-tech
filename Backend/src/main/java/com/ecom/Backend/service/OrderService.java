@@ -48,7 +48,7 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderResponse checkout(User user) {
+    public OrderResponse checkout(User user, com.ecom.Backend.dto.request.OrderRequest request) {
         // 1. Fetch Cart and Items
         Cart cart = cartRepository.findByUser_UserId(user.getUserId())
                 .orElseThrow(() -> new RuntimeException("Cart not found for user"));
@@ -58,10 +58,26 @@ public class OrderService {
             throw new RuntimeException("Cannot checkout with an empty cart");
         }
 
-        // 2. Fetch User's Default Address
-        Address address = addressRepository.findByUser_UserIdAndIsDefaultTrue(user.getUserId())
-                .stream().findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("No default shipping address found. Please add an address first."));
+        // 2. Resolve Shipping Address
+        // We try to find if this user already has this address, otherwise create it
+        Address address = addressRepository.findByUser_UserId(user.getUserId())
+                .stream()
+                .filter(a -> a.getStreetAddress().equalsIgnoreCase(request.getStreet()) && a.getCity().equalsIgnoreCase(request.getCity()))
+                .findFirst()
+                .orElseGet(() -> {
+                    Address newAddr = Address.builder()
+                            .user(user)
+                            .streetAddress(request.getStreet())
+                            .city(request.getCity())
+                            .state(request.getState())
+                            .zipCode(request.getZipCode())
+                            .country(request.getCountry())
+                            .phoneNumber(request.getPhone())
+                            .recipientName(user.getName())
+                            .isDefault(false)
+                            .build();
+                    return addressRepository.save(newAddr);
+                });
 
         // 3. Calculate Total and Prepare Order
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -72,12 +88,11 @@ public class OrderService {
                 .address(address)
                 .status(OrderStatus.PENDING)
                 .orderedAt(LocalDateTime.now())
-                .orderAddressStreet(address.getStreetAddress())
-                .orderAddressCity(address.getCity())
-                .orderAddressCountry(address.getCountry())
-                .orderAddressPhoneNumber(address.getPhoneNumber())
-                .orderAddressLandmarks(address.getLandmarks())
-                .orderAddressRecipient(address.getRecipientName())
+                .orderAddressStreet(request.getStreet())
+                .orderAddressCity(request.getCity())
+                .orderAddressCountry(request.getCountry())
+                .orderAddressPhoneNumber(request.getPhone())
+                .orderAddressRecipient(user.getName())
                 .build();
         
         // We save the order first to get an ID

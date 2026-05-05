@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ShoppingBag, Heart, Star, ArrowLeft, Check } from 'lucide-react'
-import api from '../api/axios'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { trackRecentlyViewed } from '../lib/recentlyViewed'
+import apiService from '../api/service'
 
 export default function ProductDetail() {
   const { id }             = useParams()
@@ -20,16 +20,20 @@ export default function ProductDetail() {
   const [reviews, setReviews]       = useState([])
 
   useEffect(() => {
-    setLoading(true)
-    api.get(`/products/${id}`)
+    let cancelled = false
+    
+    apiService.products.getOne(id)
       .then(({ data }) => {
-        setProduct(data)
-        setSelectedVariant(data.variants?.[0] ?? null)
-        setReviews(data.reviews ?? [])
-        trackRecentlyViewed(data)
+        if (cancelled) return
+        const p = data.data
+        setProduct(p)
+        setSelectedVariant(p.variants?.[0] ?? null)
+        setReviews(p.reviews ?? [])
+        trackRecentlyViewed(p)
       })
-      .catch(() => navigate('/products'))
-      .finally(() => setLoading(false))
+      .catch(() => { if (!cancelled) navigate('/products') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [id, navigate])
 
   const handleAddToCart = async () => {

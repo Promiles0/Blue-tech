@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Search, SlidersHorizontal, ChevronDown, X } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
-import api from '../api/axios'
+import apiService from '../api/service'
 
 const CATEGORY_NAMES = ['All', 'Audio', 'Wearables', 'Cameras', 'Computing', 'Gaming', 'Accessories']
 const SORT_OPTIONS   = [
@@ -12,16 +12,6 @@ const SORT_OPTIONS   = [
   { label: 'Name A–Z',        value: 'name,asc' },
 ]
 
-const MOCK = [
-  { id: 1, name: 'Pulse Pro Earbuds',    price: 189,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=500&q=80', variants: [{ id: 1 }] },
-  { id: 2, name: 'Vox Studio Monitor',   price: 459,  categoryName: 'Audio',     imageUrl: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80', variants: [{ id: 2 }] },
-  { id: 3, name: 'Atlas Smartwatch',     price: 599,  categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', variants: [{ id: 3 }] },
-  { id: 4, name: 'Trail Sport Band',     price: 49,   categoryName: 'Wearables', imageUrl: 'https://images.unsplash.com/photo-1575311373937-040b8e1fd6b0?w=500&q=80', variants: [{ id: 4 }] },
-  { id: 5, name: 'Lumen X1 Mirrorless', price: 2199, categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80', variants: [{ id: 5 }] },
-  { id: 6, name: 'Prism Action Cam',    price: 429,  categoryName: 'Cameras',   imageUrl: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80', variants: [{ id: 6 }] },
-  { id: 7, name: 'Stratos Ultrabook 14',price: 1499, categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=500&q=80', variants: [{ id: 7 }] },
-  { id: 8, name: 'Mecha 75 Keyboard',   price: 179,  categoryName: 'Computing', imageUrl: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=500&q=80', variants: [{ id: 8 }] },
-]
 
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -38,8 +28,8 @@ export default function Products() {
 
   // Fetch category list once to get IDs for filtering
   useEffect(() => {
-    api.get('/categories')
-      .then(({ data }) => setCategories(Array.isArray(data) ? data : []))
+    apiService.categories.getAll()
+      .then(({ data }) => setCategories(Array.isArray(data.data) ? data.data : []))
       .catch(() => {})
   }, [])
 
@@ -52,14 +42,11 @@ export default function Products() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-
     const hasFilter = searchQ || (category && category !== 'All')
     const [sortField, sortDir] = sort.split(',')
 
     let request
     if (hasFilter) {
-      // Use search endpoint: GET /api/products/search?name=...&categoryId=...
       const params = new URLSearchParams()
       if (searchQ) params.set('name', searchQ)
       if (category && category !== 'All') {
@@ -69,31 +56,31 @@ export default function Products() {
       params.set('sort', `${sortField},${sortDir}`)
       params.set('page', page)
       params.set('size', '12')
-      request = api.get(`/products/search?${params}`)
+      request = apiService.products.search(params)
     } else {
-      // Use paginated list endpoint: GET /api/products?page=0&size=12&sort=...
       const params = new URLSearchParams()
       params.set('sort', `${sortField},${sortDir}`)
       params.set('page', page)
       params.set('size', '12')
-      request = api.get(`/products?${params}`)
+      request = apiService.products.getAllPaginated(params)
     }
 
     request
       .then(({ data }) => {
         if (!cancelled) {
-          const content = data?.content ?? (Array.isArray(data) ? data : null)
-          setProducts(content ?? MOCK)
-          setTotalPages(data?.totalPages ?? 1)
+          const resData = data.data
+          const content = resData?.content ?? (Array.isArray(resData) ? resData : null)
+          setProducts(content ?? [])
+          setTotalPages(resData?.totalPages ?? 1)
         }
       })
-      .catch(() => { if (!cancelled) setProducts(MOCK) })
+      .catch(() => { if (!cancelled) setProducts([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
   }, [searchQ, category, sort, page, categories])
 
-  const displayProducts = products.length ? products : MOCK
+  const displayProducts = products
   const currentSort     = SORT_OPTIONS.find(o => o.value === sort) ?? SORT_OPTIONS[0]
 
   return (
