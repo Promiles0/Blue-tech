@@ -14,13 +14,31 @@ import java.util.List;
 @AllArgsConstructor
 public class DashboardStatsResponse {
     
+    private BigDecimal revenue24h;
+    private BigDecimal revenue7d;
+    private BigDecimal revenue30d;
     private BigDecimal totalRevenue;
+    private BigDecimal aov;
+    
+    private Long orders30d;
     private Long totalOrders;
     private Long totalCustomers;
+    private Long totalVariants;
     private Long ordersToday;
+    private Long lowStockCount;
     
     private List<LowStockAlert> lowStockAlerts;
     private List<TopSeller> topSellers;
+    private List<RevenuePoint> revenueSeries;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RevenuePoint {
+        private String date;
+        private BigDecimal revenue;
+    }
 
     @Data
     @Builder

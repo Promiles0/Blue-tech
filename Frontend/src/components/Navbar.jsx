@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 
 export default function Navbar() {
-  const { user, logout }     = useAuth()
+  const { user, logout, isAdmin } = useAuth()
   const { count }            = useCart()
   const navigate             = useNavigate()
   const location             = useLocation()
@@ -119,12 +119,19 @@ export default function Navbar() {
                   boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                   zIndex: 100,
                 }}>
+                  {isAdmin && (
+                    <DropdownItem to="/admin/products" icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>
+                      Admin Dashboard
+                    </DropdownItem>
+                  )}
                   <DropdownItem to="/account" icon={<User size={14} />} onClick={() => setUserMenuOpen(false)}>
-                    My account
+                    Profile
                   </DropdownItem>
-                  <DropdownItem to="/orders" icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>
-                    My orders
-                  </DropdownItem>
+                  {!isAdmin && (
+                    <DropdownItem to="/orders" icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>
+                      My orders
+                    </DropdownItem>
+                  )}
                   <div style={{ height: 1, background: '#2a2a2a', margin: '4px 6px' }} />
                   <DropdownItem
                     icon={<LogOut size={14} />}

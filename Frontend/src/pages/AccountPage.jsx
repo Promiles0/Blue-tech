@@ -13,7 +13,7 @@ const TABS = [
 ]
 
 export default function Account() {
-  const { user, logout, updateUser } = useAuth()
+  const { user, logout, updateUser, isAdmin } = useAuth()
   const navigate          = useNavigate()
   
   // Helper for masking email
@@ -22,7 +22,11 @@ export default function Account() {
     const [name, domain] = email.split('@')
     return `${name.substring(0, 3)}****@${domain}`
   }
-  const [tab, setTab]     = useState('orders')
+
+  // Filter tabs for admin
+  const filteredTabs = TABS.filter(t => !isAdmin || t.id === 'profile')
+
+  const [tab, setTab]     = useState(isAdmin ? 'profile' : 'orders')
   const [orderSubTab, setOrderSubTab] = useState('all')
   const [orders, setOrders] = useState([])
   const [addresses, setAddresses] = useState([])
@@ -170,66 +174,75 @@ export default function Account() {
   return (
     <div style={{ padding: '64px 0 120px' }}>
       <div className="container-noir">
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 80, alignItems: 'start' }}>
+        <div style={{ 
+          display: isAdmin ? 'block' : 'grid', 
+          gridTemplateColumns: isAdmin ? 'none' : '280px 1fr', 
+          gap: isAdmin ? 0 : 80, 
+          alignItems: 'start',
+          maxWidth: isAdmin ? 800 : 'none',
+          margin: isAdmin ? '0 auto' : '0'
+        }}>
 
           {/* Sidebar (Ref #1 & #6) */}
-          <div style={{ 
-            background: '#161616', 
-            border: '1px solid #262626', 
-            borderRadius: 20, 
-            overflow: 'hidden', 
-            position: 'sticky', top: 80,
-            boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
-          }}>
-            {/* User info */}
-            <div style={{ padding: '32px 24px', borderBottom: '1px solid #262626' }}>
-              <div style={{ 
-                width: 56, height: 56, borderRadius: '50%', background: '#7c5cf0', 
-                display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                marginBottom: 16, fontSize: 22, fontWeight: 900, color: '#fff',
-                boxShadow: '0 4px 12px rgba(124, 92, 240, 0.3)'
-              }}>
-                {(user.name ?? user.email ?? 'U')[0].toUpperCase()}
+          {!isAdmin && (
+            <div style={{ 
+              background: '#161616', 
+              border: '1px solid #262626', 
+              borderRadius: 20, 
+              overflow: 'hidden', 
+              position: 'sticky', top: 80,
+              boxShadow: '0 10px 40px rgba(0,0,0,0.3)'
+            }}>
+              {/* User info */}
+              <div style={{ padding: '32px 24px', borderBottom: '1px solid #262626' }}>
+                <div style={{ 
+                  width: 56, height: 56, borderRadius: '50%', background: '#7c5cf0', 
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  marginBottom: 16, fontSize: 22, fontWeight: 900, color: '#fff',
+                  boxShadow: '0 4px 12px rgba(124, 92, 240, 0.3)'
+                }}>
+                  {(user.name ?? user.email ?? 'U')[0].toUpperCase()}
+                </div>
+                <p style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 4, letterSpacing: '-0.01em' }}>{user.name ?? 'User'}</p>
+                <p style={{ fontSize: 12, color: '#555', fontWeight: 500 }}>{maskEmail(user.email)}</p>
               </div>
-              <p style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 4, letterSpacing: '-0.01em' }}>{user.name ?? 'User'}</p>
-              <p style={{ fontSize: 12, color: '#555', fontWeight: 500 }}>{maskEmail(user.email)}</p>
-            </div>
 
-            {/* Nav */}
-            <nav style={{ padding: '12px 12px 24px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {TABS.map(({ id, label, icon: Icon }) => (
-                  <button key={id} onClick={() => {
-                    if (id === 'orders') { setLoadingOrders(true); setOrders([]) }
-                    setTab(id)
-                  }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '14px 16px', borderRadius: 12,
-                      background: tab === id ? '#7c5cf010' : 'none',
-                      color: tab === id ? '#7c5cf0' : '#666',
-                      border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600,
-                      transition: 'all 0.2s', textAlign: 'left',
+              {/* Nav */}
+              <nav style={{ padding: '12px 12px 24px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {filteredTabs.map(({ id, label, icon: Icon }) => (
+                    <button key={id} onClick={() => {
+                      if (id === 'orders') { setLoadingOrders(true); setOrders([]) }
+                      setTab(id)
                     }}
-                    onMouseEnter={e => { if (tab !== id) { e.currentTarget.style.background = '#1e1e1e'; e.currentTarget.style.color = '#fff' } }}
-                    onMouseLeave={e => { if (tab !== id) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#666' } }}
-                  >
-                    <Icon size={18} strokeWidth={1.5} /> {label}
-                  </button>
-                ))}
-              </div>
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '14px 16px', borderRadius: 12,
+                        background: tab === id ? '#7c5cf010' : 'none',
+                        color: tab === id ? '#7c5cf0' : '#666',
+                        border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+                        transition: 'all 0.2s', textAlign: 'left',
+                      }}
+                      onMouseEnter={e => { if (tab !== id) { e.currentTarget.style.background = '#1e1e1e'; e.currentTarget.style.color = '#fff' } }}
+                      onMouseLeave={e => { if (tab !== id) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#666' } }}
+                    >
+                      <Icon size={18} strokeWidth={1.5} /> {label}
+                    </button>
+                  ))}
+                </div>
 
-              <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #262626' }}>
-                <button onClick={handleLogout}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: 'none', color: '#666', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, textAlign: 'left', transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.07)' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.background = 'none' }}
-                >
-                  <LogOut size={18} strokeWidth={1.5} /> Sign out
-                </button>
-              </div>
-            </nav>
-          </div>
+                <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #262626' }}>
+                  <button onClick={handleLogout}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, background: 'none', color: '#666', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, textAlign: 'left', transition: 'all 0.2s' }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.07)' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#666'; e.currentTarget.style.background = 'none' }}
+                  >
+                    <LogOut size={18} strokeWidth={1.5} /> Sign out
+                  </button>
+                </div>
+              </nav>
+            </div>
+          )}
 
           {/* Content */}
           <div className="fade-in" key={tab} style={{ paddingTop: 8 }}>

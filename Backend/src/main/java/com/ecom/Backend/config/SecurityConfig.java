@@ -55,7 +55,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**", "/login/**", "/oauth2/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/payments/webhook").permitAll() // Allow everyone to access Login/Register, OAuth2, and Webhooks
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**", "/api/products/**", "/uploads/**").permitAll() // Public catalog and images
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**", "/api/products/**", "/uploads/**", "/api/reviews/**").permitAll() // Public catalog, images, and reviews
                 .requestMatchers("/api/categories/**", "/api/products/**").hasRole("ADMIN") // Only Admins can create/edit catalog
                 .requestMatchers("/api/admin/**").hasRole("ADMIN") // Global admin route protection
                 .requestMatchers("/api/cart/**", "/api/orders/**", "/api/wishlist/**", "/api/addresses/**", "/api/notifications/**", "/api/users/**").authenticated() // Logged in user

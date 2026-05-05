@@ -28,6 +28,18 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Long countByOrderedAtAfter(LocalDateTime dateTime);
 
+    @Query("SELECT SUM(o.totalAmount) FROM Order o WHERE o.status != 'CANCELLED' AND o.orderedAt > :dateTime")
+    BigDecimal calculateRevenueAfter(@Param("dateTime") LocalDateTime dateTime);
+
+    Long countByStatusNot(OrderStatus status);
+
+    @Query("SELECT CAST(o.orderedAt AS date), SUM(o.totalAmount) " +
+           "FROM Order o " +
+           "WHERE o.status != 'CANCELLED' AND o.orderedAt > :dateTime " +
+           "GROUP BY CAST(o.orderedAt AS date) " +
+           "ORDER BY CAST(o.orderedAt AS date) ASC")
+    List<Object[]> findRevenueByDayAfter(@Param("dateTime") LocalDateTime dateTime);
+
     @Query("SELECT oi.variant.product.name, SUM(oi.quantity) as totalQty " +
            "FROM OrderItem oi " +
            "GROUP BY oi.variant.product.name " +

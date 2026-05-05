@@ -21,17 +21,42 @@ public class AnalyticsService {
     private final ProductVariantRepository variantRepository;
 
     public DashboardStatsResponse getAdminStats() {
-        LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime dayAgo = now.minusDays(1);
+        LocalDateTime weekAgo = now.minusDays(7);
+        LocalDateTime monthAgo = now.minusDays(30);
 
-        // 1. Core Metrics
-        BigDecimal revenue = orderRepository.calculateTotalRevenue();
+        // 1. Revenue Metrics
+        BigDecimal rev24h = orderRepository.calculateRevenueAfter(dayAgo);
+        BigDecimal rev7d  = orderRepository.calculateRevenueAfter(weekAgo);
+        BigDecimal rev30d = orderRepository.calculateRevenueAfter(monthAgo);
+        BigDecimal totalRev = orderRepository.calculateTotalRevenue();
+        Long orders30d = orderRepository.countByOrderedAtAfter(monthAgo);
+        
+        BigDecimal aov = BigDecimal.ZERO;
+        if (orders30d != null && orders30d > 0 && rev30d != null) {
+            aov = rev30d.divide(BigDecimal.valueOf(orders30d), 2, BigDecimal.ROUND_HALF_UP);
+        }
+
+        // 2. Counts
         Long totalOrders = orderRepository.count();
         Long totalCustomers = userRepository.count();
-        Long ordersToday = orderRepository.countByOrderedAtAfter(yesterday);
+        Long totalVariants = variantRepository.count();
+        Long lowStockCount = variantRepository.countByStockQuantityLessThan(5);
 
-        // 2. Low Stock Alerts (Under 5 items)
+        // 3. Chart Series (14 days)
+        List<DashboardStatsResponse.RevenuePoint> series = orderRepository.findRevenueByDayAfter(now.minusDays(14))
+                .stream()
+                .map(obj -> DashboardStatsResponse.RevenuePoint.builder()
+                        .date(obj[0].toString())
+                        .revenue((BigDecimal) obj[1])
+                        .build())
+                .collect(Collectors.toList());
+
+        // 4. Alerts & Sellers
         List<DashboardStatsResponse.LowStockAlert> lowStock = variantRepository.findByStockQuantityLessThan(5)
                 .stream()
+                .limit(5)
                 .map(v -> DashboardStatsResponse.LowStockAlert.builder()
                         .productName(v.getProduct().getName())
                         .variantInfo(v.getSizeOrColor())
@@ -39,7 +64,6 @@ public class AnalyticsService {
                         .build())
                 .collect(Collectors.toList());
 
-        // 3. Top Sellers (By Quantity)
         List<DashboardStatsResponse.TopSeller> topSellers = orderRepository.findTopSellers()
                 .stream()
                 .limit(5)
@@ -50,10 +74,17 @@ public class AnalyticsService {
                 .collect(Collectors.toList());
 
         return DashboardStatsResponse.builder()
-                .totalRevenue(revenue != null ? revenue : BigDecimal.ZERO)
+                .revenue24h(rev24h != null ? rev24h : BigDecimal.ZERO)
+                .revenue7d(rev7d != null ? rev7d : BigDecimal.ZERO)
+                .revenue30d(rev30d != null ? rev30d : BigDecimal.ZERO)
+                .totalRevenue(totalRev != null ? totalRev : BigDecimal.ZERO)
+                .aov(aov)
+                .orders30d(orders30d)
                 .totalOrders(totalOrders)
                 .totalCustomers(totalCustomers)
-                .ordersToday(ordersToday)
+                .totalVariants(totalVariants)
+                .lowStockCount(lowStockCount)
+                .revenueSeries(series)
                 .lowStockAlerts(lowStock)
                 .topSellers(topSellers)
                 .build();

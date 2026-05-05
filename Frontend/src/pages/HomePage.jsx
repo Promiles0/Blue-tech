@@ -64,7 +64,7 @@ export default function Home() {
   const [loading,         setLoading]         = useState(true)
 
   useEffect(() => {
-    apiService.products.getAllCategories()
+    apiService.categories.getAll()
       .then(({ data }) => setCategories(Array.isArray(data.data) ? data.data : []))
       .catch(() => {})
   }, [])

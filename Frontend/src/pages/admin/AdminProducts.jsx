@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check } from 'lucide-react'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 
 const EMPTY_VARIANT = { skuCode: '', sizeOrColor: '', priceAdjustment: '', stockQuantity: 0 }
 const EMPTY_IMAGE   = { imageUrl: '', isPrimary: false }
@@ -47,19 +47,20 @@ export default function AdminProducts() {
 
   const fetchProducts = useCallback(() => {
     setLoading(true)
-    api.get(`/products?page=${page}&size=12`)
+    apiService.admin.products.getAll(page, 12)
       .then(({ data }) => {
         const payload = data.data ?? data
-        setProducts(payload.content ?? payload)
+        setProducts(payload.content ?? (Array.isArray(payload) ? payload : []))
         setTotalPages(payload.totalPages ?? 1)
       })
+      .catch(() => setProducts([]))
       .finally(() => setLoading(false))
   }, [page])
 
   useEffect(() => { fetchProducts() }, [fetchProducts])
 
   useEffect(() => {
-    api.get('/categories').then(({ data }) => setCategories(data.data ?? data))
+    apiService.categories.getAll().then(({ data }) => setCategories(data.data ?? (Array.isArray(data) ? data : [])))
   }, [])
 
   const openCreate = () => {
@@ -78,7 +79,7 @@ export default function AdminProducts() {
     setModal('edit')
     setLoadingDetail(true)
     try {
-      const { data } = await api.get(`/products/${product.productId ?? product.id}`)
+      const { data } = await apiService.admin.products.getOne(product.productId ?? product.id)
       const p = data?.data ?? data
       setForm(formFromDetail(p))
       setEditing(p)
@@ -119,21 +120,19 @@ export default function AdminProducts() {
       }
       let productId
       if (modal === 'create') {
-        const { data } = await api.post('/products', payload)
+        const { data } = await apiService.admin.products.create(payload)
         productId = (data?.data ?? data).productId
         setSuccess('Product created!')
       } else {
         productId = editing.productId ?? editing.id
-        await api.put(`/products/${productId}`, payload)
+        await apiService.admin.products.update(productId, payload)
         setSuccess('Product updated!')
       }
       for (const fu of fileUploads) {
         const fd = new FormData()
         fd.append('file', fu.file)
         fd.append('isPrimary', fu.isPrimary)
-        await api.post(`/products/${productId}/images`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        await apiService.admin.products.uploadImage(productId, fd)
       }
       closeModal()
       fetchProducts()
@@ -152,9 +151,10 @@ export default function AdminProducts() {
 
   const handleDelete = async (product) => {
     if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) return
-    setDeleting(product.productId ?? product.id)
+    const productId = product.productId ?? product.id
+    setDeleting(productId)
     try {
-      await api.delete(`/products/${product.productId ?? product.id}`)
+      await apiService.admin.products.delete(productId)
       fetchProducts()
     } catch {
       alert('Failed to delete product.')

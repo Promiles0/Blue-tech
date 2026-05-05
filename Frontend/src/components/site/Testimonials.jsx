@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Star } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 
 const FALLBACK = [
   { name: 'Alex M.',   rating: 5, text: 'The build quality is unlike anything I\'ve owned. Worth every penny.' },
@@ -57,10 +57,10 @@ export default function Testimonials() {
   const [items, setItems] = useState(FALLBACK)
 
   useEffect(() => {
-    api.get('/reviews/recent?limit=8')
+    apiService.reviews.getRecent(8)
       .then(({ data }) => {
-        const reviews = data?.data ?? data
-        if (Array.isArray(reviews) && reviews.length >= 4) {
+        const reviews = data?.data ?? (Array.isArray(data) ? data : [])
+        if (reviews.length >= 4) {
           setItems(reviews.map(r => ({ name: r.userName, rating: r.rating, text: r.comment })))
         }
       })

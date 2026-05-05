@@ -7,11 +7,11 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ResponsiveContainer,
 } from 'recharts'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 import { money } from '../../lib/format'
 
 function fetchStats() {
-  return api.get('/admin/dashboard/stats').then(r => r.data)
+  return apiService.admin.getDashboardStats().then(r => r.data.data)
 }
 
 export default function AdminDashboard() {
@@ -29,7 +29,7 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {isError && <ErrorBanner msg="Failed to load dashboard stats." />}
+      {isError && !data && <ErrorBanner msg="Failed to load dashboard stats." />}
 
       {/* KPI Grid — 4 cols × 2 rows */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
         <KPI icon={ShoppingBag} label="Orders 30d"   value={isLoading ? '—' : (data?.orders30d ?? 0).toLocaleString()} />
         <KPI icon={Users}       label="Customers"    value={isLoading ? '—' : (data?.totalCustomers ?? 0).toLocaleString()} />
         <KPI icon={AlertTriangle} label="Low Stock"  value={isLoading ? '—' : (data?.lowStockCount ?? 0).toLocaleString()} accent="var(--admin-warning)" />
-        <KPI icon={Package}     label="Variants"     value={isLoading ? '—' : '—'} />
+        <KPI icon={Package}     label="Variants"     value={isLoading ? '—' : (data?.totalVariants ?? 0).toLocaleString()} />
       </div>
 
       {/* Revenue chart + Low stock */}
