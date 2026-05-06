@@ -1,4 +1,12 @@
 {
+    "java.import.exclusions": [
+        "Frontend/**",
+        "**/node_modules/**"
+    ],
+    "java.project.sourcePaths": [
+        "Backend/src/main/java",
+        "Backend/src/test/java"
+    ],
     "java.compile.nullAnalysis.mode": "automatic",
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "automatic"
 }

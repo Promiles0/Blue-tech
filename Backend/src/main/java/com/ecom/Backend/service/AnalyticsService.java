@@ -179,7 +179,7 @@ public class AnalyticsService {
         userRepository.findAllByOrderByCreatedAtDesc().forEach(u -> {
             if (u.getCreatedAt() != null) {
                 String key = u.getCreatedAt().format(fmt);
-                buckets.merge(key, 1L, Long::sum);
+                buckets.merge(key, 1L, (left, right) -> Long.valueOf(left.longValue() + right.longValue()));
             }
         });
         return buckets.entrySet().stream()
