@@ -18,7 +18,6 @@ export default function ProductDetail() {
   const navigate = useNavigate()
 
   const [product, setProduct] = useState(null)
-  const [loading, setLoading] = useState(false)
   const [selectedVariant, setSelectedVariant] = useState(null)
   const [activeImage, setActiveImage] = useState(0)
   const [qty, setQty] = useState(1)
@@ -34,7 +33,6 @@ export default function ProductDetail() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
 
     apiService.products.getOne(id)
       .then(({ data }) => {
@@ -46,7 +44,6 @@ export default function ProductDetail() {
         trackRecentlyViewed(p)
       })
       .catch(() => { if (!cancelled) navigate('/products') })
-      .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
   }, [id, navigate])
@@ -58,6 +55,9 @@ export default function ProductDetail() {
     obs.observe(el)
     return () => obs.disconnect()
   }, [product])
+
+  const resolvedProductId = String(product?.productId ?? product?.id ?? '')
+  const loading = !product || resolvedProductId !== String(id)
 
   const handleAddToCart = async () => {
     if (!user) {
