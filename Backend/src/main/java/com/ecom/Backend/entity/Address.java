@@ -31,6 +31,10 @@ public class Address {
     @Column(nullable = false)
     private String city;
 
+    private String state;
+
+    private String zipCode;
+
     @Column(columnDefinition = "TEXT")
     private String landmarks; // e.g., "Near the BK Branch"
 

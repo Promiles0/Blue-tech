@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 import { dateTime } from '../../lib/format'
 
 function fetchAuditLogs() {
-  return api.get('/admin/audit?limit=200').then(r => r.data)
+  return apiService.admin.audit.getAll(200).then(r => r.data)
 }
 
 const ACTION_COLORS = {

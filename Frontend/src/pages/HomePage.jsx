@@ -2,26 +2,27 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Truck, Shield, RotateCcw } from 'lucide-react'
 import { motion, useReducedMotion } from 'framer-motion'
-import ProductCard    from '../components/ProductCard'
-import Testimonials   from '../components/site/Testimonials'
+import ProductCard from '../components/ProductCard'
+import Testimonials from '../components/site/Testimonials'
 import RecentlyViewed from '../components/site/RecentlyViewed'
 import { Reveal, Parallax, Magnetic } from '../lib/motion'
-import api from '../api/axios'
+import apiService from '../api/service'
 
+const CATEGORIES_FALLBACK = ['Audio', 'Wearables', 'Cameras', 'Computing', 'Gaming', 'Accessories']
 
 // ── Word-by-word stagger ────────────────────────────────────────────────────
 const containerVariants = {
-  hidden:  { opacity: 0 },
+  hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.25 } },
 }
 const wordVariants = {
-  hidden:  { y: 20, opacity: 0 },
-  visible: { y: 0,  opacity: 1, transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1] } },
+  hidden: { y: 20, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1] } },
 }
 
 function StaggeredHeadline({ lines }) {
   const reduce = useReducedMotion()
-  const words  = lines.flatMap((line, li) => [
+  const words = lines.flatMap((line, li) => [
     ...line.split(' ').map((word, wi) => ({ word, line: li, wi })),
     { word: null, line: li, wi: -1 }, // line break marke
   ])
@@ -63,17 +64,17 @@ export default function Home() {
   const [loading,         setLoading]         = useState(true)
 
   useEffect(() => {
-    api.get('/categories')
-      .then(({ data }) => setCategories(Array.isArray(data) ? data : []))
+    apiService.categories.getAll()
+      .then(({ data }) => setCategories(Array.isArray(data.data) ? data.data : []))
       .catch(() => {})
   }, [])
 
   useEffect(() => {
     let cancelled = false
-    api.get('/products?page=0&size=8')
+    apiService.products.getAllPaginated('page=0&size=8')
       .then(({ data }) => {
         if (!cancelled) {
-          const content = data?.content ?? (Array.isArray(data) ? data : [])
+          const content = data.data?.content ?? (Array.isArray(data.data) ? data.data : [])
           setProducts(content)
         }
       })
@@ -174,7 +175,6 @@ export default function Home() {
                   aspectRatio: '4/5', background: '#1a1a1a',
                 }}>
                   <img
-                    // src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&q=80"
                     src="https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
                     alt="Aurora Wireless headphones"
                     className="ken-burns"
@@ -212,29 +212,31 @@ export default function Home() {
       </section>
 
       {/* ── Category tabs ──────────────────────────────────── */}
-      <section style={{ borderTop: '1px solid #141414', borderBottom: '1px solid #141414', overflowX: 'auto' }}>
-        <div className="container-noir" style={{ display: 'flex', minWidth: 560 }}>
-          {categories.map(cat => (
-            <button
-              key={cat.categoryId}
-              onClick={() => setActiveCategory(prev => prev === cat.name ? null : cat.name)}
-              style={{
-                flex: 1, padding: '18px 8px',
-                fontSize: 14, fontWeight: 500,
-                color: activeCategory === cat.name ? '#fff' : '#555',
-                background: 'none', border: 'none',
-                borderBottom: `2px solid ${activeCategory === cat.name ? '#7c5cf0' : 'transparent'}`,
-                cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = '#bbb' }}
-              onMouseLeave={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = '#555' }}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
-      </section>
+      {categories.length > 0 && (
+        <section style={{ borderTop: '1px solid #141414', borderBottom: '1px solid #141414', overflowX: 'auto' }}>
+          <div className="container-noir" style={{ display: 'flex', minWidth: 560 }}>
+            {categories.map(cat => (
+              <button
+                key={cat.categoryId ?? cat.id}
+                onClick={() => setActiveCategory(prev => prev === cat.name ? null : cat.name)}
+                style={{
+                  flex: 1, padding: '18px 8px',
+                  fontSize: 14, fontWeight: 500,
+                  color: activeCategory === cat.name ? '#fff' : '#555',
+                  background: 'none', border: 'none',
+                  borderBottom: `2px solid ${activeCategory === cat.name ? '#7c5cf0' : 'transparent'}`,
+                  cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = '#bbb' }}
+                onMouseLeave={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = '#555' }}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Featured product grid ───────────────────────────── */}
       <section style={{ padding: '56px 0 48px' }}>
@@ -335,9 +337,9 @@ export default function Home() {
               display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32,
             }}>
               {[
-                { icon: <Truck size={22} />,     title: 'Free shipping',   desc: 'On all orders over $200.' },
-                { icon: <Shield size={22} />,    title: '2-year warranty', desc: 'Quietly confident craftsmanship.' },
-                { icon: <RotateCcw size={22} />, title: '30-day returns',  desc: "If it isn't right, send it back." },
+                { icon: <Truck size={22} />, title: 'Free shipping', desc: 'On all orders over $200.' },
+                { icon: <Shield size={22} />, title: '2-year warranty', desc: 'Quietly confident craftsmanship.' },
+                { icon: <RotateCcw size={22} />, title: '30-day returns', desc: "If it isn't right, send it back." },
               ].map(({ icon, title, desc }) => (
                 <div key={title}>
                   <div style={{ color: '#7c5cf0', marginBottom: 12 }}>{icon}</div>

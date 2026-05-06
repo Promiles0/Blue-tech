@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query' 
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 import { money } from '../../lib/format'
 
 const CHART_COLORS = ['#7c5cf0', '#f59e0b', '#22c55e', '#3b82f6', '#ef4444']
@@ -17,7 +17,7 @@ const tooltipStyle = {
 }
 
 function fetchAnalytics() {
-  return api.get('/admin/analytics').then(r => r.data)
+  return apiService.admin.getAnalytics().then(r => r.data.data)
 }
 
 export default function AdminAnalytics() {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Star, MessageSquare } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 
 function Card({ name, rating, text }) {
   return (
@@ -47,10 +47,14 @@ export default function Testimonials() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get('/reviews/recent?limit=12')
+    apiService.reviews.getRecent(12)
       .then(({ data }) => {
         const reviews = Array.isArray(data) ? data : []
-        setItems(reviews.map(r => ({ name: r.userName, rating: r.rating, text: r.comment })))
+        setItems(reviews.map(r => ({
+          name: r.userName || 'Anonymous',
+          rating: r.rating ?? 5,
+          text: r.comment || 'Loved it.',
+        })))
       })
       .catch(() => {})
       .finally(() => setLoading(false))

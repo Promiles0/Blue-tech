@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Eye, EyeOff, Trash2, Star, Search } from 'lucide-react'
 import { toast } from 'sonner'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 import { dateShort } from '../../lib/format'
 
 function fetchReviews(rating) {
-  const q = rating ? `?rating=${rating}` : ''
-  return api.get(`/admin/reviews${q}`).then(r => r.data)
+  return apiService.admin.reviews.getAll(rating).then(r => r.data)
 }
 
 export default function AdminReviews() {
@@ -29,7 +28,7 @@ export default function AdminReviews() {
 
   const toggleHidden = useMutation({
     mutationFn: ({ reviewId, isHidden }) =>
-      api.patch(`/admin/reviews/${reviewId}`, { isHidden }).then(r => r.data),
+      apiService.admin.reviews.update(reviewId, { isHidden }).then(r => r.data),
     onSuccess: (_, { isHidden }) => {
       qc.invalidateQueries({ queryKey: ['admin-reviews'] })
       toast.success(isHidden ? 'Review hidden' : 'Review visible')
@@ -38,7 +37,7 @@ export default function AdminReviews() {
   })
 
   const deleteReview = useMutation({
-    mutationFn: reviewId => api.delete(`/admin/reviews/${reviewId}`),
+    mutationFn: reviewId => apiService.admin.reviews.delete(reviewId),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-reviews'] }); toast.success('Review deleted') },
     onError: () => toast.error('Failed to delete review'),
   })

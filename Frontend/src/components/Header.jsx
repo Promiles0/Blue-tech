@@ -178,6 +178,10 @@ export default function Header() {
                       Admin panel
                     </DropdownItem>
                   )}
+                  <DropdownItem to="/account" icon={<User size={14} />} onClick={() => setUserMenuOpen(false)}>Profile</DropdownItem>
+                  {!isAdmin && (
+                    <DropdownItem to="/orders"  icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>
+                  )}
                   <div style={{ height: 1, background: '#2a2a2a', margin: '4px 6px' }} />
                   <DropdownItem danger icon={<LogOut size={14} />} onClick={() => { logout(); setUserMenuOpen(false); navigate('/') }}>
                     Sign out

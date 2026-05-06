@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import api from '../api/axios'
+import apiService from '../api/service'
 
 const AuthContext = createContext(null)
 
@@ -11,29 +11,35 @@ export function AuthProvider({ children }) {
     const token     = localStorage.getItem('token')
     const savedUser = localStorage.getItem('user')
     if (token && savedUser) {
-      try { setUser(JSON.parse(savedUser)) } catch {}
+      try { 
+        const parsed = JSON.parse(savedUser)
+        Promise.resolve().then(() => setUser(parsed))
+      } catch (e) {
+        console.error('Failed to parse saved user', e)
+      }
     }
-    setLoading(false)
+    Promise.resolve().then(() => setLoading(false))
   }, [])
 
   const login = async (email, password) => {
-    const { data } = await api.post('/auth/login', { email, password })
+    const { data } = await apiService.auth.login({ email, password })
+    // The interceptor unwraps ApiResponse.data, so data here is the AuthResponse { token, user }
     localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user ?? data))
-    setUser(data.user ?? data)
+    localStorage.setItem('user', JSON.stringify(data.user))
+    setUser(data.user)
     return data
   }
 
   const register = async (name, email, password) => {
-    const { data } = await api.post('/auth/register', { name, email, password })
+    const { data } = await apiService.auth.register({ name, email, password })
     localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user ?? data))
-    setUser(data.user ?? data)
+    localStorage.setItem('user', JSON.stringify(data.user))
+    setUser(data.user)
     return data
   }
 
   const googleLogin = async (token) => {
-    const { data } = await api.post('/auth/google', { token })
+    const { data } = await apiService.auth.googleLogin(token)
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user ?? data))
     setUser(data.user ?? data)
@@ -46,6 +52,11 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
+  const updateUser = (updatedUser) => {
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+    setUser(updatedUser)
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -54,6 +65,7 @@ export function AuthProvider({ children }) {
       register,
       googleLogin,
       logout,
+      updateUser,
       isAuthenticated: !!user,
       isAdmin: user?.role === 'ADMIN',
     }}>
@@ -62,6 +74,7 @@ export function AuthProvider({ children }) {
   )
 }
 
+/* eslint-disable-next-line react-refresh/only-export-components */
 export const useAuth = () => {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider')

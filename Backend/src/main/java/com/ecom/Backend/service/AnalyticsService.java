@@ -2,6 +2,7 @@ package com.ecom.Backend.service;
 
 import com.ecom.Backend.dto.response.AnalyticsDataResponse;
 import com.ecom.Backend.dto.response.DashboardStatsResponse;
+import com.ecom.Backend.enums.OrderStatus;
 import com.ecom.Backend.entity.Order;
 import com.ecom.Backend.repository.OrderRepository;
 import com.ecom.Backend.repository.ProductVariantRepository;
@@ -14,9 +15,11 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
-import com.ecom.Backend.enums.OrderStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -35,20 +38,26 @@ public class AnalyticsService {
         BigDecimal rev24h  = orderRepository.calculateRevenueAfter(minus24h);
         BigDecimal rev7d   = orderRepository.calculateRevenueAfter(minus7d);
         BigDecimal rev30d  = orderRepository.calculateRevenueAfter(minus30d);
+        BigDecimal totalRev = orderRepository.calculateTotalRevenue();
 
-        Long orders30d      = orderRepository.countByOrderedAtAfterAndNotCancelled(minus30d);
+        Long orders30d = orderRepository.countByOrderedAtAfterAndNotCancelled(minus30d);
+        Long totalOrders = orderRepository.count();
         Long totalCustomers = userRepository.count();
+        Long totalVariants = variantRepository.count();
+        Long ordersToday = orderRepository.countByOrderedAtAfterAndNotCancelled(now.toLocalDate().atStartOfDay());
+        Long lowStockCount = variantRepository.countByStockQuantityLessThan(5);
 
-        BigDecimal aov = (orders30d > 0)
-                ? rev30d.divide(BigDecimal.valueOf(orders30d), 2, RoundingMode.HALF_UP)
+        BigDecimal safeRev30d = rev30d != null ? rev30d : BigDecimal.ZERO;
+        long safeOrders30d = orders30d != null ? orders30d : 0L;
+        BigDecimal aov = safeOrders30d > 0
+                ? safeRev30d.divide(BigDecimal.valueOf(safeOrders30d), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
 
-        // 14-day revenue series
-        List<DashboardStatsResponse.DayRevenue> series = build14DaySeries();
+        List<DashboardStatsResponse.RevenuePoint> series = build14DaySeries();
 
-        // Low stock
         List<DashboardStatsResponse.LowStockAlert> lowStock = variantRepository.findByStockQuantityLessThan(5)
                 .stream()
+                .limit(5)
                 .map(v -> DashboardStatsResponse.LowStockAlert.builder()
                         .productName(v.getProduct().getName())
                         .skuCode(v.getSkuCode())
@@ -56,7 +65,6 @@ public class AnalyticsService {
                         .build())
                 .collect(Collectors.toList());
 
-        // Order pipeline by status
         Map<String, Long> ordersByStatus = new LinkedHashMap<>();
         for (Object[] row : orderRepository.countGroupedByStatus()) {
             OrderStatus s = (OrderStatus) row[0];
@@ -65,10 +73,8 @@ public class AnalyticsService {
         }
         Long pendingOrders = ordersByStatus.getOrDefault(OrderStatus.PENDING.name(), 0L);
 
-        // New customers in last 24h
         Long newCustomers24h = userRepository.countByCreatedAtAfter(minus24h);
 
-        // Recent 5 orders
         List<DashboardStatsResponse.RecentOrder> recentOrders = orderRepository.findTop5ByOrderByOrderedAtDesc()
                 .stream()
                 .map(o -> DashboardStatsResponse.RecentOrder.builder()
@@ -80,19 +86,33 @@ public class AnalyticsService {
                         .build())
                 .collect(Collectors.toList());
 
+        List<DashboardStatsResponse.TopSeller> topSellers = orderRepository.findTopSellers()
+                .stream()
+                .map(obj -> DashboardStatsResponse.TopSeller.builder()
+                        .productName((String) obj[0])
+                        .totalSold(((Number) obj[1]).longValue())
+                        .revenue(obj.length > 2 && obj[2] instanceof BigDecimal ? (BigDecimal) obj[2] : BigDecimal.ZERO)
+                        .build())
+                .collect(Collectors.toList());
+
         return DashboardStatsResponse.builder()
                 .revenue24h(rev24h != null ? rev24h : BigDecimal.ZERO)
                 .revenue7d(rev7d != null ? rev7d : BigDecimal.ZERO)
-                .revenue30d(rev30d != null ? rev30d : BigDecimal.ZERO)
+                .revenue30d(safeRev30d)
+                .totalRevenue(totalRev != null ? totalRev : BigDecimal.ZERO)
                 .aov(aov)
-                .orders30d(orders30d)
+                .orders30d(safeOrders30d)
+                .totalOrders(totalOrders)
                 .totalCustomers(totalCustomers)
-                .lowStockCount((long) lowStock.size())
+                .totalVariants(totalVariants)
+                .ordersToday(ordersToday != null ? ordersToday : 0L)
+                .lowStockCount(lowStockCount)
                 .pendingOrders(pendingOrders)
                 .newCustomers24h(newCustomers24h != null ? newCustomers24h : 0L)
                 .ordersByStatus(ordersByStatus)
                 .revenueSeries(series)
                 .lowStockAlerts(lowStock)
+                .topSellers(topSellers)
                 .recentOrders(recentOrders)
                 .build();
     }
@@ -129,7 +149,7 @@ public class AnalyticsService {
                 .build();
     }
 
-    private List<DashboardStatsResponse.DayRevenue> build14DaySeries() {
+    private List<DashboardStatsResponse.RevenuePoint> build14DaySeries() {
         LocalDateTime from = LocalDateTime.now().minusDays(13).toLocalDate().atStartOfDay();
         List<Order> recentOrders = orderRepository.findAllByOrderByOrderedAtDesc().stream()
                 .filter(o -> o.getOrderedAt() != null && o.getOrderedAt().isAfter(from))
@@ -148,7 +168,7 @@ public class AnalyticsService {
         }
 
         return buckets.entrySet().stream()
-                .map(e -> DashboardStatsResponse.DayRevenue.builder()
+                .map(e -> DashboardStatsResponse.RevenuePoint.builder()
                         .date(e.getKey()).revenue(e.getValue()).build())
                 .collect(Collectors.toList());
     }

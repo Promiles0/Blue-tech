@@ -4,7 +4,7 @@ import { Search, SlidersHorizontal, ChevronDown, X } from 'lucide-react'
 import { motion, LayoutGroup } from 'framer-motion'
 import ProductCard from '../components/ProductCard'
 import { Reveal } from '../lib/motion'
-import api from '../api/axios'
+import apiService from '../api/service'
 
 const SORT_OPTIONS = [
   { label: 'Newest',          value: 'productId,desc' },
@@ -28,8 +28,8 @@ export default function Products() {
 
   // Fetch category list once to get IDs for filtering
   useEffect(() => {
-    api.get('/categories')
-      .then(({ data }) => setCategories(Array.isArray(data) ? data : []))
+    apiService.categories.getAll()
+      .then(({ data }) => setCategories(Array.isArray(data.data) ? data.data : []))
       .catch(() => {})
   }, [])
 
@@ -44,7 +44,7 @@ export default function Products() {
     let cancelled = false
 
     const needsCategoryFilter = category && category !== 'All'
-    const hasFilter = searchQ || needsCategoryFilter
+    const hasFilter = !!searchQ || needsCategoryFilter
 
     // Wait for categories to load before applying a category filter
     if (needsCategoryFilter && categories.length === 0) return
@@ -53,7 +53,6 @@ export default function Products() {
 
     let request
     if (hasFilter) {
-      // Use search endpoint: GET /api/products/search?name=...&categoryId=...
       const params = new URLSearchParams()
       if (searchQ) params.set('name', searchQ)
       if (needsCategoryFilter) {
@@ -64,22 +63,22 @@ export default function Products() {
       params.set('sort', `${sortField},${sortDir}`)
       params.set('page', page)
       params.set('size', '12')
-      request = api.get(`/products/search?${params}`)
+      request = apiService.products.search(params)
     } else {
-      // Use paginated list endpoint: GET /api/products?page=0&size=12&sort=...
       const params = new URLSearchParams()
       params.set('sort', `${sortField},${sortDir}`)
       params.set('page', page)
       params.set('size', '12')
-      request = api.get(`/products?${params}`)
+      request = apiService.products.getAllPaginated(params)
     }
 
     request
       .then(({ data }) => {
         if (!cancelled) {
-          const content = data?.content ?? (Array.isArray(data) ? data : [])
+          const resData = data
+          const content = resData?.content ?? (Array.isArray(resData) ? resData : [])
           setProducts(content)
-          setTotalPages(data?.totalPages ?? 1)
+          setTotalPages(resData?.totalPages ?? 1)
         }
       })
       .catch(() => { if (!cancelled) setProducts([]) })

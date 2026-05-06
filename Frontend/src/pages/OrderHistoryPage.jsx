@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Package, ChevronRight } from "lucide-react";
-import orderService from "../services/orderService";
+import apiService from "../api/service";
 
 const STATUS_STYLES = {
   PENDING:    "text-yellow-400/70 bg-yellow-400/10 border-yellow-400/20",
@@ -25,15 +25,21 @@ function OrderHistoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
-      try {
-        const data = await orderService.getMyOrders();
-        setOrders(data);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
+    let cancelled = false;
+    Promise.resolve().then(() => setLoading(true));
+    
+    apiService.orders.getUserOrders()
+      .then(({ data }) => {
+        if (!cancelled) setOrders(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!cancelled) setOrders([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
   }, []);
 
   if (loading) {
@@ -72,7 +78,7 @@ function OrderHistoryPage() {
                 <div>
                   <p style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>Order #{order.orderId ?? order.id}</p>
                   <p style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
-                    {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    {new Date(order.createdAt ?? order.orderedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

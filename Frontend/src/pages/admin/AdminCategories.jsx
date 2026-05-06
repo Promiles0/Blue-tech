@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, X, Check, AlertCircle } from 'lucide-react'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 
 const EMPTY = { name: '', description: '' }
 
@@ -17,8 +17,8 @@ export default function AdminCategories() {
 
   const fetchCategories = () => {
     setLoading(true)
-    api.get('/categories')
-      .then(({ data }) => setCategories(data.data ?? data))
+    apiService.admin.categories.getAll()
+      .then(({ data }) => setCategories(data.data ?? (Array.isArray(data) ? data : [])))
       .finally(() => setLoading(false))
   }
 
@@ -33,11 +33,12 @@ export default function AdminCategories() {
     if (!form.name.trim()) { setError('Category name is required.'); return }
     setSaving(true)
     try {
+      const payload = { name: form.name.trim(), description: form.description.trim() || undefined }
       if (modal === 'create') {
-        await api.post('/categories', { name: form.name.trim(), description: form.description.trim() || undefined })
+        await apiService.admin.categories.create(payload)
         setSuccess('Category created!')
       } else {
-        await api.put(`/categories/${editing.categoryId}`, { name: form.name.trim(), description: form.description.trim() || undefined })
+        await apiService.admin.categories.update(editing.categoryId, payload)
         setSuccess('Category updated!')
       }
       closeModal()
@@ -54,7 +55,7 @@ export default function AdminCategories() {
     if (!window.confirm(`Delete category "${cat.name ?? cat.categoryName}"? Products in this category may be affected.`)) return
     setDeleting(cat.categoryId)
     try {
-      await api.delete(`/categories/${cat.categoryId}`)
+      await apiService.admin.categories.delete(cat.categoryId)
       fetchCategories()
     } catch {
       alert('Failed to delete category — it may still have products assigned to it.')

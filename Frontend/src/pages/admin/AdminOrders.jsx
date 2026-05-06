@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Eye, Download, CreditCard, Truck, X } from 'lucide-react'
 import { toast } from 'sonner'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 import { money, dateShort, dateTime } from '../../lib/format'
 
 const STATUSES = ['all', 'PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
@@ -17,12 +17,11 @@ const STATUS_COLORS = {
 }
 
 function fetchOrders(status) {
-  const q = status && status !== 'all' ? `?status=${status}` : ''
-  return api.get(`/admin/orders${q}`).then(r => r.data)
+  return apiService.admin.orders.getAll(status).then(r => r.data)
 }
 
 function fetchOrderDetail(id) {
-  return api.get(`/admin/orders/${id}`).then(r => r.data)
+  return apiService.admin.orders.getOne(id).then(r => r.data)
 }
 
 export default function AdminOrders() {
@@ -37,7 +36,7 @@ export default function AdminOrders() {
 
   const updateStatus = useMutation({
     mutationFn: ({ orderId, status }) =>
-      api.patch(`/admin/orders/${orderId}/status`, { status }).then(r => r.data),
+      apiService.admin.orders.updateStatus(orderId, status).then(r => r.data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-orders'] }); toast.success('Status updated') },
     onError: () => toast.error('Failed to update status'),
   })
@@ -140,7 +139,7 @@ function OrderDrawer({ orderId, onClose }) {
   })
 
   const markPaid = useMutation({
-    mutationFn: () => api.post(`/admin/orders/${orderId}/payments`).then(r => r.data),
+    mutationFn: () => apiService.admin.orders.markPaid(orderId).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-order-detail', orderId] })
       qc.invalidateQueries({ queryKey: ['admin-orders'] })
@@ -152,7 +151,7 @@ function OrderDrawer({ orderId, onClose }) {
   const [carrier, setCarrier] = useState('')
   const [tracking, setTracking] = useState('')
   const addShipment = useMutation({
-    mutationFn: () => api.post(`/admin/orders/${orderId}/shipments`, { carrier, trackingNumber: tracking }).then(r => r.data),
+    mutationFn: () => apiService.admin.orders.addShipment(orderId, { carrier, trackingNumber: tracking }).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-order-detail', orderId] })
       qc.invalidateQueries({ queryKey: ['admin-orders'] })
