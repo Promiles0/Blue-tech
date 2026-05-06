@@ -20,6 +20,18 @@ public class OrderController {
     private final OrderService orderService;
     private final AuthService authService;
 
+    @GetMapping("/my")
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getMyOrders() {
+        User user = authService.getCurrentAuthenticatedUser();
+        return ResponseEntity.ok(ApiResponse.success("Orders fetched", orderService.getMyOrders(user)));
+    }
+
+    @GetMapping("/{orderId}")
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrderById(@PathVariable Long orderId) {
+        User user = authService.getCurrentAuthenticatedUser();
+        return ResponseEntity.ok(ApiResponse.success("Order fetched", orderService.getOrderById(user, orderId)));
+    }
+
     // POST /api/orders/checkout
     @PostMapping("/checkout")
     public ResponseEntity<ApiResponse<OrderResponse>> checkout(@RequestBody com.ecom.Backend.dto.request.OrderRequest request) {
@@ -29,19 +41,6 @@ public class OrderController {
                 ApiResponse.success("Order placed successfully!", response),
                 HttpStatus.CREATED
         );
-    }
-
-    // GET /api/orders
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<OrderResponse>>> getMyOrders() {
-        User user = authService.getCurrentAuthenticatedUser();
-        return ResponseEntity.ok(ApiResponse.success("Order history fetched", orderService.getUserOrders(user)));
-    }
-
-    // GET /api/orders/{id}
-    @GetMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<OrderResponse>> getOrderById(@PathVariable Long orderId) {
-        return ResponseEntity.ok(ApiResponse.success("Order details fetched", orderService.getOrderById(orderId)));
     }
 
     // PUT /api/orders/{id}/cancel

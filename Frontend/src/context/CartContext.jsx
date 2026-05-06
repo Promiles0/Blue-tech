@@ -10,12 +10,13 @@ export function CartProvider({ children }) {
   const { user }          = useAuth()
 
   const count = items.reduce((sum, i) => sum + (i.quantity ?? 1), 0)
-  const total = items.reduce((sum, i) => sum + (parseFloat(i.unitPrice ?? i.price ?? 0)) * (i.quantity ?? 1), 0)
+  const total = items.reduce((sum, i) => sum + parseFloat(i.unitPrice ?? 0) * (i.quantity ?? 1), 0)
+  const cart = { items }
 
   const fetchCart = useCallback(async () => {
     try {
       const { data } = await apiService.cart.get()
-      setItems(data.data?.items ?? [])
+      setItems(data?.items ?? [])
     } catch {
       setItems([])
     }
@@ -59,8 +60,19 @@ export function CartProvider({ children }) {
     }
   }
 
+  const isInCart = (variantId) => items.some(i => i.variantId === variantId)
+  const clearCart = async () => {
+    try {
+      await Promise.all(items.map(item => apiService.cart.removeItem(item.cartItemId ?? item.id)))
+      setItems([])
+    } catch {
+      toast.error('Failed to clear cart')
+      await fetchCart()
+    }
+  }
+
   return (
-    <CartContext.Provider value={{ items, count, total, addToCart, removeFromCart, updateQuantity, fetchCart }}>
+    <CartContext.Provider value={{ cart, items, count, total, addToCart, removeFromCart, updateQuantity, clearCart, fetchCart, isInCart }}>
       {children}
     </CartContext.Provider>
   )

@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -89,6 +90,15 @@ public class ProductService {
         // 1. Find the category
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + request.getCategoryId()));
+
+        // 1.5. Pre-check for duplicate SKU codes — gives a friendly error before hitting the DB constraint
+        for (ProductCreateRequest.VariantRequest vReq : request.getVariants()) {
+            if (variantRepository.findBySkuCode(vReq.getSkuCode()).isPresent()) {
+                throw new IllegalArgumentException(
+                    "SKU \"" + vReq.getSkuCode() + "\" already exists. Please use a unique SKU for each variant."
+                );
+            }
+        }
 
         // 2. Save the Base Product
         Product product = Product.builder()
@@ -172,7 +182,35 @@ public class ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        // 4. Log Mutation
+        // 4. Update variants (stock quantity, size/color, price adjustment)
+        List<ProductVariant> savedVariants;
+        if (request.getVariants() != null && !request.getVariants().isEmpty()) {
+            savedVariants = new ArrayList<>();
+            for (ProductUpdateRequest.VariantUpdateRequest vReq : request.getVariants()) {
+                if (vReq.getVariantId() != null) {
+                    ProductVariant variant = variantRepository.findById(vReq.getVariantId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Variant not found: " + vReq.getVariantId()));
+                    variant.setSkuCode(vReq.getSkuCode());
+                    variant.setSizeOrColor(vReq.getSizeOrColor());
+                    variant.setPriceAdjustment(vReq.getPriceAdjustment());
+                    variant.setStockQuantity(vReq.getStockQuantity());
+                    savedVariants.add(variantRepository.save(variant));
+                } else {
+                    ProductVariant newVariant = ProductVariant.builder()
+                            .product(savedProduct)
+                            .skuCode(vReq.getSkuCode())
+                            .sizeOrColor(vReq.getSizeOrColor())
+                            .priceAdjustment(vReq.getPriceAdjustment())
+                            .stockQuantity(vReq.getStockQuantity())
+                            .build();
+                    savedVariants.add(variantRepository.save(newVariant));
+                }
+            }
+        } else {
+            savedVariants = savedProduct.getVariants();
+        }
+
+        // 5. Log Mutation
         auditLogService.log(
                 authService.getCurrentAuthenticatedUser().getUserId(),
                 "UPDATE_PRODUCT",
@@ -181,8 +219,7 @@ public class ProductService {
                 null
         );
 
-        // Return current state (simplifying by using existing fetch logic or returning base info)
-        return buildProductDetailResponse(savedProduct, savedProduct.getVariants(), savedProduct.getImages());
+        return buildProductDetailResponse(savedProduct, savedVariants, savedProduct.getImages());
     }
 
     @Transactional
@@ -205,24 +242,30 @@ public class ProductService {
 
     // Fetches products in small "pages" (e.g., 10 at a time) to keep the app fast
     public Page<ProductListResponse> getProductsPaged(Pageable pageable) {
-        return productRepository.findAll(pageable)
-                .map(product -> ProductListResponse.builder()
-                        .productId(product.getProductId())
-                        .name(product.getName())
-                        .categoryName(product.getCategory().getCategoryName())
-                        .startingPrice(product.getPrice()) // Using base price for the list
-                        .build());
+        return productRepository.findAll(pageable).map(this::toListResponse);
     }
 
     public Page<ProductListResponse> searchProducts(String name, Long categoryId, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
         Specification<Product> spec = ProductSpecification.filterBy(name, categoryId, minPrice, maxPrice);
-        return productRepository.findAll(spec, pageable)
-                .map(product -> ProductListResponse.builder()
-                        .productId(product.getProductId())
-                        .name(product.getName())
-                        .categoryName(product.getCategory().getCategoryName())
-                        .startingPrice(product.getPrice())
-                        .build());
+        return productRepository.findAll(spec, pageable).map(this::toListResponse);
+    }
+
+    private ProductListResponse toListResponse(Product product) {
+        String primaryImage = null;
+        if (product.getImages() != null) {
+            primaryImage = product.getImages().stream()
+                    .filter(ProductImage::getIsPrimary)
+                    .map(ProductImage::getImageUrl)
+                    .findFirst()
+                    .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
+        }
+        return ProductListResponse.builder()
+                .productId(product.getProductId())
+                .name(product.getName())
+                .categoryName(product.getCategory().getCategoryName())
+                .startingPrice(product.getPrice())
+                .primaryImageUrl(primaryImage)
+                .build();
     }
 
     // Helper method to convert Entities to DTOs
@@ -241,7 +284,7 @@ public class ProductService {
         List<ProductDetailResponse.ImageResponse> imageDtos = images != null ? images.stream()
                 .map(i -> ProductDetailResponse.ImageResponse.builder()
                         .imageId(i.getImageId())
-                        .imageUrl("/uploads/products/" + i.getImageUrl())
+                        .imageUrl(i.getImageUrl())
                         .isPrimary(i.getIsPrimary())
                         .build())
                 .collect(Collectors.toList()) : null;
@@ -251,6 +294,7 @@ public class ProductService {
                 .name(product.getName())
                 .description(product.getDescription())
                 .price(product.getPrice())
+                .categoryId(product.getCategory().getCategoryId())
                 .categoryName(product.getCategory().getCategoryName())
                 .variants(variantDtos)
                 .images(imageDtos)

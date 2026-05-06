@@ -3,7 +3,9 @@ package com.ecom.Backend.repository;
 import com.ecom.Backend.entity.Product;
 import com.ecom.Backend.entity.Review;
 import com.ecom.Backend.entity.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,4 +16,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByProduct_ProductId(Long productId);
     Optional<Review> findByUserAndProduct(User user, Product product);
     boolean existsByUserAndProduct(User user, Product product);
+    @Query("SELECT r FROM Review r WHERE r.isHidden = false ORDER BY r.createdAt DESC")
+    List<Review> findRecentVisible(Pageable pageable);
+    List<Review> findByRatingOrderByCreatedAtDesc(Integer rating);
 }

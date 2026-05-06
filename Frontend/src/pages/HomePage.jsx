@@ -183,22 +183,28 @@ export default function Home() {
                   />
                 </div>
 
-                {/* Featured badge */}
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1, duration: 0.4 }}
-                  style={{
-                    position: 'absolute', bottom: -18, left: -18,
-                    background: '#0f0f0f', border: '1px solid #1e1e1e',
-                    borderRadius: 12, padding: '14px 20px',
-                    boxShadow: 'var(--shadow-elegant)',
-                  }}
-                >
-                  <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#444', marginBottom: 4 }}>FEATURED</p>
-                  <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, marginBottom: 3 }}>Aurora Wireless</p>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>$349</p>
-                </motion.div>
+                {/* Featured badge — first real product */}
+                {products[0] && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1, duration: 0.4 }}
+                    style={{
+                      position: 'absolute', bottom: -18, left: -18,
+                      background: '#0f0f0f', border: '1px solid #1e1e1e',
+                      borderRadius: 12, padding: '14px 20px',
+                      boxShadow: 'var(--shadow-elegant)',
+                    }}
+                  >
+                    <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#444', marginBottom: 4 }}>FEATURED</p>
+                    <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, marginBottom: 3 }}>
+                      {products[0].name}
+                    </p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>
+                      ${parseFloat(products[0].startingPrice ?? products[0].price ?? 0).toFixed(0)}
+                    </p>
+                  </motion.div>
+                )}
               </div>
             </Parallax>
           </Reveal>
@@ -261,7 +267,7 @@ export default function Home() {
           ) : (
             <div className="grid-4">
               {displayProducts.map((p, i) => (
-                <Reveal key={p.id} delay={i * 0.05}>
+                <Reveal key={p.productId ?? p.id} delay={i * 0.05}>
                   <ProductCard product={p} />
                 </Reveal>
               ))}

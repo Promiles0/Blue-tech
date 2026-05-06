@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check } from 'lucide-react'
 import apiService from '../../api/service'
 
-const EMPTY_VARIANT = { skuCode: '', sizeOrColor: '', priceAdjustment: '', stockQuantity: 0 }
+const EMPTY_VARIANT = { variantId: null, skuCode: '', sizeOrColor: '', priceAdjustment: '', stockQuantity: 0 }
 const EMPTY_IMAGE   = { imageUrl: '', isPrimary: false }
 const EMPTY_FORM = {
   name: '', description: '', price: '', categoryId: '',
@@ -17,6 +17,7 @@ function formFromDetail(p) {
     price:       p.price ?? '',
     categoryId:  p.categoryId ?? '',
     variants:    p.variants?.length ? p.variants.map(v => ({
+      variantId:       v.variantId ?? null,
       skuCode:         v.skuCode ?? '',
       sizeOrColor:     v.sizeOrColor ?? '',
       priceAdjustment: v.priceAdjustment ?? '',
@@ -108,6 +109,7 @@ export default function AdminProducts() {
         price:       Number(form.price),
         categoryId:  Number(form.categoryId),
         variants:    form.variants.map(v => ({
+          ...(v.variantId != null ? { variantId: v.variantId } : {}),
           skuCode:         v.skuCode.trim(),
           sizeOrColor:     v.sizeOrColor.trim() || undefined,
           priceAdjustment: v.priceAdjustment !== '' ? Number(v.priceAdjustment) : undefined,
@@ -223,8 +225,8 @@ export default function AdminProducts() {
               >
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {p.images?.[0]?.imageUrl && (
-                      <img src={p.images[0].imageUrl} alt=""
+                    {(p.primaryImageUrl ?? p.images?.[0]?.imageUrl) && (
+                      <img src={p.primaryImageUrl ?? p.images[0].imageUrl} alt=""
                         style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', background: '#1c1c1c' }}
                         onError={e => { e.target.style.display = 'none' }}
                       />
@@ -232,8 +234,8 @@ export default function AdminProducts() {
                     <span style={{ fontWeight: 500, color: '#ddd' }}>{p.name}</span>
                   </div>
                 </td>
-                <td style={{ padding: '14px 16px', color: '#555' }}>{p.category?.name ?? p.categoryName ?? '—'}</td>
-                <td style={{ padding: '14px 16px', color: '#f59e0b', fontWeight: 600 }}>${Number(p.price).toFixed(2)}</td>
+                <td style={{ padding: '14px 16px', color: '#555' }}>{p.categoryName ?? p.category?.name ?? '—'}</td>
+                <td style={{ padding: '14px 16px', color: '#f59e0b', fontWeight: 600 }}>${Number(p.startingPrice ?? p.price ?? 0).toFixed(2)}</td>
                 <td style={{ padding: '14px 16px', color: '#555' }}>{p.variants?.length ?? 0}</td>
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', gap: 8 }}>

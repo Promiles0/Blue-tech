@@ -30,6 +30,8 @@ public class User {
 
     private String phone;
 
+    private String picture; // Profile picture URL from Google
+
     private String provider;   // e.g. "google", "local"
     private String providerId; // ID from google
 
@@ -42,6 +44,10 @@ public class User {
     private LocalDateTime createdAt;
 
     private LocalDateTime lastLogin;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean isSuspended = false;
 
     private String resetToken;
     private LocalDateTime resetTokenExpiry;

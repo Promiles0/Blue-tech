@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +29,7 @@ public class OrderService {
     private final AuditLogService auditLogService;
     private final AuthService authService;
     private final EmailService emailService;
+    private final ShipmentRepository shipmentRepository;
 
     public List<OrderResponse> getAllOrders() {
         return orderRepository.findAll().stream()
@@ -185,6 +187,32 @@ public class OrderService {
                 "Cancelled order ID: " + orderId + ". Stock restored.",
                 null
         );
+    }
+
+    public List<OrderResponse> getMyOrders(User user) {
+        return orderRepository.findByUser_UserId(user.getUserId())
+                .stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .map(this::mapToOrderResponse)
+                .collect(Collectors.toList());
+    }
+
+    public OrderResponse getOrderById(User user, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (!order.getUser().getUserId().equals(user.getUserId())) {
+            throw new RuntimeException("Unauthorized");
+        }
+        OrderResponse response = mapToOrderResponse(order);
+        shipmentRepository.findByOrder_OrderId(orderId).ifPresent(s ->
+            response.setShipmentInfo(OrderResponse.ShipmentInfo.builder()
+                    .carrier(s.getCarrier())
+                    .trackingNumber(s.getTrackingNumber())
+                    .status(s.getStatus().name())
+                    .shippedAt(s.getShippedAt())
+                    .build())
+        );
+        return response;
     }
 
     private OrderResponse mapToOrderResponse(Order order) {

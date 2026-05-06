@@ -2,11 +2,14 @@ package com.ecom.Backend.service;
 
 import com.ecom.Backend.dto.response.WishlistResponse;
 import com.ecom.Backend.entity.*;
+import com.ecom.Backend.enums.NotificationCategory;
+import com.ecom.Backend.enums.NotificationSeverity;
 import com.ecom.Backend.repository.ProductRepository;
 import com.ecom.Backend.repository.WishlistItemRepository;
 import com.ecom.Backend.repository.WishlistRepository;
 import com.ecom.Backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +24,8 @@ public class WishlistService {
     private final WishlistRepository wishlistRepository;
     private final WishlistItemRepository wishlistItemRepository;
     private final ProductRepository productRepository;
+    @Lazy
+    private final NotificationService notificationService;
 
     private Wishlist getOrCreateWishlist(User user) {
         return wishlistRepository.findByUser_UserId(user.getUserId())
@@ -36,10 +41,17 @@ public class WishlistService {
         wishlistItemRepository.findByWishlistAndProduct(wishlist, product)
                 .ifPresentOrElse(
                     wishlistItemRepository::delete,
-                    () -> wishlistItemRepository.save(WishlistItem.builder()
-                            .wishlist(wishlist)
-                            .product(product)
-                            .build())
+                    () -> {
+                        wishlistItemRepository.save(WishlistItem.builder()
+                                .wishlist(wishlist)
+                                .product(product)
+                                .build());
+                        notificationService.emitUserNotification(user, NotificationCategory.SHOPPING,
+                                NotificationSeverity.INFO,
+                                product.getName() + " saved to wishlist",
+                                "You added " + product.getName() + " to your wishlist.",
+                                "/wishlist");
+                    }
                 );
     }
 
@@ -48,14 +60,20 @@ public class WishlistService {
         
         List<WishlistResponse.WishlistItemDetail> items = wishlist.getItems().stream().map(item -> {
             Product p = item.getProduct();
-            String primaryImage = p.getImages() != null ? p.getImages().stream()
-                    .filter(ProductImage::getIsPrimary)
-                    .map(ProductImage::getImageUrl)
-                    .findFirst().orElse(null) : null;
+            String primaryImage = null;
+            if (p.getImages() != null && !p.getImages().isEmpty()) {
+                primaryImage = p.getImages().stream()
+                        .filter(img -> img.getIsPrimary() != null && img.getIsPrimary())
+                        .map(ProductImage::getImageUrl)
+                        .findFirst()
+                        .orElse(p.getImages().get(0).getImageUrl());
+            }
 
             return WishlistResponse.WishlistItemDetail.builder()
                     .productId(p.getProductId())
                     .productName(p.getName())
+                    .price(p.getPrice())
+                    .categoryName(p.getCategory() != null ? p.getCategory().getCategoryName() : null)
                     .averageRating(p.getAverageRating())
                     .primaryImageUrl(primaryImage)
                     .build();

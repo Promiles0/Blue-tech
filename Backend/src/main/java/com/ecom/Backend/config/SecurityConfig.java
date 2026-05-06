@@ -5,8 +5,10 @@ import com.ecom.Backend.security.CustomUserDetailsService;
 import com.ecom.Backend.security.JwtAuthenticationFilter;
 import com.ecom.Backend.security.OAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -17,6 +19,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -48,20 +51,42 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 
+    private AuthenticationEntryPoint apiAuthenticationEntryPoint() {
+        return (request, response, authException) -> {
+            if (request.getRequestURI().startsWith("/api/")) {
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                return;
+            }
+            response.sendRedirect("/oauth2/authorization/google");
+        };
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+            .cors(cors -> {})
             .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for REST APIs
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/auth/**", "/login/**", "/oauth2/**", "/swagger-ui/**", "/v3/api-docs/**", "/api/payments/webhook").permitAll() // Allow everyone to access Login/Register, OAuth2, and Webhooks
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**", "/api/products/**", "/uploads/**", "/api/reviews/**").permitAll() // Public catalog, images, and reviews
                 .requestMatchers("/api/categories/**", "/api/products/**").hasRole("ADMIN") // Only Admins can create/edit catalog
                 .requestMatchers("/api/admin/**").hasRole("ADMIN") // Global admin route protection
+                .requestMatchers("/api/notifications/admin/**").hasRole("ADMIN") // Admin-only notification endpoints
                 .requestMatchers("/api/cart/**", "/api/orders/**", "/api/wishlist/**", "/api/addresses/**", "/api/notifications/**", "/api/users/**").authenticated() // Logged in user
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/products/*/reviews").authenticated()
-                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/reviews/*").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/products/*/reviews").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/reviews/*").authenticated()
                 .anyRequest().authenticated() // Protect everything else
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(apiAuthenticationEntryPoint())
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    if (request.getRequestURI().startsWith("/api/")) {
+                        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden");
+                        return;
+                    }
+                    response.sendRedirect("/");
+                })
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) // OAuth2 needs a temporary session to store state

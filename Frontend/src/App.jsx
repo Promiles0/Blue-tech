@@ -5,8 +5,9 @@ import { Toaster } from 'sonner'
 import { AuthProvider }    from './context/AuthContext'
 import { CartProvider }    from './context/CartContext'
 import { UIProvider }      from './context/UIContext'
-import { WishlistProvider } from './context/WishlistContext'
-import { useAuth }         from './context/AuthContext'
+import { WishlistProvider }       from './context/WishlistContext'
+import { NotificationProvider }  from './context/NotificationContext'
+import { useAuth }               from './context/AuthContext'
 import SiteLayout          from './components/site/SiteLayout'
 import ProtectedRoute      from './components/ProtectedRoute'
 import HomePage            from './pages/HomePage'
@@ -19,8 +20,12 @@ import WishlistPage        from './pages/WishlistPage'
 import AccountPage         from './pages/AccountPage'
 import CheckoutPage        from './pages/CheckoutPage'
 import OrderHistoryPage    from './pages/OrderHistoryPage'
-import NotFoundPage        from './pages/NotFoundPage'
-import AdminLayout         from './pages/admin/AdminLayout'
+import OrderDetailPage     from './pages/OrderDetailPage'
+import SearchPage         from './pages/SearchPage'
+import CategoryPage       from './pages/CategoryPage'
+import NotFoundPage           from './pages/NotFoundPage'
+import NotificationsPage      from './pages/NotificationsPage'
+import AdminLayout            from './pages/admin/AdminLayout'
 import AdminDashboard      from './pages/admin/AdminDashboard'
 import AdminProducts       from './pages/admin/AdminProducts'
 import AdminCategories     from './pages/admin/AdminCategories'
@@ -30,6 +35,8 @@ import AdminUsers          from './pages/admin/AdminUsers'
 import AdminReviews        from './pages/admin/AdminReviews'
 import AdminAnalytics      from './pages/admin/AdminAnalytics'
 import AdminAudit          from './pages/admin/AdminAudit'
+import AdminNotifications  from './pages/admin/AdminNotifications'
+import AdminCoupons        from './pages/admin/AdminCoupons'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 2 } },
@@ -42,16 +49,18 @@ export default function App() {
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-              <UIProvider>
-                <Toaster position="bottom-right" richColors />
-                <Routes>
-                  {/* Admin section — no SiteLayout, ADMIN role required */}
-                  <Route path="/admin/*" element={<AdminSection />} />
+              <NotificationProvider>
+                <UIProvider>
+                  <Toaster position="bottom-right" richColors />
+                  <Routes>
+                    {/* Admin section — no SiteLayout, ADMIN role required */}
+                    <Route path="/admin/*" element={<AdminSection />} />
 
-                  {/* Customer site — wrapped in SiteLayout */}
-                  <Route path="*" element={<CustomerSite />} />
-                </Routes>
-              </UIProvider>
+                    {/* Customer site — wrapped in SiteLayout */}
+                    <Route path="*" element={<CustomerSite />} />
+                  </Routes>
+                </UIProvider>
+              </NotificationProvider>
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>
@@ -81,8 +90,10 @@ function AdminSection() {
         <Route path="shipments"  element={<AdminShipments />} />
         <Route path="users"      element={<AdminUsers />} />
         <Route path="reviews"    element={<AdminReviews />} />
-        <Route path="analytics"  element={<AdminAnalytics />} />
-        <Route path="audit"      element={<AdminAudit />} />
+        <Route path="coupons"    element={<AdminCoupons />} />
+        <Route path="analytics"      element={<AdminAnalytics />} />
+        <Route path="audit"          element={<AdminAudit />} />
+        <Route path="notifications"  element={<AdminNotifications />} />
       </Route>
     </Routes>
   )
@@ -95,14 +106,18 @@ function CustomerSite() {
         <Route path="/"             element={<HomePage />} />
         <Route path="/login"        element={<LoginPage />} />
         <Route path="/register"     element={<RegisterPage />} />
-        <Route path="/products"     element={<ProductsPage />} />
-        <Route path="/products/:id" element={<ProductDetailPage />} />
+        <Route path="/products"          element={<ProductsPage />} />
+        <Route path="/products/:id"      element={<ProductDetailPage />} />
+        <Route path="/search"            element={<SearchPage />} />
+        <Route path="/category/:slug"    element={<CategoryPage />} />
 
         <Route path="/cart"     element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
         <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
         <Route path="/account"  element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
-        <Route path="/orders"   element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
+        <Route path="/orders"        element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
+        <Route path="/orders/:id"    element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

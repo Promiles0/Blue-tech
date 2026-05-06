@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Package } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Package, ChevronRight } from "lucide-react";
 import apiService from "../api/service";
 
 const STATUS_STYLES = {
@@ -22,7 +23,6 @@ function StatusBadge({ status }) {
 function OrderHistoryPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,7 +30,7 @@ function OrderHistoryPage() {
     
     apiService.orders.getUserOrders()
       .then(({ data }) => {
-        if (!cancelled) setOrders(Array.isArray(data.data) ? data.data : []);
+        if (!cancelled) setOrders(Array.isArray(data) ? data : []);
       })
       .catch(() => {
         if (!cancelled) setOrders([]);
@@ -67,53 +67,29 @@ function OrderHistoryPage() {
       ) : (
         <div className="flex flex-col gap-4">
           {orders.map((order) => (
-            <div key={order.id} className="glass-card rounded-2xl overflow-hidden">
-              {/* Order header */}
-              <button
-                onClick={() => setExpanded(expanded === order.id ? null : order.id)}
-                className="w-full flex items-center justify-between px-6 py-5 text-left hover:bg-white/2 transition-colors"
-              >
-                <div className="flex items-center gap-5">
-                  <div>
-                    <p className="text-[12px] text-[#555] mb-1">
-                      Order #{order.id}
-                    </p>
-                    <p className="text-[13px] font-semibold text-white/80">
-                      {new Date(order.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </p>
-                  </div>
+            <Link
+              key={order.orderId ?? order.id}
+              to={`/orders/${order.orderId ?? order.id}`}
+              style={{ display: 'block', background: '#141414', border: '1px solid #1e1e1e', borderRadius: 16, overflow: 'hidden', transition: 'border-color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = '#2a2a2a'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = '#1e1e1e'}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px' }}>
+                <div>
+                  <p style={{ fontSize: 12, color: '#555', marginBottom: 4 }}>Order #{order.orderId ?? order.id}</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                    {new Date(order.createdAt ?? order.orderedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <StatusBadge status={order.status} />
-                  <span className="font-display font-bold text-[15px] text-white">
-                    ${order.total?.toFixed(2)}
+                  <span style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b' }}>
+                    ${parseFloat(order.totalAmount ?? order.total ?? 0).toFixed(2)}
                   </span>
+                  <ChevronRight size={16} color="#555" />
                 </div>
-              </button>
-
-              {/* Expanded items */}
-              {expanded === order.id && order.items?.length > 0 && (
-                <div className="border-t border-white/5 px-6 py-4 flex flex-col gap-3">
-                  {order.items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between text-[13px]">
-                      <span className="text-[#888]">{item.product?.name}</span>
-                      <span className="text-[#555]">
-                        {item.quantity} × ${item.price?.toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
-                  {order.shippingAddress && (
-                    <p className="text-[12px] text-[#444] mt-2 pt-3 border-t border-white/4">
-                      Ships to: {order.shippingAddress}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
+              </div>
+            </Link>
           ))}
         </div>
       )}
