@@ -1,23 +1,36 @@
 package com.ecom.Backend.service;
 
-import com.ecom.Backend.dto.request.*;
+import com.ecom.Backend.dto.request.GoogleLoginRequest;
+import com.ecom.Backend.dto.request.PasswordChangeRequest;
+import com.ecom.Backend.dto.request.ProfileUpdateRequest;
+import com.ecom.Backend.dto.request.ResetPasswordRequest;
+import com.ecom.Backend.dto.request.UserLoginRequest;
+import com.ecom.Backend.dto.request.UserRegisterRequest;
 import com.ecom.Backend.dto.response.AuthResponse;
 import com.ecom.Backend.dto.response.UserResponse;
 import com.ecom.Backend.entity.User;
 import com.ecom.Backend.enums.RoleType;
+import com.ecom.Backend.exception.ResourceNotFoundException;
 import com.ecom.Backend.repository.UserRepository;
 import com.ecom.Backend.security.CustomUserDetailsService;
 import com.ecom.Backend.security.JwtService;
-import com.ecom.Backend.exception.ResourceNotFoundException;
+import com.ecom.Backend.service.EmailService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -35,6 +48,9 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final CustomUserDetailsService userDetailsService;
     private final EmailService emailService;
+
+    @Value("${app.google.web-client-id}")
+    private String googleWebClientId;
 
     // Helper to get the logged-in User entity from the Security Context
     public User getCurrentAuthenticatedUser() {
@@ -76,6 +92,7 @@ public class AuthService {
                 .name(savedUser.getName())
                 .email(savedUser.getEmail())
                 .phone(savedUser.getPhone())
+                .picture(savedUser.getPicture())
                 .role(savedUser.getRole())
                 .build();
                 
@@ -123,6 +140,7 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
+                .picture(user.getPicture())
                 .role(user.getRole())
                 .build();
 
@@ -131,6 +149,73 @@ public class AuthService {
                 .token(jwtToken)
                 .user(userResponse)
                 .build();
+    }
+
+    public AuthResponse googleLogin(GoogleLoginRequest request) {
+        try {
+            if (googleWebClientId == null || googleWebClientId.isBlank()) {
+                throw new RuntimeException("Google web client ID is not configured. Set GOOGLE_WEB_CLIENT_ID in your backend environment.");
+            }
+
+            // Create the verifier and lock the token to your exact client ID and issuer
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleWebClientId))
+                    .setIssuers(Arrays.asList("https://accounts.google.com", "accounts.google.com"))
+                    .build();
+
+            // Verify the token from the frontend
+            GoogleIdToken idToken = verifier.verify(request.getToken());
+            if (idToken == null) {
+                throw new RuntimeException("Invalid Google token");
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String email = payload.getEmail();
+            String name = (String) payload.get("name");
+            String picture = (String) payload.get("picture");
+            String googleId = payload.getSubject(); // Unique Google user ID
+
+            if (email == null || googleId == null) {
+                throw new RuntimeException("Google token payload did not contain required user data.");
+            }
+
+            // Check if user exists, if not create
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user == null) {
+                user = User.builder()
+                        .name(name)
+                        .email(email)
+                        .picture(picture)
+                        .passwordHash("google-oauth") // Dummy password for OAuth users
+                        .provider("google")
+                        .providerId(googleId)
+                        .role(RoleType.CUSTOMER)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                userRepository.save(user);
+            }
+
+            // Generate JWT Token
+            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+            String jwtToken = jwtService.generateToken(userDetails);
+
+            // Map to response
+            UserResponse userResponse = UserResponse.builder()
+                    .userId(user.getUserId())
+                    .name(user.getName())
+                    .email(user.getEmail())
+                    .phone(user.getPhone())
+                    .picture(user.getPicture())
+                    .role(user.getRole())
+                    .build();
+
+            return AuthResponse.builder()
+                    .token(jwtToken)
+                    .user(userResponse)
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Google login failed: " + e.getMessage());
+        }
     }
 
     public UserResponse updateProfile(User user, ProfileUpdateRequest request) {
@@ -193,6 +278,7 @@ public class AuthService {
                 .name(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
+                .picture(user.getPicture())
                 .role(user.getRole())
                 .build();
     }

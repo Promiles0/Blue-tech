@@ -1,0 +1,49 @@
+{
+  "properties": [
+    {
+      "name": "app.admin.email",
+      "type": "java.lang.String",
+      "description": "Bootstrap email address for the seeded admin account."
+    },
+    {
+      "name": "app.admin.password",
+      "type": "java.lang.String",
+      "description": "Bootstrap password for the seeded admin account."
+    },
+    {
+      "name": "app.admin.name",
+      "type": "java.lang.String",
+      "description": "Display name for the seeded admin account."
+    },
+    {
+      "name": "app.admin.phone",
+      "type": "java.lang.String",
+      "description": "Phone number for the seeded admin account."
+    },
+    {
+      "name": "app.upload.dir",
+      "type": "java.lang.String",
+      "description": "Filesystem directory used to store uploaded product files."
+    },
+    {
+      "name": "app.google.web-client-id",
+      "type": "java.lang.String",
+      "description": "Google OAuth web client ID used to validate ID tokens from the frontend."
+    },
+    {
+      "name": "app.frontend.url",
+      "type": "java.lang.String",
+      "description": "Frontend base URL used for redirect targets after authentication."
+    },
+    {
+      "name": "app.flutterwave.secret-key",
+      "type": "java.lang.String",
+      "description": "Secret key used for Flutterwave API requests."
+    },
+    {
+      "name": "app.flutterwave.webhook-secret",
+      "type": "java.lang.String",
+      "description": "Expected verification secret for Flutterwave webhook requests."
+    }
+  ]
+}

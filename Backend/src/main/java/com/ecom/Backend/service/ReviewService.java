@@ -5,13 +5,18 @@ import com.ecom.Backend.dto.response.ReviewResponse;
 import com.ecom.Backend.entity.Product;
 import com.ecom.Backend.entity.Review;
 import com.ecom.Backend.entity.User;
+import com.ecom.Backend.enums.NotificationCategory;
+import com.ecom.Backend.enums.NotificationSeverity;
 import com.ecom.Backend.enums.OrderStatus;
 import com.ecom.Backend.repository.OrderRepository;
 import com.ecom.Backend.repository.ProductRepository;
 import com.ecom.Backend.repository.ReviewRepository;
 import com.ecom.Backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -26,6 +31,8 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    @Lazy
+    private final NotificationService notificationService;
 
     @Transactional
     public ReviewResponse postReview(User user, Long productId, ReviewRequest request) {
@@ -50,6 +57,17 @@ public class ReviewService {
 
         Review savedReview = reviewRepository.save(review);
         updateProductRatingCache(product, request.getRating(), true);
+
+        notificationService.emitUserNotification(user, NotificationCategory.COMMUNITY,
+                NotificationSeverity.SUCCESS,
+                "Review posted for " + product.getName(),
+                "Your " + request.getRating() + "-star review has been published.",
+                "/products/" + productId);
+        notificationService.emitAdminNotification(NotificationCategory.COMMUNITY,
+                NotificationSeverity.INFO,
+                "New review on " + product.getName(),
+                user.getName() + " left a " + request.getRating() + "-star review.",
+                "/admin/reviews");
 
         return mapToResponse(savedReview);
     }
@@ -112,6 +130,15 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> getRecentReviews(int limit) {
+        Pageable pageable = PageRequest.of(0, Math.max(1, limit));
+        return reviewRepository.findRecentVisible(pageable)
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     private void updateProductRatingCache(Product product, Integer newRating, boolean isNewReview) {
         double currentAvg = product.getAverageRating();
         int currentCount = product.getReviewCount();
@@ -136,9 +163,10 @@ public class ReviewService {
     }
 
     private ReviewResponse mapToResponse(Review review) {
+        String userName = review.getUser() != null ? review.getUser().getName() : "Anonymous";
         return ReviewResponse.builder()
                 .reviewId(review.getReviewId())
-                .userName(review.getUser().getName())
+                .userName(userName)
                 .rating(review.getRating())
                 .comment(review.getComment())
                 .createdAt(review.getCreatedAt())

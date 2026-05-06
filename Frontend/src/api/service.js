@@ -5,6 +5,7 @@ const apiService = {
   auth: {
     login: (credentials) => api.post('/auth/login', credentials),
     register: (userData) => api.post('/auth/register', userData),
+    googleLogin: (token) => api.post('/auth/google', { token }),
     getProfile: () => api.get('/users/profile'),
     updateProfile: (data) => api.put('/users/profile', data),
     changePassword: (data) => api.put('/users/password', data),
@@ -53,7 +54,7 @@ const apiService = {
   // --- ORDERS ---
   orders: {
     checkout: (orderRequest) => api.post('/orders/checkout', orderRequest),
-    getUserOrders: () => api.get('/orders/my-orders'),
+    getUserOrders: () => api.get('/orders/my'),
     getOrderDetails: (id) => api.get(`/orders/${id}`),
   },
 

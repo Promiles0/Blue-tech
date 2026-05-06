@@ -2,9 +2,10 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Truck, Users, MessageSquare, BarChart3, ScrollText,
-  LogOut, ArrowLeft,
+  LogOut, ArrowLeft, Bell, Tag,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import AdminNotificationBell from '../../components/admin/AdminNotificationBell'
 
 const NAV = [
   { to: '/admin',            label: 'Overview',    icon: LayoutDashboard, end: true },
@@ -14,8 +15,10 @@ const NAV = [
   { to: '/admin/shipments',  label: 'Shipments',   icon: Truck },
   { to: '/admin/users',      label: 'Users',       icon: Users },
   { to: '/admin/reviews',    label: 'Reviews',     icon: MessageSquare },
-  { to: '/admin/analytics',  label: 'Analytics',   icon: BarChart3 },
-  { to: '/admin/audit',      label: 'Audit Log',   icon: ScrollText },
+  { to: '/admin/coupons',    label: 'Coupons',     icon: Tag },
+  { to: '/admin/analytics',      label: 'Analytics',      icon: BarChart3 },
+  { to: '/admin/audit',          label: 'Audit Log',      icon: ScrollText },
+  { to: '/admin/notifications',  label: 'Notifications',  icon: Bell },
 ]
 
 export default function AdminLayout() {
@@ -102,6 +105,16 @@ export default function AdminLayout() {
 
       {/* ── Main ── */}
       <main style={{ marginLeft: 240, flex: 1, minHeight: '100vh', background: 'var(--admin-bg)' }}>
+        {/* Top bar with admin bell */}
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 10,
+          display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+          padding: '10px 24px',
+          background: 'var(--admin-bg)',
+          borderBottom: '1px solid var(--admin-border)',
+        }}>
+          <AdminNotificationBell />
+        </div>
         <Outlet />
       </main>
     </div>

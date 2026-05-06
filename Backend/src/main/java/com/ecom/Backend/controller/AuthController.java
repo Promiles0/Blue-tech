@@ -1,5 +1,6 @@
 package com.ecom.Backend.controller;
 
+import com.ecom.Backend.dto.request.GoogleLoginRequest;
 import com.ecom.Backend.dto.request.ResetPasswordRequest;
 import com.ecom.Backend.dto.request.UserLoginRequest;
 import com.ecom.Backend.dto.request.UserRegisterRequest;
@@ -29,6 +30,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody UserLoginRequest request) {
         AuthResponse responseData = authService.loginUser(request);
         return new ResponseEntity<>(ApiResponse.success("Login successful!", responseData), HttpStatus.OK);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        AuthResponse responseData = authService.googleLogin(request);
+        return new ResponseEntity<>(ApiResponse.success("Google login successful!", responseData), HttpStatus.OK);
     }
 
     @PostMapping("/forgot-password")

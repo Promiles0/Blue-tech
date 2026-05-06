@@ -54,6 +54,14 @@ public class ReviewController {
         return ResponseEntity.ok(ApiResponse.success("Reviews fetched successfully", reviews));
     }
 
+    // GET /api/reviews/recent?limit=8
+    @GetMapping("/reviews/recent")
+    public ResponseEntity<ApiResponse<List<ReviewResponse>>> getRecentReviews(
+            @RequestParam(defaultValue = "8") int limit) {
+        List<ReviewResponse> reviews = reviewService.getRecentReviews(limit);
+        return ResponseEntity.ok(ApiResponse.success("Recent reviews fetched", reviews));
+    }
+
     // DELETE /api/reviews/{id}
     @DeleteMapping("/reviews/{reviewId}")
     public ResponseEntity<ApiResponse<Void>> deleteReview(@PathVariable Long reviewId) {

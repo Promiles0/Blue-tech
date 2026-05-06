@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/cart")
 @RequiredArgsConstructor
@@ -31,6 +33,17 @@ public class CartController {
     public ResponseEntity<ApiResponse<CartResponse>> addToCart(@Valid @RequestBody CartItemRequest request) {
         User user = authService.getCurrentAuthenticatedUser();
         return ResponseEntity.ok(ApiResponse.success("Item added to cart", cartService.addToCart(user, request)));
+    }
+
+    // PATCH /api/cart/{id}
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<CartResponse>> updateQuantity(
+            @PathVariable Long id,
+            @RequestBody Map<String, Integer> body) {
+        User user = authService.getCurrentAuthenticatedUser();
+        int quantity = body.getOrDefault("quantity", 1);
+        CartResponse cart = cartService.updateQuantity(user, id, quantity);
+        return ResponseEntity.ok(ApiResponse.success("Cart updated", cart));
     }
 
     // DELETE /api/cart/{id}

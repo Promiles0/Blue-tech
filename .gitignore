@@ -1,0 +1,40 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/resources/*.jar
+!**/src/test/resources/*.jar
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/resources/archetype-resources/google_cheatsheet.pdf
+
+### VS Code ###
+.vscode/
+
+### OS ###
+.DS_Store
+Thumbs.db
+desktop.ini
+
+### Custom ###
+Backend/target/
+Frontend/dist/
+uploads/
+*.log
+.temp/
+.env
+.env.*
+Backend/.env
+Frontend/.env
+!*.env.example
+!**/.env.example

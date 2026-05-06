@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import api from '../api/axios'
 import { useAuth } from './AuthContext'
 
@@ -20,8 +21,9 @@ export function WishlistProvider({ children }) {
 
   useEffect(() => { load() }, [load])
 
-  const toggle = async (productId) => {
+  const toggle = async (productId, productName) => {
     if (!user) return
+    const wasWishlisted = wishlistIds.has(productId)
     setWishlistIds(prev => {
       const next = new Set(prev)
       if (next.has(productId)) next.delete(productId)
@@ -30,6 +32,11 @@ export function WishlistProvider({ children }) {
     })
     try {
       await api.post(`/wishlist/${productId}`)
+      if (wasWishlisted) {
+        toast(productName ? `${productName} removed from wishlist` : 'Removed from wishlist')
+      } else {
+        toast.success(productName ? `${productName} saved to your wishlist` : 'Saved to wishlist')
+      }
     } catch {
       load()
     }

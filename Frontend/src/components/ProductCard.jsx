@@ -108,7 +108,7 @@ export default function ProductCard({ product }) {
 
           {/* Wishlist button — stops propagation so card click doesn't fire */}
           <button
-            onClick={e => { e.stopPropagation(); if (user) toggle(pid) }}
+            onClick={e => { e.stopPropagation(); if (user) toggle(pid, product.name) }}
             title={user ? (wishlisted ? 'Remove from wishlist' : 'Add to wishlist') : 'Sign in to save'}
             style={{
               position: 'absolute', top: 10, right: 10,
