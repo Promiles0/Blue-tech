@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react' // useRef used for prevCountRef + popoverRef
 import { Bell, X, Inbox } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -34,18 +34,12 @@ function timeAgo(dateStr) {
 
 export default function AdminNotificationBell() {
   const { adminUnread, fetchAdminUnreadCount } = useNotifications()
-  const [open, setOpen]         = useState(false)
-  const [items, setItems]       = useState([])
-  const [loading, setLoading]   = useState(false)
-  const [badgeKey, setBadgeKey] = useState(0)
-  const [prevCount, setPrev]    = useState(adminUnread)
+  const [open, setOpen]       = useState(false)
+  const [items, setItems]     = useState([])
+  const [loading, setLoading] = useState(false)
   const popoverRef = useRef(null)
   const navigate   = useNavigate()
-
-  useEffect(() => {
-    if (adminUnread > prevCount) setBadgeKey(k => k + 1)
-    setPrev(adminUnread)
-  }, [adminUnread]) // eslint-disable-line
+  // adminUnread used directly as motion key — bumps the spring animation on each new notification
 
   const fetchItems = useCallback(async () => {
     setLoading(true)
@@ -62,7 +56,7 @@ export default function AdminNotificationBell() {
       await api.post('/notifications/admin/mark-all-read')
       setItems(prev => prev.map(n => ({ ...n, isRead: true })))
       fetchAdminUnreadCount()
-    } catch {}
+    } catch { /* mark-all-read is best-effort */ }
   }
 
   const handleOpen = async () => {
@@ -100,7 +94,7 @@ export default function AdminNotificationBell() {
         <Bell size={16} />
         {adminUnread > 0 && (
           <motion.span
-            key={badgeKey}
+            key={adminUnread}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}

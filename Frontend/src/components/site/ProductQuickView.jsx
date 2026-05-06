@@ -24,6 +24,7 @@ export default function ProductQuickView() {
 
   const isOpen = !!quickViewProduct
   const pid    = quickViewProduct?.productId ?? quickViewProduct?.id
+  const stockQty = selectedVariant?.stockQuantity ?? 0
 
   useEffect(() => {
     if (!quickViewProduct) { setProduct(null); setActiveImage(0); setQty(1); return }
@@ -230,16 +231,22 @@ export default function ProductQuickView() {
                           <Minus size={14} />
                         </button>
                         <span style={{ fontSize: 15, color: '#fff', minWidth: 20, textAlign: 'center' }}>{qty}</span>
-                        <button onClick={() => setQty(q => q + 1)}
-                          style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', display: 'flex' }}>
+                        <button
+                          onClick={() => setQty(q => Math.min(stockQty, q + 1))}
+                          disabled={qty >= stockQty}
+                          style={{ background: 'none', border: 'none', color: qty >= stockQty ? '#333' : '#888', cursor: qty >= stockQty ? 'not-allowed' : 'pointer', display: 'flex' }}>
                           <Plus size={14} />
                         </button>
                       </div>
                     </div>
 
                     {selectedVariant && (
-                      <p style={{ fontSize: 12, color: (selectedVariant.stockQuantity ?? 0) > 0 ? '#22c55e' : '#ef4444', marginBottom: 18 }}>
-                        {(selectedVariant.stockQuantity ?? 0) > 0 ? `${selectedVariant.stockQuantity} in stock` : 'Out of stock'}
+                      <p style={{ fontSize: 12, color: stockQty > 0 ? '#22c55e' : '#ef4444', marginBottom: 18 }}>
+                        {stockQty === 0
+                          ? 'Out of stock'
+                          : stockQty <= 5
+                            ? `Only ${stockQty} left`
+                            : `${stockQty} in stock`}
                       </p>
                     )}
 

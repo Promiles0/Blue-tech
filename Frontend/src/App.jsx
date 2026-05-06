@@ -21,6 +21,8 @@ import AccountPage         from './pages/AccountPage'
 import CheckoutPage        from './pages/CheckoutPage'
 import OrderHistoryPage    from './pages/OrderHistoryPage'
 import OrderDetailPage     from './pages/OrderDetailPage'
+import SearchPage         from './pages/SearchPage'
+import CategoryPage       from './pages/CategoryPage'
 import NotFoundPage           from './pages/NotFoundPage'
 import NotificationsPage      from './pages/NotificationsPage'
 import AdminLayout            from './pages/admin/AdminLayout'
@@ -104,8 +106,10 @@ function CustomerSite() {
         <Route path="/"             element={<HomePage />} />
         <Route path="/login"        element={<LoginPage />} />
         <Route path="/register"     element={<RegisterPage />} />
-        <Route path="/products"     element={<ProductsPage />} />
-        <Route path="/products/:id" element={<ProductDetailPage />} />
+        <Route path="/products"          element={<ProductsPage />} />
+        <Route path="/products/:id"      element={<ProductDetailPage />} />
+        <Route path="/search"            element={<SearchPage />} />
+        <Route path="/category/:slug"    element={<CategoryPage />} />
 
         <Route path="/cart"     element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
         <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />

@@ -4,7 +4,9 @@
       "Bash(npm install *)",
       "Bash(npm run *)",
       "Bash(where java *)",
-      "Bash(java -version)"
+      "Bash(java -version)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\arois\\\\E-COMMERCE-PLATFORM\" -Directory)",
+      "Bash(Select-Object Name)"
     ]
   }
 }
