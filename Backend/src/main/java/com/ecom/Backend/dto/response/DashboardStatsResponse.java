@@ -17,17 +17,29 @@ public class DashboardStatsResponse {
     private BigDecimal revenue24h;
     private BigDecimal revenue7d;
     private BigDecimal revenue30d;
+    private BigDecimal totalRevenue;
     private BigDecimal aov;
+
     private Long orders30d;
+    private Long totalOrders;
     private Long totalCustomers;
+    private Long totalVariants;
+    private Long ordersToday;
     private Long lowStockCount;
     private Long pendingOrders;
     private Long newCustomers24h;
     private Map<String, Long> ordersByStatus;
 
-    private List<DayRevenue> revenueSeries;
     private List<LowStockAlert> lowStockAlerts;
+    private List<TopSeller> topSellers;
+    private List<RevenuePoint> revenueSeries;
     private List<RecentOrder> recentOrders;
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class RevenuePoint {
+        private String date;
+        private BigDecimal revenue;
+    }
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class DayRevenue {
@@ -40,6 +52,13 @@ public class DashboardStatsResponse {
         private String productName;
         private String skuCode;
         private Integer currentStock;
+    }
+
+    @Data @Builder @NoArgsConstructor @AllArgsConstructor
+    public static class TopSeller {
+        private String productName;
+        private Long totalSold;
+        private BigDecimal revenue;
     }
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor

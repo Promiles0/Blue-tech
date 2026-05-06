@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   DollarSign, TrendingUp, ShoppingBag, Users,
-  AlertTriangle, Activity, Clock, UserPlus,
+  AlertTriangle, Activity, Clock, UserPlus, Package,
 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
@@ -9,11 +9,11 @@ import {
   BarChart, Bar, Cell,
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 import { money } from '../../lib/format'
 
 function fetchStats() {
-  return api.get('/admin/dashboard/stats').then(r => r.data)
+  return apiService.admin.getDashboardStats().then(r => r.data)
 }
 
 const STATUS_COLOR = {
@@ -54,7 +54,7 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {isError && <ErrorBanner msg="Failed to load dashboard stats." />}
+      {isError && !data && <ErrorBanner msg="Failed to load dashboard stats." />}
 
       {/* KPI Grid — 4 cols × 2 rows */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
@@ -63,6 +63,11 @@ export default function AdminDashboard() {
         <KPI icon={Activity}      label="Revenue 30d"     value={isLoading ? '—' : money(data?.revenue30d)} />
         <KPI icon={ShoppingBag}   label="AOV (30d)"       value={isLoading ? '—' : money(data?.aov)} />
         <KPI icon={ShoppingBag}   label="Orders 30d"      value={isLoading ? '—' : (data?.orders30d ?? 0).toLocaleString()} />
+        <KPI icon={Clock}         label="Pending Orders"  value={isLoading ? '—' : (data?.pendingOrders ?? 0).toLocaleString()} accent="var(--admin-warning)" />
+        <KPI icon={Users}         label="Customers"       value={isLoading ? '—' : (data?.totalCustomers ?? 0).toLocaleString()} />
+        <KPI icon={UserPlus}      label="New Today"       value={isLoading ? '—' : (data?.newCustomers24h ?? 0).toLocaleString()} accent="var(--admin-success)" />
+        <KPI icon={AlertTriangle} label="Low Stock"  value={isLoading ? '—' : (data?.lowStockCount ?? 0).toLocaleString()} accent="var(--admin-warning)" />
+        <KPI icon={Package}     label="Variants"     value={isLoading ? '—' : (data?.totalVariants ?? 0).toLocaleString()} />
         <KPI icon={Clock}         label="Pending Orders"  value={isLoading ? '—' : (data?.pendingOrders ?? 0).toLocaleString()} accent="var(--admin-warning)" />
         <KPI icon={Users}         label="Customers"       value={isLoading ? '—' : (data?.totalCustomers ?? 0).toLocaleString()} />
         <KPI icon={UserPlus}      label="New Today"       value={isLoading ? '—' : (data?.newCustomers24h ?? 0).toLocaleString()} accent="var(--admin-success)" />

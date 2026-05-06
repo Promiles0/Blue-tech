@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search } from 'lucide-react'
 import { useUI } from '../../context/UIContext'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 
 export default function CommandPalette() {
   const { paletteOpen, setPaletteOpen } = useUI()
@@ -38,8 +38,11 @@ export default function CommandPalette() {
     const timer = setTimeout(async () => {
       setLoading(true)
       try {
-        const { data } = await api.get(`/products/search?name=${encodeURIComponent(query)}&size=6`)
-        const list = data?.content ?? (Array.isArray(data) ? data : [])
+        const params = new URLSearchParams()
+        params.set('name', query)
+        params.set('size', '6')
+        const { data } = await apiService.products.search(params)
+        const list = data.data?.content ?? (Array.isArray(data.data) ? data.data : [])
         setResults(list)
       } catch {
         setResults([])

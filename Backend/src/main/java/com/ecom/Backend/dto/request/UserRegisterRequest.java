@@ -18,6 +18,4 @@ public class UserRegisterRequest {
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")
     private String password;
-
-    private String phone;
 }

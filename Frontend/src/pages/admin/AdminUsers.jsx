@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Search, ShieldCheck, ShieldOff, Ban, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 import { money, dateShort } from '../../lib/format'
 
 function fetchUsers(search) {
-  const q = search ? `?search=${encodeURIComponent(search)}` : ''
-  return api.get(`/admin/users${q}`).then(r => r.data)
+  return apiService.admin.users.getAll(search).then(r => r.data)
 }
 
 export default function AdminUsers() {
@@ -27,7 +26,7 @@ export default function AdminUsers() {
   }
 
   const setAdmin = useMutation({
-    mutationFn: ({ userId, make }) => api.patch(`/admin/users/${userId}/admin`, { make }).then(r => r.data),
+    mutationFn: ({ userId, make }) => apiService.admin.users.setAdmin(userId, make).then(r => r.data),
     onSuccess: (_, { make }) => {
       qc.invalidateQueries({ queryKey: ['admin-users'] })
       toast.success(make ? 'Admin role granted' : 'Admin role removed')
@@ -36,7 +35,7 @@ export default function AdminUsers() {
   })
 
   const setSuspend = useMutation({
-    mutationFn: ({ userId, suspend }) => api.patch(`/admin/users/${userId}/suspend`, { suspend }).then(r => r.data),
+    mutationFn: ({ userId, suspend }) => apiService.admin.users.setSuspend(userId, suspend).then(r => r.data),
     onSuccess: (_, { suspend }) => {
       qc.invalidateQueries({ queryKey: ['admin-users'] })
       toast.success(suspend ? 'User suspended' : 'User unsuspended')

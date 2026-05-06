@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Save } from 'lucide-react'
 import { toast } from 'sonner'
-import api from '../../api/axios'
+import apiService from '../../api/service'
 import { dateShort } from '../../lib/format'
 
 const SHIPMENT_STATUSES = ['PENDING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'RETURNED']
 
 function fetchShipments() {
-  return api.get('/admin/shipments').then(r => r.data)
+  return apiService.admin.shipments.getAll().then(r => r.data)
 }
 
 export default function AdminShipments() {
@@ -50,7 +50,7 @@ function ShipmentRow({ shipment }) {
   }, [shipment])
 
   const save = useMutation({
-    mutationFn: () => api.patch(`/admin/shipments/${shipment.shipmentId}`, { carrier, trackingNumber: tracking, status }).then(r => r.data),
+    mutationFn: () => apiService.admin.shipments.update(shipment.shipmentId, { carrier, trackingNumber: tracking, status }).then(r => r.data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-shipments'] }); toast.success('Shipment saved') },
     onError: () => toast.error('Failed to save shipment'),
   })
