@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ShoppingBag, Heart, ArrowLeft, Check, BadgeCheck } from 'lucide-react'
+import { ShoppingBag, Heart, ArrowLeft, Check, BadgeCheck, Plus, Minus } from 'lucide-react'
 import { toast } from 'sonner'
-// BadgeCheck used in reviews section below
 import api from '../api/axios'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { trackRecentlyViewed } from '../lib/recentlyViewed'
 import { StarDisplay, StarInput } from '../components/site/StarRating'
+import LensZoom from '../components/site/LensZoom'
+import StickyCartBar from '../components/site/StickyCartBar'
 
 export default function ProductDetail() {
   const { id }             = useParams()
@@ -18,9 +19,16 @@ export default function ProductDetail() {
   const [loading, setLoading]       = useState(false)
   const [selectedVariant, setSelectedVariant] = useState(null)
   const [activeImage, setActiveImage]     = useState(0)
+  const [qty, setQty]               = useState(1)
   const [adding, setAdding]         = useState(false)
   const [added, setAdded]           = useState(false)
+  const [stickyVisible, setStickyVisible] = useState(false)
+  const ctaRef = useRef(null)
   const [reviews, setReviews]       = useState([])
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted]   = useState(false)
 
   useEffect(() => {
     setLoading(true)  // eslint-disable-line
@@ -35,12 +43,21 @@ export default function ProductDetail() {
       .finally(() => setLoading(false))
   }, [id, navigate])
 
+  useEffect(() => {
+    const el = ctaRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(([entry]) => setStickyVisible(!entry.isIntersecting), { threshold: 0 })
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [product]) // re-attach after product loads
+
   const handleAddToCart = async () => {
     if (!user) { navigate('/login', { state: { from: `/products/${id}` } }); return }
-    if (!selectedVariant?.id) return
+    const variantId = selectedVariant?.variantId ?? selectedVariant?.id
+    if (!variantId) return
     setAdding(true)
     try {
-      await addToCart(selectedVariant.id, 1)
+      await addToCart(variantId, qty)
       setAdded(true)
       setTimeout(() => setAdded(false), 2000)
     } finally {
@@ -88,11 +105,9 @@ export default function ProductDetail() {
           {/* Images */}
           <div>
             <div style={{ borderRadius: 16, overflow: 'hidden', background: '#141414', marginBottom: 12, aspectRatio: '4/3' }}>
-              <img
-                src={images[activeImage]?.imageUrl}
+              <LensZoom
+                src={images[activeImage]?.imageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80'}
                 alt={product.name}
-                onError={e => { e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80' }}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>
             {images.length > 1 && (
@@ -118,11 +133,7 @@ export default function ProductDetail() {
 
             {avgRating && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
-                <div style={{ display: 'flex', gap: 2 }}>
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={14} fill={i < Math.round(Number(avgRating)) ? '#f59e0b' : 'none'} color="#f59e0b" />
-                  ))}
-                </div>
+                <StarDisplay rating={Number(avgRating)} size={14} />
                 <span style={{ fontSize: 13, color: '#888' }}>{avgRating} ({reviews.length} review{reviews.length !== 1 ? 's' : ''})</span>
               </div>
             )}
@@ -142,37 +153,63 @@ export default function ProductDetail() {
               <div style={{ marginBottom: 24 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 10 }}>Options</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {product.variants.map(v => (
-                    <button key={v.id} onClick={() => setSelectedVariant(v)}
-                      style={{
-                        padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
-                        background: selectedVariant?.id === v.id ? '#7c5cf0' : 'transparent',
-                        color:      selectedVariant?.id === v.id ? '#fff' : '#888',
-                        border:     `1px solid ${selectedVariant?.id === v.id ? '#7c5cf0' : '#2a2a2a'}`,
-                        cursor: 'pointer', transition: 'all 0.2s',
-                      }}
-                    >
-                      {v.sizeOrColor ?? v.skuCode}
-                    </button>
-                  ))}
+                  {product.variants.map(v => {
+                    const vid  = v.variantId ?? v.id
+                    const svid = selectedVariant?.variantId ?? selectedVariant?.id
+                    return (
+                      <button key={vid} onClick={() => { setSelectedVariant(v); setQty(1) }}
+                        style={{
+                          padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+                          background: svid === vid ? '#7c5cf0' : 'transparent',
+                          color:      svid === vid ? '#fff' : '#888',
+                          border:     `1px solid ${svid === vid ? '#7c5cf0' : '#2a2a2a'}`,
+                          cursor: 'pointer', transition: 'all 0.2s',
+                        }}
+                      >
+                        {v.sizeOrColor ?? v.skuCode}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
 
             {/* Stock */}
             {selectedVariant && (
-              <p style={{ fontSize: 13, color: selectedVariant.stockQuantity > 0 ? '#22c55e' : '#ef4444', marginBottom: 24 }}>
-                {selectedVariant.stockQuantity > 0
-                  ? `${selectedVariant.stockQuantity} in stock`
-                  : 'Out of stock'}
+              <p style={{ fontSize: 13, color: (selectedVariant.stockQuantity ?? 0) > 0 ? '#22c55e' : '#ef4444', marginBottom: 16 }}>
+                {(selectedVariant.stockQuantity ?? 0) === 0
+                  ? 'Out of stock'
+                  : selectedVariant.stockQuantity <= 5
+                    ? `Only ${selectedVariant.stockQuantity} left`
+                    : `${selectedVariant.stockQuantity} in stock`}
               </p>
             )}
 
+            {/* Qty selector */}
+            {selectedVariant && (selectedVariant.stockQuantity ?? 0) > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#ccc' }}>Qty</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: '1px solid #2a2a2a', borderRadius: 10, padding: '8px 16px', width: 'fit-content' }}>
+                  <button onClick={() => setQty(q => Math.max(1, q - 1))}
+                    style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', display: 'flex' }}>
+                    <Minus size={14} />
+                  </button>
+                  <span style={{ fontSize: 15, color: '#fff', minWidth: 20, textAlign: 'center' }}>{qty}</span>
+                  <button
+                    onClick={() => setQty(q => Math.min(selectedVariant.stockQuantity, q + 1))}
+                    disabled={qty >= (selectedVariant.stockQuantity ?? 0)}
+                    style={{ background: 'none', border: 'none', color: qty >= (selectedVariant.stockQuantity ?? 0) ? '#333' : '#888', cursor: qty >= (selectedVariant.stockQuantity ?? 0) ? 'not-allowed' : 'pointer', display: 'flex' }}>
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Add to cart */}
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div ref={ctaRef} style={{ display: 'flex', gap: 12 }}>
               <button
                 onClick={handleAddToCart}
-                disabled={adding || !selectedVariant || selectedVariant?.stockQuantity === 0}
+                disabled={adding || !selectedVariant || (selectedVariant?.stockQuantity ?? 0) === 0}
                 className="noir-btn-primary"
                 style={{ flex: 1, padding: '14px', fontSize: 15 }}
               >
@@ -186,27 +223,105 @@ export default function ProductDetail() {
         </div>
 
         {/* Reviews */}
-        {reviews.length > 0 && (
-          <div style={{ marginTop: 72 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 24 }}>Reviews</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ marginTop: 72 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>
+              Reviews {reviews.length > 0 && <span style={{ fontSize: 15, color: '#555', fontWeight: 400 }}>({reviews.length})</span>}
+            </h2>
+          </div>
+
+          {/* Submission form */}
+          {user ? (
+            submitted ? (
+              <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, fontSize: 14, color: '#34d399' }}>
+                Thanks for your review!
+              </div>
+            ) : (
+              <div style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 14 }}>Leave a review</p>
+                <div style={{ marginBottom: 14 }}>
+                  <StarInput value={reviewRating} onChange={setReviewRating} />
+                </div>
+                <textarea
+                  value={reviewComment}
+                  onChange={e => setReviewComment(e.target.value)}
+                  placeholder="Share your thoughts…"
+                  rows={3}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14,
+                    background: '#0e0e0e', border: '1px solid #262626', color: '#fff',
+                    resize: 'vertical', outline: 'none', lineHeight: 1.6,
+                    fontFamily: 'inherit', marginBottom: 12,
+                  }}
+                />
+                <button
+                  onClick={async () => {
+                    if (!reviewRating) { toast.error('Please select a star rating.'); return }
+                    setSubmitting(true)
+                    try {
+                      const { data } = await api.post(`/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment })
+                      setReviews(prev => [data.data ?? data, ...prev])
+                      setSubmitted(true)
+                      toast.success('Review posted!')
+                    } catch (err) {
+                      toast.error(err.response?.data?.message ?? 'Could not post review.')
+                    } finally {
+                      setSubmitting(false)
+                    }
+                  }}
+                  disabled={submitting}
+                  className="noir-btn-primary"
+                  style={{ padding: '10px 22px', fontSize: 14 }}
+                >
+                  {submitting ? 'Posting…' : 'Post review'}
+                </button>
+              </div>
+            )
+          ) : (
+            <div style={{ marginBottom: 24, fontSize: 13, color: '#555' }}>
+              <Link to="/login" style={{ color: '#7c5cf0' }}>Sign in</Link> to leave a review.
+            </div>
+          )}
+
+          {/* Review list */}
+          {reviews.length === 0 ? (
+            <p style={{ fontSize: 14, color: '#555' }}>No reviews yet. Be the first!</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {reviews.map(r => (
-                <div key={r.id} style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 12, padding: '20px 24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{r.user?.name ?? 'Anonymous'}</span>
-                    <div style={{ display: 'flex', gap: 2 }}>
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={12} fill={i < r.rating ? '#f59e0b' : 'none'} color="#f59e0b" />
-                      ))}
+                <div key={r.reviewId ?? r.id} style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 12, padding: '18px 22px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8, gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{r.user?.name ?? r.userName ?? 'Anonymous'}</span>
+                      {r.verifiedBuyer && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#34d399' }}>
+                          <BadgeCheck size={12} /> Verified
+                        </span>
+                      )}
                     </div>
+                    <StarDisplay rating={r.rating} size={12} />
                   </div>
-                  {r.comment && <p style={{ fontSize: 14, color: '#888', lineHeight: 1.6 }}>{r.comment}</p>}
+                  {r.comment && <p style={{ fontSize: 14, color: '#888', lineHeight: 1.65 }}>{r.comment}</p>}
+                  {r.createdAt && (
+                    <p style={{ fontSize: 11, color: '#444', marginTop: 8 }}>
+                      {new Date(r.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      <StickyCartBar
+        product={product}
+        selectedVariant={selectedVariant}
+        onAdd={handleAddToCart}
+        adding={adding}
+        added={added}
+        visible={stickyVisible}
+      />
     </div>
   )
 }

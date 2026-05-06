@@ -41,7 +41,7 @@ public class AdminCouponService {
                 .build();
         Coupon saved = couponRepository.save(coupon);
         auditLogService.log(authService.getCurrentAuthenticatedUser().getUserId(),
-                "CREATE_COUPON", "coupons", "Created coupon: " + saved.getCode(), saved.getCouponId());
+                "CREATE_COUPON", "coupons", "Created coupon: " + saved.getCode(), saved.getCouponId().toString());
         return toResponse(saved);
     }
 
@@ -64,14 +64,14 @@ public class AdminCouponService {
         Coupon saved = couponRepository.save(coupon);
         auditLogService.log(authService.getCurrentAuthenticatedUser().getUserId(),
                 "TOGGLE_COUPON", "coupons",
-                (saved.isActive() ? "Activated" : "Paused") + " coupon: " + saved.getCode(), id);
+                (saved.isActive() ? "Activated" : "Paused") + " coupon: " + saved.getCode(), id.toString());
         return toResponse(saved);
     }
 
     public void delete(Long id) {
         Coupon coupon = getOrThrow(id);
         auditLogService.log(authService.getCurrentAuthenticatedUser().getUserId(),
-                "DELETE_COUPON", "coupons", "Deleted coupon: " + coupon.getCode(), id);
+                "DELETE_COUPON", "coupons", "Deleted coupon: " + coupon.getCode(), id.toString());
         couponRepository.delete(coupon);
     }
 

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check } from 'lucide-react'
 import api from '../../api/axios'
 
-const EMPTY_VARIANT = { skuCode: '', sizeOrColor: '', priceAdjustment: '', stockQuantity: 0 }
+const EMPTY_VARIANT = { variantId: null, skuCode: '', sizeOrColor: '', priceAdjustment: '', stockQuantity: 0 }
 const EMPTY_IMAGE   = { imageUrl: '', isPrimary: false }
 const EMPTY_FORM = {
   name: '', description: '', price: '', categoryId: '',
@@ -17,6 +17,7 @@ function formFromDetail(p) {
     price:       p.price ?? '',
     categoryId:  p.categoryId ?? '',
     variants:    p.variants?.length ? p.variants.map(v => ({
+      variantId:       v.variantId ?? null,
       skuCode:         v.skuCode ?? '',
       sizeOrColor:     v.sizeOrColor ?? '',
       priceAdjustment: v.priceAdjustment ?? '',
@@ -107,6 +108,7 @@ export default function AdminProducts() {
         price:       Number(form.price),
         categoryId:  Number(form.categoryId),
         variants:    form.variants.map(v => ({
+          ...(v.variantId != null ? { variantId: v.variantId } : {}),
           skuCode:         v.skuCode.trim(),
           sizeOrColor:     v.sizeOrColor.trim() || undefined,
           priceAdjustment: v.priceAdjustment !== '' ? Number(v.priceAdjustment) : undefined,

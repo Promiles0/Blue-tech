@@ -45,7 +45,7 @@ public class AuthService {
     private final CustomUserDetailsService userDetailsService;
     private final EmailService emailService;
 
-    @Value("${app.google.web-client-id:969012591537-lah9tkerqlo3eifpm0iiv7khvlf8rh7v.apps.googleusercontent.com}")
+    @Value("${app.google.web-client-id}")
     private String googleWebClientId;
 
     // Helper to get the logged-in User entity from the Security Context
@@ -136,6 +136,10 @@ public class AuthService {
 
     public AuthResponse googleLogin(GoogleLoginRequest request) {
         try {
+            if (googleWebClientId == null || googleWebClientId.isBlank()) {
+                throw new RuntimeException("Google web client ID is not configured. Set GOOGLE_WEB_CLIENT_ID in your backend environment.");
+            }
+
             // Create the verifier and lock the token to your exact client ID and issuer
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
                     .setAudience(Collections.singletonList(googleWebClientId))
