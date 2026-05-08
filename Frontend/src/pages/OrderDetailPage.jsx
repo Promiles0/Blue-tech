@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Package, Truck, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { ArrowLeft, Package, Truck, CheckCircle2, Clock, XCircle, Wallet } from 'lucide-react'
 import { motion } from 'framer-motion'
 import orderService from '../services/orderService'
 
@@ -106,33 +106,84 @@ export default function OrderDetailPage() {
     <div style={{ padding: '48px 0 80px' }}>
       <div className="container-noir" style={{ maxWidth: 760 }}>
 
-        <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#888', marginBottom: 32, transition: 'color 0.2s' }}
+        <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#999', marginBottom: 32, transition: 'color 0.2s' }}
           onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.color = '#888'}
+          onMouseLeave={e => e.currentTarget.style.color = '#999'}
         >
           <ArrowLeft size={14} /> Back to orders
         </Link>
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 32, gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18, gap: 16, flexWrap: 'wrap' }}>
             <div>
               <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: '#444', textTransform: 'uppercase', marginBottom: 6 }}>Order</p>
-              <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>#{order.orderId}</h1>
-              <p style={{ fontSize: 13, color: '#555', marginTop: 4 }}>{fmt(order.createdAt)}</p>
+              <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>#{order.orderId}</h1>
+              <p style={{ fontSize: 13, color: '#999', marginTop: 6 }}>{fmt(order.createdAt)}</p>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, minWidth: 190 }}>
               <StatusBadge status={order.status} />
-              <span style={{ fontSize: 24, fontWeight: 900, color: '#f59e0b' }}>
-                ${parseFloat(order.totalAmount ?? 0).toFixed(2)}
-              </span>
+              <span style={{ fontSize: 24, fontWeight: 900, color: '#f59e0b' }}>${parseFloat(order.totalAmount ?? 0).toFixed(2)}</span>
+              <p style={{ color: '#999', fontSize: 13 }}>Items: {order.items?.length ?? 0}</p>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
+          <div className="order-summary-meta" style={{ marginBottom: 28 }}>
+            <div className="dashboard-card-secondary">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ 
+                  width: 32, height: 32, borderRadius: 8, background: 'rgba(59,130,246,0.12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1px solid rgba(59,130,246,0.3)'
+                }}>
+                  <Clock size={16} style={{ color: '#3b82f6' }} />
+                </div>
+                <span className="label-muted">Order date</span>
+              </div>
+              <p style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: '#fff' }}>{fmt(order.createdAt)}</p>
+            </div>
+            <div className="dashboard-card-secondary">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ 
+                  width: 32, height: 32, borderRadius: 8, background: 
+                  order.paymentStatus === 'COMPLETED' ? 'rgba(34,197,94,0.12)' : 
+                  order.paymentStatus === 'PENDING' ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: `1px solid ${
+                    order.paymentStatus === 'COMPLETED' ? 'rgba(34,197,94,0.3)' : 
+                    order.paymentStatus === 'PENDING' ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'
+                  }`
+                }}>
+                  <Wallet size={16} style={{ 
+                    color: order.paymentStatus === 'COMPLETED' ? '#22c55e' : 
+                           order.paymentStatus === 'PENDING' ? '#f59e0b' : '#ef4444' 
+                  }} />
+                </div>
+                <span className="label-muted">Payment</span>
+              </div>
+              <p style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: '#fff' }}>{order.paymentMethod ?? 'Credit card'}</p>
+              <p style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{order.paymentStatus ?? 'Completed'}</p>
+            </div>
+            <div className="dashboard-card-secondary">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ 
+                  width: 32, height: 32, borderRadius: 8, background: 'rgba(124,92,240,0.12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: '1px solid rgba(124,92,240,0.3)'
+                }}>
+                  <Truck size={16} style={{ color: '#7c5cf0' }} />
+                </div>
+                <span className="label-muted">Shipping</span>
+              </div>
+              <p style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: '#fff' }}>{order.shippingMethod ?? 'Standard delivery'}</p>
+              <p style={{ fontSize: 12, color: '#999', marginTop: 4 }}>Estimated delivery: 3-5 days</p>
+            </div>
+          </div>
+
+          <div className="order-detail-panel" style={{ marginBottom: 32 }}>
 
             {/* Timeline */}
-            <div style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 16, padding: '24px 20px' }}>
+            <div className="dashboard-panel">
               <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#555', textTransform: 'uppercase', marginBottom: 20 }}>
                 {order.status === 'CANCELLED' ? 'Cancelled' : 'Timeline'}
               </p>
@@ -159,20 +210,20 @@ export default function OrderDetailPage() {
             </div>
 
             {/* Shipping + Shipment info */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="order-details-grid">
               {(order.shippingRecipient || order.shippingStreet) && (
-                <div style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 16, padding: '20px' }}>
+                <div className="dashboard-panel">
                   <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#555', textTransform: 'uppercase', marginBottom: 12 }}>Ship to</p>
                   {order.shippingRecipient && <p style={{ fontSize: 14, fontWeight: 600, color: '#fff', marginBottom: 4 }}>{order.shippingRecipient}</p>}
-                  {order.shippingStreet  && <p style={{ fontSize: 13, color: '#888' }}>{order.shippingStreet}</p>}
-                  {order.shippingCity    && <p style={{ fontSize: 13, color: '#888' }}>{order.shippingCity}</p>}
-                  {order.shippingCountry && <p style={{ fontSize: 13, color: '#888' }}>{order.shippingCountry}</p>}
+                  {order.shippingStreet  && <p style={{ fontSize: 13, color: '#999' }}>{order.shippingStreet}</p>}
+                  {order.shippingCity    && <p style={{ fontSize: 13, color: '#999' }}>{order.shippingCity}</p>}
+                  {order.shippingCountry && <p style={{ fontSize: 13, color: '#999' }}>{order.shippingCountry}</p>}
                   {order.shippingPhoneNumber && <p style={{ fontSize: 12, color: '#555', marginTop: 6 }}>{order.shippingPhoneNumber}</p>}
                 </div>
               )}
 
               {order.shipmentInfo && (
-                <div style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 16, padding: '20px' }}>
+                <div className="dashboard-panel">
                   <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#555', textTransform: 'uppercase', marginBottom: 12 }}>Shipment</p>
                   {order.shipmentInfo.carrier && (
                     <p style={{ fontSize: 13, color: '#ccc', marginBottom: 4 }}>
@@ -195,8 +246,8 @@ export default function OrderDetailPage() {
 
           {/* Items */}
           {order.items?.length > 0 && (
-            <div style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 16, overflow: 'hidden' }}>
-              <div style={{ padding: '18px 20px', borderBottom: '1px solid #1e1e1e' }}>
+            <div className="dashboard-panel" style={{ overflow: 'hidden' }}>
+              <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#555', textTransform: 'uppercase' }}>Items</p>
               </div>
               {order.items.map((item, i) => (
@@ -207,10 +258,10 @@ export default function OrderDetailPage() {
                 }}>
                   <div>
                     <p style={{ fontSize: 14, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{item.productName}</p>
-                    {item.variantInfo && <p style={{ fontSize: 12, color: '#555' }}>{item.variantInfo}</p>}
+                    {item.variantInfo && <p style={{ fontSize: 12, color: '#999' }}>{item.variantInfo}</p>}
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 13, color: '#888' }}>{item.quantity} × ${parseFloat(item.priceAtPurchase ?? 0).toFixed(2)}</p>
+                    <p style={{ fontSize: 13, color: '#999' }}>{item.quantity} × ${parseFloat(item.priceAtPurchase ?? 0).toFixed(2)}</p>
                     <p style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>${parseFloat(item.subtotal ?? 0).toFixed(2)}</p>
                   </div>
                 </div>

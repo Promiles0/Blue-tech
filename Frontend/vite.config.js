@@ -7,19 +7,19 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
         secure: false,
         configure: (proxy) => {
           proxy.on('error', (err) => {
-            console.error('\n[proxy] ❌ Backend unreachable at http://localhost:8080')
+            console.error('\n[proxy] ❌ Backend unreachable at http://127.0.0.1:8080')
             console.error('[proxy]    Is the Spring Boot server running? (mvnw spring-boot:run)')
             console.error('[proxy]    Error:', err.message, '\n')
           })
         },
       },
       '/uploads': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
         secure: false,
       },

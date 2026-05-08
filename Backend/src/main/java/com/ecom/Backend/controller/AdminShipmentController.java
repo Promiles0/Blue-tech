@@ -13,6 +13,8 @@ import com.ecom.Backend.service.ShipmentService;
 import com.ecom.Backend.util.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -58,11 +60,11 @@ public class AdminShipmentController {
 
     @PatchMapping("/{shipmentId}")
     public ResponseEntity<ApiResponse<AdminShipmentResponse>> updateShipment(
-            @PathVariable Long shipmentId,
+            @PathVariable @NonNull Long shipmentId,
             @RequestBody Map<String, String> body) {
 
-        Shipment shipment = shipmentRepository.findById(shipmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Shipment not found"));
+        Shipment shipment = Objects.requireNonNull(shipmentRepository.findById(Objects.requireNonNull(shipmentId))
+                .orElseThrow(() -> new ResourceNotFoundException("Shipment not found")));
 
         if (body.containsKey("carrier"))        shipment.setCarrier(body.get("carrier"));
         if (body.containsKey("trackingNumber")) shipment.setTrackingNumber(body.get("trackingNumber"));
@@ -70,7 +72,7 @@ public class AdminShipmentController {
 
         shipmentRepository.save(shipment);
 
-        Long adminId = authService.getCurrentAuthenticatedUser().getUserId();
+        Long adminId = Objects.requireNonNull(authService.getCurrentAuthenticatedUser().getUserId());
         auditLogService.log(adminId, "shipment.update", "shipments", String.valueOf(shipmentId),
                 "Updated shipment #" + shipmentId, null);
 

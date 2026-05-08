@@ -181,7 +181,7 @@ public class OrderService {
 
         // 3. Log Audit
         auditLogService.log(
-                authService.getCurrentAuthenticatedUser().getUserId(),
+                currentUser.getUserId(),
                 "CANCEL_ORDER",
                 "orders",
                 "Cancelled order ID: " + orderId + ". Stock restored.",

@@ -5,7 +5,7 @@ const LEVELS = [
   { label: 'Strong',color: '#34d399', min: 4  },
 ]
 
-function score(pw) {
+export function score(pw) {
   if (!pw) return 0
   let s = 0
   if (pw.length >= 8)  s++
@@ -14,6 +14,10 @@ function score(pw) {
   if (/[0-9]/.test(pw)) s++
   if (/[^A-Za-z0-9]/.test(pw)) s++
   return Math.min(s, 4)
+}
+
+export function isFair(pw) {
+  return score(pw) >= 2
 }
 
 function getStrengthLevel(pw) {

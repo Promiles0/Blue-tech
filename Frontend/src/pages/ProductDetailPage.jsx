@@ -6,6 +6,7 @@ import api from '../api/axios'
 import apiService from '../api/service'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import { useWishlist } from '../context/WishlistContext'
 import { trackRecentlyViewed } from '../lib/recentlyViewed'
 import { StarDisplay, StarInput } from '../components/site/StarRating'
 import LensZoom from '../components/site/LensZoom'
@@ -15,6 +16,7 @@ export default function ProductDetail() {
   const { id } = useParams()
   const { addToCart } = useCart()
   const { user } = useAuth()
+  const { wishlistIds, toggle: toggleWishlist } = useWishlist()
   const navigate = useNavigate()
 
   const [product, setProduct] = useState(null)
@@ -37,13 +39,16 @@ export default function ProductDetail() {
     apiService.products.getOne(id)
       .then(({ data }) => {
         if (cancelled) return
-        const p = data
-        setProduct(p)
-        setSelectedVariant(p.variants?.[0] ?? null)
-        setReviews(p.reviews ?? [])
-        trackRecentlyViewed(p)
+        setProduct(data)
+        setSelectedVariant(data.variants?.[0] ?? null)
+        trackRecentlyViewed(data)
       })
       .catch(() => { if (!cancelled) navigate('/products') })
+
+    // Reviews are a separate endpoint
+    api.get(`/products/${id}/reviews`)
+      .then(({ data }) => { if (!cancelled) setReviews(Array.isArray(data) ? data : []) })
+      .catch(() => {})
 
     return () => { cancelled = true }
   }, [id, navigate])
@@ -58,6 +63,8 @@ export default function ProductDetail() {
 
   const resolvedProductId = String(product?.productId ?? product?.id ?? '')
   const loading = !product || resolvedProductId !== String(id)
+  const pid = parseInt(id, 10)
+  const wishlisted = wishlistIds.has(pid)
 
   const handleAddToCart = async () => {
     if (!user) {
@@ -227,8 +234,12 @@ export default function ProductDetail() {
               >
                 {added ? <><Check size={16} /> Added!</> : adding ? 'Adding…' : <><ShoppingBag size={16} /> Add to cart</>}
               </button>
-              <button className="noir-btn-outline" style={{ padding: '14px 16px' }}>
-                <Heart size={18} />
+              <button
+                onClick={() => user ? toggleWishlist(pid, product.name) : navigate('/login', { state: { from: `/products/${id}` } })}
+                className="noir-btn-outline"
+                style={{ padding: '14px 16px', color: wishlisted ? '#f87171' : undefined, borderColor: wishlisted ? 'rgba(239,68,68,0.4)' : undefined, background: wishlisted ? 'rgba(239,68,68,0.08)' : undefined }}
+              >
+                <Heart size={18} fill={wishlisted ? 'currentColor' : 'none'} />
               </button>
             </div>
           </div>

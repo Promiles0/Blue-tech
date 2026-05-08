@@ -7,6 +7,7 @@ import com.ecom.Backend.exception.ResourceNotFoundException;
 import com.ecom.Backend.repository.CouponRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.util.Objects;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,9 +40,9 @@ public class AdminCouponService {
                 .maxUses(req.getMaxUses())
                 .isActive(req.isActive())
                 .build();
-        Coupon saved = couponRepository.save(coupon);
+        Coupon saved = Objects.requireNonNull(couponRepository.save(coupon));
         auditLogService.log(authService.getCurrentAuthenticatedUser().getUserId(),
-                "CREATE_COUPON", "coupons", "Created coupon: " + saved.getCode(), saved.getCouponId().toString());
+                "CREATE_COUPON", "coupons", Objects.requireNonNull(saved.getCouponId()).toString(), "Created coupon: " + saved.getCode(), null);
         return toResponse(saved);
     }
 
@@ -63,15 +64,15 @@ public class AdminCouponService {
         coupon.setActive(!coupon.isActive());
         Coupon saved = couponRepository.save(coupon);
         auditLogService.log(authService.getCurrentAuthenticatedUser().getUserId(),
-                "TOGGLE_COUPON", "coupons",
-                (saved.isActive() ? "Activated" : "Paused") + " coupon: " + saved.getCode(), id.toString());
+                "TOGGLE_COUPON", "coupons", Objects.requireNonNull(id).toString(),
+                (saved.isActive() ? "Activated" : "Paused") + " coupon: " + saved.getCode(), null);
         return toResponse(saved);
     }
 
     public void delete(Long id) {
         Coupon coupon = getOrThrow(id);
         auditLogService.log(authService.getCurrentAuthenticatedUser().getUserId(),
-                "DELETE_COUPON", "coupons", "Deleted coupon: " + coupon.getCode(), id.toString());
+                "DELETE_COUPON", "coupons", id.toString(), "Deleted coupon: " + coupon.getCode(), null);
         couponRepository.delete(coupon);
     }
 

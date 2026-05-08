@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
@@ -25,6 +25,7 @@ import SearchPage         from './pages/SearchPage'
 import CategoryPage       from './pages/CategoryPage'
 import NotFoundPage           from './pages/NotFoundPage'
 import NotificationsPage      from './pages/NotificationsPage'
+import HelpPage               from './pages/HelpPage'
 import AdminLayout            from './pages/admin/AdminLayout'
 import AdminDashboard      from './pages/admin/AdminDashboard'
 import AdminProducts       from './pages/admin/AdminProducts'
@@ -42,6 +43,12 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 2 } },
 })
 
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [pathname])
+  return null
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -52,6 +59,7 @@ export default function App() {
               <NotificationProvider>
                 <UIProvider>
                   <Toaster position="bottom-right" richColors />
+                  <ScrollToTop />
                   <Routes>
                     {/* Admin section — no SiteLayout, ADMIN role required */}
                     <Route path="/admin/*" element={<AdminSection />} />
@@ -118,6 +126,7 @@ function CustomerSite() {
         <Route path="/orders"        element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>} />
         <Route path="/orders/:id"    element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+        <Route path="/help"          element={<HelpPage />} />
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
