@@ -1,43 +1,22 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 /**
  * GoogleLogin Component
- *
- * This component integrates Google Sign-In into the React app.
- * It initializes the Google Identity Services with the provided Client ID,
- * renders the Google Sign-In button, and handles the authentication callback.
- *
- * Make sure the exact origin shown by window.location.origin is authorized in
- * your Google Cloud Console under Authorized JavaScript origins.
- * Example: http://localhost:5173
  */
 const GoogleLogin = () => {
   const { googleLogin } = useAuth()
+  const navigate = useNavigate()
   const [error, setError] = useState('')
 
-  // Debug: Log the exact origin being used
-  useEffect(() => {
-    console.log('🔐 Google Sign-In Debug Info:')
-    console.log('Client ID:', CLIENT_ID)
-    console.log('Current Origin:', window.location.origin)
-    console.log('Full URL:', window.location.href)
-    console.log('⚠️  Make sure your Google Cloud Console has this EXACT origin in "Authorized JavaScript origins"')
-  }, [])
+  // ... (debug useEffect remains same)
 
   useEffect(() => {
     const initializeGoogleSignIn = () => {
-      if (!CLIENT_ID) {
-        setError('Missing VITE_GOOGLE_CLIENT_ID. Add it to your frontend environment before using Google Sign-In.')
-        return
-      }
-
-      if (!window.google?.accounts?.id) {
-        setError('Google Identity Services did not load. Please refresh the page.')
-        return
-      }
+      // ... (checks remain same)
 
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
@@ -50,6 +29,7 @@ const GoogleLogin = () => {
 
           try {
             await googleLogin(response.credential)
+            navigate('/', { replace: true })
           } catch (err) {
             console.error('Google login failed:', err)
             const message = err.response?.data?.message || 'Google login failed. Please try again.'

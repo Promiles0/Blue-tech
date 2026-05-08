@@ -236,7 +236,8 @@ export default function ProductQuickView() {
                         </button>
                       )}
                       <button
-                        onClick={() => { if (user) toggle(pid, product?.name) }}
+                        type="button"
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); if (user) toggle(pid, product?.name) }}
                         className="noir-btn-outline"
                         style={{ padding: '13px 14px', color: wishlisted ? '#f87171' : undefined, borderColor: wishlisted ? 'rgba(239,68,68,0.4)' : undefined }}
                         title={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}

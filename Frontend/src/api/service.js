@@ -51,6 +51,11 @@ const apiService = {
     toggle: (productId) => api.post(`/wishlist/${productId}`),
   },
 
+  // --- NEWSLETTER ---
+  newsletter: {
+    subscribe: (email) => api.post('/newsletter/subscribe', { email }),
+  },
+
   // --- ORDERS ---
   orders: {
     checkout: (orderRequest) => api.post('/orders/checkout', orderRequest),

@@ -38,7 +38,11 @@ export default function SiteLayout({ children }) {
           </motion.main>
         </AnimatePresence>
 
-        <NewsletterBand />
+        {/* Hide newsletter on utility/auth pages */}
+        {!['/login', '/register', '/account', '/checkout'].some(path => location.pathname.startsWith(path)) && (
+          <NewsletterBand />
+        )}
+        
         <Footer />
       </div>
 

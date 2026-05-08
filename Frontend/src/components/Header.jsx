@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X, ArrowRight } from 'lucide-react'
 import NotificationBell from './site/NotificationBell'
-import { motion, useScroll, useTransform, useSpring, useMotionTemplate } from 'framer-motion'
+import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useUI } from '../context/UIContext'
+import apiService from '../api/service'
 
 export default function Header() {
   const { user, logout, isAdmin }                           = useAuth()
@@ -14,9 +16,24 @@ export default function Header() {
   const navigate                                            = useNavigate()
   const location                                            = useLocation()
   const [userMenuOpen, setUserMenuOpen]                     = useState(false)
+  const [browseOpen, setBrowseOpen]                         = useState(false)
+  const [searchOpen, setSearchOpen]                         = useState(false)
+  const [searchQuery, setSearchQuery]                       = useState('')
   const [prevCount, setPrevCount]                           = useState(count)
   const [badgeKey, setBadgeKey]                             = useState(0)
   const userMenuRef                                         = useRef(null)
+  const browseRef                                           = useRef(null)
+  const searchRef                                           = useRef(null)
+  const searchInputRef                                      = useRef(null)
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await apiService.categories.getAll()
+      return Array.isArray(res.data) ? res.data : []
+    },
+    staleTime: 1000 * 60 * 5,
+  })
 
   // Scroll-linked transforms — liquid glass
   const { scrollY }  = useScroll()
@@ -36,14 +53,29 @@ export default function Header() {
     setPrevCount(count)
   }, [count]) // eslint-disable-line
 
-  // Close user menu on outside click
+  // Close user menu and browse menu on outside click
   useEffect(() => {
     const onDown = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false)
+      if (browseRef.current && !browseRef.current.contains(e.target)) setBrowseOpen(false)
+      if (searchRef.current && !searchRef.current.contains(e.target)) { setSearchOpen(false); setSearchQuery('') }
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
   }, [])
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (searchOpen) setTimeout(() => searchInputRef.current?.focus(), 60)
+  }, [searchOpen])
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    if (!searchQuery.trim()) return
+    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+    setSearchOpen(false)
+    setSearchQuery('')
+  }
 
   const isActive = (path, search = '') =>
     location.pathname === path && (!search || location.search === search)
@@ -95,36 +127,179 @@ export default function Header() {
 
         {/* Center nav — hidden on mobile */}
         <nav className="nav-links" style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
-          {[
-            { label: 'Shop',      to: '/products',                   search: '' },
-            { label: 'Audio',     to: '/products', search: '?category=Audio' },
-            { label: 'Wearables', to: '/products', search: '?category=Wearables' },
-            { label: 'Computing', to: '/products', search: '?category=Computing' },
-          ].map(({ label, to, search }) => {
-            const href   = to + search
-            const active = location.pathname + location.search === href
-                        || (label === 'Shop' && location.pathname === '/products' && !location.search)
-            return (
-              <Link
-                key={label}
-                to={href}
-                className="story-link"
-                style={{ fontSize: 14, fontWeight: 400, color: active ? '#fff' : '#888', transition: 'color 0.2s' }}
-                onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#ccc' }}
-                onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#888' }}
-              >
-                {label}
-              </Link>
-            )
-          })}
+          <Link
+            to="/products"
+            className="story-link"
+            style={{ fontSize: 14, fontWeight: 400, color: location.pathname === '/products' && !location.search ? '#fff' : '#888', transition: 'color 0.2s' }}
+            onMouseEnter={e => { if (location.pathname !== '/products' || location.search) e.currentTarget.style.color = '#ccc' }}
+            onMouseLeave={e => { if (location.pathname !== '/products' || location.search) e.currentTarget.style.color = '#888' }}
+          >
+            Shop
+          </Link>
+
+          <div ref={browseRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setBrowseOpen(open => !open)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                fontSize: 14, fontWeight: 400, color: browseOpen ? '#fff' : '#888',
+                background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.2s', padding: 0,
+              }}
+              onMouseEnter={e => { if (!browseOpen) e.currentTarget.style.color = '#ccc' }}
+              onMouseLeave={e => { if (!browseOpen) e.currentTarget.style.color = '#888' }}
+            >
+              Browse
+              <ChevronDown size={14} style={{ transform: browseOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+            </button>
+
+            {browseOpen && (
+              <>
+                {/* Full-width mega menu — fixed to viewport width */}
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: 'var(--header-h, 58px)',
+                    left: 0, right: 0,
+                    background: 'rgba(10,10,12,0.97)',
+                    backdropFilter: 'blur(24px)',
+                    WebkitBackdropFilter: 'blur(24px)',
+                    borderBottom: '1px solid rgba(255,255,255,0.07)',
+                    boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+                    zIndex: 99,
+                    padding: '36px 0 40px',
+                  }}
+                >
+                  <div className="container-noir">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: 48 }}>
+
+                      {/* Left — label */}
+                      <div>
+                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#7c5cf0', marginBottom: 12 }}>
+                          Shop by category
+                        </p>
+                        <p style={{ fontSize: 13, color: '#444', lineHeight: 1.6, maxWidth: 200 }}>
+                          Explore our full range of considered products.
+                        </p>
+                        <Link
+                          to="/products"
+                          onClick={() => setBrowseOpen(false)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            marginTop: 20, fontSize: 13, fontWeight: 600,
+                            color: '#7c5cf0', textDecoration: 'none',
+                            transition: 'opacity 0.15s',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+                          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                        >
+                          View all <ChevronDown size={12} style={{ transform: 'rotate(-90deg)' }} />
+                        </Link>
+                      </div>
+
+                      {/* Right — category grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                        {categories.map(cat => (
+                          <Link
+                            key={cat.categoryId}
+                            to={`/products?category=${encodeURIComponent(cat.name)}`}
+                            onClick={() => setBrowseOpen(false)}
+                            style={{
+                              display: 'block',
+                              padding: '14px 16px',
+                              borderRadius: 12,
+                              background: 'rgba(255,255,255,0.03)',
+                              border: '1px solid rgba(255,255,255,0.06)',
+                              color: '#ccc',
+                              textDecoration: 'none',
+                              fontSize: 14,
+                              fontWeight: 500,
+                              transition: 'background 0.15s, color 0.15s, border-color 0.15s',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background = 'rgba(124,92,240,0.1)'
+                              e.currentTarget.style.color = '#fff'
+                              e.currentTarget.style.borderColor = 'rgba(124,92,240,0.25)'
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                              e.currentTarget.style.color = '#ccc'
+                              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                            }}
+                          >
+                            {cat.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Click-away backdrop */}
+                <div
+                  onClick={() => setBrowseOpen(false)}
+                  style={{ position: 'fixed', inset: 0, zIndex: 98 }}
+                />
+              </>
+            )}
+          </div>
         </nav>
 
         {/* Right icons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
 
-          <IconBtn onClick={() => setPaletteOpen(true)} title="Search (⌘K)">
-            <Search size={18} />
-          </IconBtn>
+          {/* Inline expanding search */}
+          <div ref={searchRef} style={{ display: 'flex', alignItems: 'center' }}>
+            <AnimatePresence mode="wait">
+              {searchOpen ? (
+                <motion.form
+                  key="search-open"
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 220, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+                  onSubmit={handleSearch}
+                  style={{ overflow: 'hidden', display: 'flex', alignItems: 'center' }}
+                >
+                  <div style={{
+                    display: 'flex', alignItems: 'center',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(124,92,240,0.35)',
+                    borderRadius: 10, padding: '0 12px',
+                    height: 36, width: '100%',
+                    boxShadow: '0 0 0 3px rgba(124,92,240,0.08)',
+                  }}>
+                    <Search size={14} style={{ color: '#7c5cf0', flexShrink: 0, marginRight: 8 }} />
+                    <input
+                      ref={searchInputRef}
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="Search…"
+                      style={{
+                        flex: 1, background: 'none', border: 'none',
+                        outline: 'none', color: '#fff', fontSize: 13,
+                        fontFamily: 'inherit',
+                      }}
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', display: 'flex', padding: 0, marginLeft: 4 }}
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                </motion.form>
+              ) : null}
+            </AnimatePresence>
+            <IconBtn
+              onClick={() => { setSearchOpen(o => !o); if (searchOpen) setSearchQuery('') }}
+              title="Search"
+              active={searchOpen}
+            >
+              {searchOpen ? <X size={18} /> : <Search size={18} />}
+            </IconBtn>
+          </div>
 
           <Link to="/wishlist">
             <IconBtn><Heart size={18} /></IconBtn>
@@ -157,30 +332,57 @@ export default function Header() {
             )}
           </div>
 
-          {/* Account */}
+          {/* Account — avatar circle when logged in */}
           {user ? (
-            <div ref={userMenuRef} style={{ position: 'relative' }}>
-              <IconBtn onClick={() => setUserMenuOpen(o => !o)}>
-                <User size={18} />
-              </IconBtn>
+            <div ref={userMenuRef} style={{ position: 'relative', marginLeft: 4 }}>
+              <button
+                onClick={() => setUserMenuOpen(o => !o)}
+                style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: userMenuOpen ? '#6b4fd8' : '#7c5cf0',
+                  color: '#fff', fontSize: 13, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: `2px solid ${userMenuOpen ? 'rgba(124,92,240,0.6)' : 'transparent'}`,
+                  cursor: 'pointer', transition: 'background 0.2s, border-color 0.2s',
+                  outline: 'none',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#6b4fd8'}
+                onMouseLeave={e => { if (!userMenuOpen) e.currentTarget.style.background = '#7c5cf0' }}
+                title={user.name ?? user.email}
+              >
+                {(user.name ?? user.email ?? 'U').charAt(0).toUpperCase()}
+              </button>
               {userMenuOpen && (
                 <div style={{
-                  position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                  position: 'absolute', top: 'calc(100% + 10px)', right: 0,
                   background: '#141414', border: '1px solid #2a2a2a',
-                  borderRadius: 12, padding: '6px', minWidth: 160,
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.6)', zIndex: 100,
+                  borderRadius: 14, padding: '6px', minWidth: 180,
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.7)', zIndex: 100,
                 }}>
-                  <DropdownItem to="/account"       icon={<User size={14} />}    onClick={() => setUserMenuOpen(false)}>My account</DropdownItem>
+                  {/* User info header */}
+                  <div style={{ padding: '10px 12px 10px', borderBottom: '1px solid #222', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{
+                        width: 30, height: 30, borderRadius: '50%',
+                        background: '#7c5cf0', color: '#fff',
+                        fontSize: 12, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}>
+                        {(user.name ?? user.email ?? 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: '#fff', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</p>
+                        <p style={{ fontSize: 11, color: '#555', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <DropdownItem to="/account"       icon={<User size={14} />}     onClick={() => setUserMenuOpen(false)}>My account</DropdownItem>
                   <DropdownItem to="/orders"        icon={<Package size={14} />}  onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>
                   <DropdownItem to="/notifications" icon={<Bell size={14} />}     onClick={() => setUserMenuOpen(false)}>Notifications</DropdownItem>
                   {isAdmin && (
                     <DropdownItem to="/admin" icon={<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#7c5cf0' }}>ADM</span>} onClick={() => setUserMenuOpen(false)}>
                       Admin panel
                     </DropdownItem>
-                  )}
-                  <DropdownItem to="/account" icon={<User size={14} />} onClick={() => setUserMenuOpen(false)}>Profile</DropdownItem>
-                  {!isAdmin && (
-                    <DropdownItem to="/orders"  icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>
                   )}
                   <div style={{ height: 1, background: '#2a2a2a', margin: '4px 6px' }} />
                   <DropdownItem danger icon={<LogOut size={14} />} onClick={() => { logout(); setUserMenuOpen(false); navigate('/') }}>
@@ -209,18 +411,20 @@ export default function Header() {
   )
 }
 
-function IconBtn({ children, onClick, title }) {
+function IconBtn({ children, onClick, title, active }) {
   return (
     <button
       onClick={onClick}
       title={title}
       style={{
-        background: 'none', border: 'none', color: '#888',
+        background: active ? 'rgba(124,92,240,0.12)' : 'none',
+        border: 'none',
+        color: active ? '#a78bfa' : '#888',
         padding: 8, display: 'flex', alignItems: 'center',
-        transition: 'color 0.2s', borderRadius: 6, cursor: 'pointer',
+        transition: 'color 0.2s, background 0.2s', borderRadius: 8, cursor: 'pointer',
       }}
-      onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-      onMouseLeave={e => e.currentTarget.style.color = '#888'}
+      onMouseEnter={e => { e.currentTarget.style.color = '#fff'; if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+      onMouseLeave={e => { e.currentTarget.style.color = active ? '#a78bfa' : '#888'; e.currentTarget.style.background = active ? 'rgba(124,92,240,0.12)' : 'none' }}
     >
       {children}
     </button>

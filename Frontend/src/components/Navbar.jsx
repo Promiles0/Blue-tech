@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Search, Heart, ShoppingBag, User, X, Package, LogOut } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { Search, Heart, ShoppingBag, User, X, Package, LogOut, LayoutDashboard } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import apiService from '../api/service'
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth()
@@ -12,12 +14,26 @@ export default function Navbar() {
   const [searchOpen, setSearchOpen]   = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [megaOpen, setMegaOpen] = useState(false)
   const userMenuRef = useRef(null)
+  const megaRef = useRef(null)
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await apiService.categories.getAll()
+      return Array.isArray(res.data) ? res.data : []
+    },
+    staleTime: 1000 * 60 * 5,
+  })
 
   useEffect(() => {
     function handleClickOutside(e) {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setUserMenuOpen(false)
+      }
+      if (megaRef.current && !megaRef.current.contains(e.target)) {
+        setMegaOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -27,7 +43,7 @@ export default function Navbar() {
   const handleSearch = (e) => {
     e.preventDefault()
     if (!searchQuery.trim()) return
-    navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
+    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
     setSearchOpen(false)
     setSearchQuery('')
   }
@@ -52,16 +68,67 @@ export default function Navbar() {
 
         {/* Center links */}
         <div className="nav-links" style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
-          {[
-            { label: 'Shop',       to: '/products' },
-            { label: 'Audio',      to: '/products?category=Audio' },
-            { label: 'Wearables',  to: '/products?category=Wearables' },
-            { label: 'Computing',  to: '/products?category=Computing' },
-          ].map(({ label, to }) => (
-            <NavLink key={label} to={to} active={location.pathname + location.search === to || (to === '/products' && isActive('/products') && !location.search)}>
-              {label}
-            </NavLink>
-          ))}
+          <NavLink to="/products" active={location.pathname === '/products' && !location.search}>
+            Shop
+          </NavLink>
+
+          <div
+            ref={megaRef}
+            style={{ position: 'relative' }}
+            onMouseEnter={() => setMegaOpen(true)}
+            onMouseLeave={() => setMegaOpen(false)}
+          >
+            <button
+              onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
+              onMouseLeave={e => e.currentTarget.style.color = '#888'}
+              style={{
+                fontSize: 14, fontWeight: 400,
+                color: '#888', background: 'none', border: 'none', cursor: 'pointer',
+                transition: 'color 0.2s', padding: 0,
+              }}
+            >
+              Browse
+            </button>
+
+            {megaOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 12px)', left: 0,
+                width: 320, background: '#0f0f10', border: '1px solid #222',
+                borderRadius: 18, padding: 20, boxShadow: '0 28px 64px rgba(0,0,0,0.35)',
+                zIndex: 100,
+              }}>
+                <p style={{ margin: 0, marginBottom: 14, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#7c5cf0' }}>
+                  Shop by category
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
+                  {categories.slice(0, 8).map(cat => (
+                    <Link
+                      key={cat.categoryId}
+                      to={`/products?category=${encodeURIComponent(cat.name)}`}
+                      style={{
+                        display: 'block', padding: '10px 12px', borderRadius: 14,
+                        color: '#ddd', textDecoration: 'none', background: '#141414',
+                        transition: 'background 0.2s, color 0.2s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#1c1c1c'; e.currentTarget.style.color = '#fff' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = '#141414'; e.currentTarget.style.color = '#ddd' }}
+                    >
+                      {cat.name}
+                    </Link>
+                  ))}
+                </div>
+                <Link
+                  to="/products"
+                  style={{
+                    display: 'inline-flex', marginTop: 16, alignItems: 'center', gap: 8,
+                    fontSize: 13, color: '#7c5cf0', textDecoration: 'none', fontWeight: 600,
+                  }}
+                >
+                  View all categories
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right icons */}
@@ -85,53 +152,71 @@ export default function Navbar() {
             <IconBtn onClick={() => setSearchOpen(true)}><Search size={18} /></IconBtn>
           )}
 
-          <Link to="/wishlist"><IconBtn><Heart size={18} /></IconBtn></Link>
-
-          <Link to="/cart" style={{ position: 'relative' }}>
-            <IconBtn><ShoppingBag size={18} /></IconBtn>
-            {count > 0 && (
-              <span style={{
-                position: 'absolute', top: 0, right: 0,
-                background: '#7c5cf0', color: '#fff', borderRadius: '50%',
-                width: 16, height: 16, fontSize: 9, fontWeight: 700,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                pointerEvents: 'none',
-              }}>
-                {count > 9 ? '9+' : count}
-              </span>
-            )}
-          </Link>
+          {!isAdmin && (
+            <>
+              <Link to="/wishlist"><IconBtn><Heart size={18} /></IconBtn></Link>
+              <Link to="/cart" style={{ position: 'relative' }}>
+                <IconBtn><ShoppingBag size={18} /></IconBtn>
+                {count > 0 && (
+                  <span style={{
+                    position: 'absolute', top: 0, right: 0,
+                    background: '#7c5cf0', color: '#fff', borderRadius: '50%',
+                    width: 16, height: 16, fontSize: 9, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none',
+                  }}>
+                    {count > 9 ? '9+' : count}
+                  </span>
+                )}
+              </Link>
+            </>
+          )}
 
           {user ? (
             <div ref={userMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: '#555', marginRight: 4, fontWeight: 500 }}>
-                Hi, {user.name.split(' ')[0]}
-              </span>
-              <IconBtn onClick={() => setUserMenuOpen(o => !o)}>
-                <User size={18} />
-              </IconBtn>
+              <button 
+                onClick={() => setUserMenuOpen(o => !o)}
+                style={{ 
+                  width: 32, height: 32, borderRadius: '50%', background: '#7c5cf0', 
+                  color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex', 
+                  alignItems: 'center', justifyContent: 'center', border: 'none', 
+                  cursor: 'pointer', marginLeft: 8, transition: 'transform 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+              </button>
 
               {userMenuOpen && (
                 <div style={{
-                  position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                  position: 'absolute', top: 'calc(100% + 12px)', right: 0,
                   background: '#141414', border: '1px solid #2a2a2a',
-                  borderRadius: 12, padding: '6px', minWidth: 160,
+                  borderRadius: 12, padding: '6px', minWidth: 180,
                   boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
                   zIndex: 100,
                 }}>
+                  <div style={{ padding: '8px 12px', borderBottom: '1px solid #2a2a2a', marginBottom: 4 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: '#fff', margin: 0 }}>{user.name}</p>
+                    <p style={{ fontSize: 11, color: '#666', margin: 0 }}>{user.email}</p>
+                  </div>
+
                   {isAdmin && (
-                    <DropdownItem to="/admin/products" icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>
+                    <DropdownItem to="/admin" icon={<LayoutDashboard size={14} />} onClick={() => setUserMenuOpen(false)}>
                       Admin Dashboard
                     </DropdownItem>
                   )}
+                  
                   <DropdownItem to="/account" icon={<User size={14} />} onClick={() => setUserMenuOpen(false)}>
-                    Profile
+                    Account Settings
                   </DropdownItem>
+
                   {!isAdmin && (
                     <DropdownItem to="/orders" icon={<Package size={14} />} onClick={() => setUserMenuOpen(false)}>
-                      My orders
+                      My Orders
                     </DropdownItem>
                   )}
+
                   <div style={{ height: 1, background: '#2a2a2a', margin: '4px 6px' }} />
                   <DropdownItem
                     icon={<LogOut size={14} />}

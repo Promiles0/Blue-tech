@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import apiService from '../../api/service'
 import { dateShort } from '../../lib/format'
 
-const SHIPMENT_STATUSES = ['PENDING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'RETURNED']
+const SHIPMENT_STATUSES = ['PENDING', 'PROCESSING', 'SHIPPED', 'IN_TRANSIT', 'DELIVERED', 'RETURNED']
 
 function fetchShipments() {
   return apiService.admin.shipments.getAll().then(r => r.data)

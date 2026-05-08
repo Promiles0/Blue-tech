@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { Search, SlidersHorizontal, ChevronDown, X } from 'lucide-react'
 import { motion, LayoutGroup } from 'framer-motion'
 import ProductCard from '../components/ProductCard'
 import { Reveal } from '../lib/motion'
 import apiService from '../api/service'
 
+const PRODUCTS_PER_PAGE = 8
 const SORT_OPTIONS = [
   { label: 'Newest',          value: 'productId,desc' },
   { label: 'Price: Low–High', value: 'price,asc' },
@@ -16,9 +18,9 @@ const SORT_OPTIONS = [
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [products, setProducts] = useState([])
-  const [categories, setCategories] = useState([]) // [{id, name}]
   const [loading, setLoading]   = useState(true)
   const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
   const [sortOpen, setSortOpen] = useState(false)
 
   const searchQ  = searchParams.get('search') ?? ''
@@ -26,12 +28,14 @@ export default function Products() {
   const sort     = searchParams.get('sort') ?? 'productId,desc'
   const page     = parseInt(searchParams.get('page') ?? '0', 10)
 
-  // Fetch category list once to get IDs for filtering
-  useEffect(() => {
-    apiService.categories.getAll()
-      .then(({ data }) => setCategories(Array.isArray(data.data) ? data.data : []))
-      .catch(() => {})
-  }, [])
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const res = await apiService.categories.getAll()
+      return Array.isArray(res.data) ? res.data : []
+    },
+    staleTime: 1000 * 60 * 5,
+  })
 
   const setParam = (key, val) => {
     const next = new URLSearchParams(searchParams)
@@ -40,14 +44,13 @@ export default function Products() {
     setSearchParams(next)
   }
 
+  const categoryIds = categories.map(c => c.categoryId).join(',')
+
   useEffect(() => {
     let cancelled = false
 
     const needsCategoryFilter = category && category !== 'All'
     const hasFilter = !!searchQ || needsCategoryFilter
-
-    // Wait for categories to load before applying a category filter
-    if (needsCategoryFilter && categories.length === 0) return
 
     const [sortField, sortDir] = sort.split(',')
 
@@ -56,19 +59,19 @@ export default function Products() {
       const params = new URLSearchParams()
       if (searchQ) params.set('name', searchQ)
       if (needsCategoryFilter) {
-        const cat = categories.find(c => c.name === category)
+        const cat = categories.find(c => c.name === category || c.categoryName === category)
         if (cat) params.set('categoryId', cat.categoryId)
-        else params.set('name', searchQ || '')  // category not found — fall back to name-only
+        else params.set('name', searchQ || '')
       }
       params.set('sort', `${sortField},${sortDir}`)
       params.set('page', page)
-      params.set('size', '12')
+      params.set('size', String(PRODUCTS_PER_PAGE))
       request = apiService.products.search(params)
     } else {
       const params = new URLSearchParams()
       params.set('sort', `${sortField},${sortDir}`)
       params.set('page', page)
-      params.set('size', '12')
+      params.set('size', String(PRODUCTS_PER_PAGE))
       request = apiService.products.getAllPaginated(params)
     }
 
@@ -79,13 +82,14 @@ export default function Products() {
           const content = resData?.content ?? (Array.isArray(resData) ? resData : [])
           setProducts(content)
           setTotalPages(resData?.totalPages ?? 1)
+          setTotalItems(resData?.totalElements ?? content.length)
         }
       })
       .catch(() => { if (!cancelled) setProducts([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [searchQ, category, sort, page, categories])
+  }, [searchQ, category, sort, page, categoryIds]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayProducts = products
   const currentSort     = SORT_OPTIONS.find(o => o.value === sort) ?? SORT_OPTIONS[0]
@@ -99,20 +103,34 @@ export default function Products() {
           <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', marginBottom: 6, letterSpacing: '-0.02em' }}>
             {searchQ ? `Results for "${searchQ}"` : category !== 'All' ? category : 'All Products'}
           </h1>
-          <p style={{ color: '#888', fontSize: 14 }}>{displayProducts.length} product{displayProducts.length !== 1 ? 's' : ''}</p>
+          <p style={{ color: '#888', fontSize: 14 }}>
+            {totalItems === 0
+              ? 'No products found'
+              : `Showing ${totalItems ? page * PRODUCTS_PER_PAGE + 1 : 0}-${Math.min(totalItems, (page + 1) * PRODUCTS_PER_PAGE)} of ${totalItems} products`}
+          </p>
         </div>
 
         {/* Controls */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 32, flexWrap: 'wrap' }}>
           {/* Search */}
           <div style={{ position: 'relative', flex: 1, minWidth: 180, maxWidth: 300 }}>
-            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#888', pointerEvents: 'none' }} />
+            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: searchQ ? '#7c5cf0' : '#555', pointerEvents: 'none', transition: 'color 0.2s' }} />
             <input
               value={searchQ}
               onChange={e => setParam('search', e.target.value)}
               placeholder="Search products…"
-              className="noir-input"
-              style={{ paddingLeft: 36, paddingRight: searchQ ? 36 : 14 }}
+              style={{
+                width: '100%', height: 40,
+                paddingLeft: 36, paddingRight: searchQ ? 36 : 14,
+                background: 'rgba(255,255,255,0.03)',
+                border: `1px solid ${searchQ ? 'rgba(124,92,240,0.35)' : 'rgba(255,255,255,0.08)'}`,
+                borderRadius: 10, color: '#fff', fontSize: 13,
+                outline: 'none', fontFamily: 'inherit',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                boxShadow: searchQ ? '0 0 0 3px rgba(124,92,240,0.08)' : 'none',
+              }}
+              onFocus={e => { e.target.style.borderColor = 'rgba(124,92,240,0.4)'; e.target.style.boxShadow = '0 0 0 3px rgba(124,92,240,0.08)' }}
+              onBlur={e => { if (!searchQ) { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none' } }}
             />
             {searchQ && (
               <button onClick={() => setParam('search', '')}

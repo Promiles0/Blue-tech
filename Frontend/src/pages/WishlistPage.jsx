@@ -19,8 +19,8 @@ export default function Wishlist() {
     }
     apiService.wishlist.get()
       .then(({ data }) => {
-        const payload = data.data ?? data
-        setItems(payload?.items ?? (Array.isArray(payload) ? payload : []))
+        // axios interceptor already unwraps ApiResponse.data → data IS the wishlist DTO
+        setItems(data?.items ?? (Array.isArray(data) ? data : []))
       })
       .catch(() => setItems([]))
       .finally(() => setLoading(false))
@@ -32,7 +32,7 @@ export default function Wishlist() {
     setToggling(prev => ({ ...prev, [productId]: true }))
     try {
       await apiService.wishlist.toggle(productId)
-      setItems(prev => prev.filter(i => (i.variant?.product?.id ?? i.product?.id ?? i.productId) !== productId))
+      setItems(prev => prev.filter(i => Number(i.productId) !== productId))
     } finally {
       setToggling(prev => ({ ...prev, [productId]: false }))
     }
@@ -65,10 +65,9 @@ export default function Wishlist() {
         ) : (
           <div className="grid-4">
             {items.map(item => {
-              const product = item.variant?.product ?? item.product ?? {}
-              const pid     = product.id ?? item.productId
-              const img     = item.primaryImageUrl ?? product.images?.[0]?.imageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80'
-              const price   = parseFloat(item.price ?? product.price ?? 0)
+              const pid     = Number(item.productId)
+              const img     = item.primaryImageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80'
+              const price   = parseFloat(item.price ?? 0)
 
               return (
                 <div key={pid} style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 12, overflow: 'hidden' }}>
@@ -82,7 +81,7 @@ export default function Wishlist() {
                   </Link>
                   <div style={{ padding: '14px 16px 16px' }}>
                     {item.categoryName && <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: '#888', marginBottom: 5, textTransform: 'uppercase' }}>{item.categoryName}</p>}
-                    <p style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 8 }}>{item.productName ?? product.name}</p>
+                    <p style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 8 }}>{item.productName}</p>
                     <p style={{ fontSize: 15, fontWeight: 700, color: '#f59e0b', marginBottom: 14 }}>${price.toFixed(2)}</p>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <Link to={`/products/${pid}`} className="noir-btn-primary" style={{ flex: 1, fontSize: 12, padding: '8px 12px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>

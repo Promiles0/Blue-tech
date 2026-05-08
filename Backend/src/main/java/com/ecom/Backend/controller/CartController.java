@@ -11,8 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/cart")
 @RequiredArgsConstructor
@@ -39,11 +37,11 @@ public class CartController {
     @PatchMapping("/{id}")
     public ResponseEntity<ApiResponse<CartResponse>> updateQuantity(
             @PathVariable Long id,
-            @RequestBody Map<String, Integer> body) {
+            @RequestParam int quantity) {
+        
         User user = authService.getCurrentAuthenticatedUser();
-        int quantity = body.getOrDefault("quantity", 1);
-        CartResponse cart = cartService.updateQuantity(user, id, quantity);
-        return ResponseEntity.ok(ApiResponse.success("Cart updated", cart));
+        CartResponse response = cartService.updateQuantity(user, id, quantity);
+        return ResponseEntity.ok(ApiResponse.success("Quantity updated", response));
     }
 
     // DELETE /api/cart/{id}
@@ -52,12 +50,5 @@ public class CartController {
         User user = authService.getCurrentAuthenticatedUser();
         cartService.removeFromCart(user, id);
         return ResponseEntity.ok(ApiResponse.success("Item removed from cart", null));
-    }
-
-    // PATCH /api/cart/{id}
-    @PatchMapping("/{id}")
-    public ResponseEntity<ApiResponse<CartResponse>> updateQuantity(@PathVariable Long id, @RequestParam int quantity) {
-        User user = authService.getCurrentAuthenticatedUser();
-        return ResponseEntity.ok(ApiResponse.success("Quantity updated", cartService.updateQuantity(user, id, quantity)));
     }
 }

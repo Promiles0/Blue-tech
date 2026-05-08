@@ -66,11 +66,10 @@ export default function AdminDashboard() {
         <KPI icon={Clock}         label="Pending Orders"  value={isLoading ? '—' : (data?.pendingOrders ?? 0).toLocaleString()} accent="var(--admin-warning)" />
         <KPI icon={Users}         label="Customers"       value={isLoading ? '—' : (data?.totalCustomers ?? 0).toLocaleString()} />
         <KPI icon={UserPlus}      label="New Today"       value={isLoading ? '—' : (data?.newCustomers24h ?? 0).toLocaleString()} accent="var(--admin-success)" />
-        <KPI icon={AlertTriangle} label="Low Stock"  value={isLoading ? '—' : (data?.lowStockCount ?? 0).toLocaleString()} accent="var(--admin-warning)" />
-        <KPI icon={Package}     label="Variants"     value={isLoading ? '—' : (data?.totalVariants ?? 0).toLocaleString()} />
-        <KPI icon={Clock}         label="Pending Orders"  value={isLoading ? '—' : (data?.pendingOrders ?? 0).toLocaleString()} accent="var(--admin-warning)" />
-        <KPI icon={Users}         label="Customers"       value={isLoading ? '—' : (data?.totalCustomers ?? 0).toLocaleString()} />
-        <KPI icon={UserPlus}      label="New Today"       value={isLoading ? '—' : (data?.newCustomers24h ?? 0).toLocaleString()} accent="var(--admin-success)" />
+        <KPI icon={AlertTriangle} label="Low Stock"       value={isLoading ? '—' : (data?.lowStockCount ?? 0).toLocaleString()} accent="var(--admin-warning)" />
+        <KPI icon={Package}       label="Variants"        value={isLoading ? '—' : (data?.totalVariants ?? 0).toLocaleString()} />
+        <KPI icon={ShoppingBag}   label="Total Orders"    value={isLoading ? '—' : (data?.totalOrders ?? 0).toLocaleString()} />
+        <KPI icon={DollarSign}    label="Total Revenue"   value={isLoading ? '—' : money(data?.totalRevenue)} />
       </div>
 
       {/* Row 2: Revenue chart + Low stock */}

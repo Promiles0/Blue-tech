@@ -65,7 +65,7 @@ export default function Home() {
 
   useEffect(() => {
     apiService.categories.getAll()
-      .then(({ data }) => setCategories(Array.isArray(data.data) ? data.data : []))
+      .then(({ data }) => setCategories(Array.isArray(data) ? data : []))
       .catch(() => {})
   }, [])
 
@@ -74,7 +74,7 @@ export default function Home() {
     apiService.products.getAllPaginated('page=0&size=8')
       .then(({ data }) => {
         if (!cancelled) {
-          const content = data.data?.content ?? (Array.isArray(data.data) ? data.data : [])
+          const content = data?.content ?? (Array.isArray(data) ? data : [])
           setProducts(content)
         }
       })

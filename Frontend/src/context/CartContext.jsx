@@ -7,18 +7,23 @@ const CartContext = createContext(null)
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState([])
-  const { user }          = useAuth()
+  const { user, logout } = useAuth()
 
   const count = items.reduce((sum, i) => sum + (i.quantity ?? 1), 0)
-  const total = items.reduce((sum, i) => sum + parseFloat(i.unitPrice ?? 0) * (i.quantity ?? 1), 0)
+  // Use cartTotal from backend when available, fallback to client calculation
+  const [serverTotal, setServerTotal] = useState(0)
+  const total = serverTotal || items.reduce((sum, i) => sum + parseFloat(i.unitPrice ?? 0) * (i.quantity ?? 1), 0)
   const cart = { items }
 
   const fetchCart = useCallback(async () => {
     try {
       const { data } = await apiService.cart.get()
+      // data is CartResponse: { items: CartItemDetail[], cartTotal }
       setItems(data?.items ?? [])
+      setServerTotal(parseFloat(data?.cartTotal ?? 0))
     } catch {
       setItems([])
+      setServerTotal(0)
     }
   }, [])
 
@@ -35,7 +40,14 @@ export function CartProvider({ children }) {
       await apiService.cart.addItem({ variantId, quantity })
       await fetchCart()
       toast.success('Added to cart')
-    } catch {
+    } catch (err) {
+      const status = err.response?.status
+      const message = err.response?.data?.message?.toLowerCase() || ''
+      if (status === 401 || status === 403 || message.includes('invalid or expired token') || message.includes('unauthorized')) {
+        logout()
+        window.location.href = '/login'
+        return
+      }
       toast.error('Failed to add to cart')
     }
   }
@@ -63,8 +75,9 @@ export function CartProvider({ children }) {
   const isInCart = (variantId) => items.some(i => i.variantId === variantId)
   const clearCart = async () => {
     try {
-      await Promise.all(items.map(item => apiService.cart.removeItem(item.cartItemId ?? item.id)))
+      await Promise.all(items.map(item => apiService.cart.removeItem(item.cartItemId)))
       setItems([])
+      setServerTotal(0)
     } catch {
       toast.error('Failed to clear cart')
       await fetchCart()
