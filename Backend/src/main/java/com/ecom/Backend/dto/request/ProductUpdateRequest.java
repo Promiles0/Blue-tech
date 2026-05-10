@@ -17,7 +17,6 @@ public class ProductUpdateRequest {
     @NotBlank(message = "Product name is required")
     private String name;
     
-    @NotBlank(message = "Description is required")
     private String description;
     
     @NotNull(message = "Base price is required")

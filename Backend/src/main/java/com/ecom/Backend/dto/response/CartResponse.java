@@ -30,5 +30,6 @@ public class CartResponse {
         private BigDecimal unitPrice; // Base Price + Adjustment
         private BigDecimal subTotal;
         private String productImageUrl;
+        private Integer stockQuantity;
     }
 }
