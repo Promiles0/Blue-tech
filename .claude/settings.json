@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn validate *)",
+      "Read(//c/Users/arois/.m2/repository/org/projectlombok/lombok/1.18.46/**)",
+      "PowerShell($env:PATH)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Maven\\\\apache-maven-3.9.9\\\\bin\\\\mvn.cmd\" -f \"C:\\\\Users\\\\arois\\\\E-COMMERCE-PLATFORM\\\\Backend\\\\pom.xml\" validate 2>&1)",
+      "Read(//c/Users/arois/**)"
+    ]
+  }
+}

@@ -91,8 +91,15 @@ public class ProductService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with ID: " + request.getCategoryId()));
 
-        // 1.5. Pre-check for duplicate SKU codes — gives a friendly error before hitting the DB constraint
+        // 1.5. Pre-check: no duplicate SKUs within the request, and no SKUs already in DB
+        java.util.Set<String> seenSkus = new java.util.HashSet<>();
         for (ProductCreateRequest.VariantRequest vReq : request.getVariants()) {
+            String skuLower = vReq.getSkuCode().trim().toLowerCase();
+            if (!seenSkus.add(skuLower)) {
+                throw new IllegalArgumentException(
+                    "SKU \"" + vReq.getSkuCode() + "\" appears more than once. Each variant must have a unique SKU."
+                );
+            }
             if (variantRepository.findBySkuCode(vReq.getSkuCode()).isPresent()) {
                 throw new IllegalArgumentException(
                     "SKU \"" + vReq.getSkuCode() + "\" already exists. Please use a unique SKU for each variant."

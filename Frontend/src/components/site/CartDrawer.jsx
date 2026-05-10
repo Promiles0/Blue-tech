@@ -130,9 +130,10 @@ export default function CartDrawer() {
                               <span style={{ fontSize: 13, color: '#fff', minWidth: 16, textAlign: 'center' }}>{item.quantity}</span>
                               <button
                                 onClick={() => updateQuantity(iid, item.quantity + 1)}
-                                style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', display: 'flex', padding: 2, transition: 'color 0.15s' }}
-                                onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                                onMouseLeave={e => e.currentTarget.style.color = '#888'}
+                                disabled={item.stockQuantity != null && item.quantity >= item.stockQuantity}
+                                style={{ background: 'none', border: 'none', color: item.stockQuantity != null && item.quantity >= item.stockQuantity ? '#333' : '#888', cursor: item.stockQuantity != null && item.quantity >= item.stockQuantity ? 'not-allowed' : 'pointer', display: 'flex', padding: 2, transition: 'color 0.15s' }}
+                                onMouseEnter={e => { if (!(item.stockQuantity != null && item.quantity >= item.stockQuantity)) e.currentTarget.style.color = '#fff' }}
+                                onMouseLeave={e => { if (!(item.stockQuantity != null && item.quantity >= item.stockQuantity)) e.currentTarget.style.color = '#888' }}
                               >
                                 <Plus size={11} />
                               </button>

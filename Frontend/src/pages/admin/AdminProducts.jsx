@@ -100,6 +100,8 @@ export default function AdminProducts() {
     if (!form.price || Number(form.price) <= 0)     { setError('A valid base price is required.'); return }
     if (!form.categoryId)                           { setError('Please select a category.'); return }
     if (form.variants.some(v => !v.skuCode.trim())) { setError('All variants must have a SKU code.'); return }
+    const skuList = form.variants.map(v => v.skuCode.trim().toLowerCase())
+    if (new Set(skuList).size < skuList.length)     { setError('Two variants share the same SKU. Each variant must have a unique SKU.'); return }
 
     setSaving(true)
     try {
@@ -140,11 +142,14 @@ export default function AdminProducts() {
       fetchProducts()
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
+      const msg = err?.response?.data?.message ?? ''
       const fieldErrors = err?.response?.data?.data
-      if (fieldErrors && typeof fieldErrors === 'object') {
+      if (msg.toLowerCase().includes('sku') || msg.toLowerCase().includes('duplicate key') || msg.toLowerCase().includes('unique constraint')) {
+        setError(msg || 'This SKU code already exists. Please use a unique SKU for each variant.')
+      } else if (fieldErrors && typeof fieldErrors === 'object') {
         setError(Object.values(fieldErrors).join(' • '))
       } else {
-        setError(err?.response?.data?.message ?? 'Something went wrong.')
+        setError(msg || 'Something went wrong.')
       }
     } finally {
       setSaving(false)

@@ -46,11 +46,13 @@ public class WishlistService {
                                 .wishlist(wishlist)
                                 .product(product)
                                 .build());
-                        notificationService.emitUserNotification(user, NotificationCategory.SHOPPING,
-                                NotificationSeverity.INFO,
-                                product.getName() + " saved to wishlist",
-                                "You added " + product.getName() + " to your wishlist.",
-                                "/wishlist");
+                        try {
+                            notificationService.emitUserNotification(user, NotificationCategory.SHOPPING,
+                                    NotificationSeverity.INFO,
+                                    product.getName() + " saved to wishlist",
+                                    "You added " + product.getName() + " to your wishlist.",
+                                    "/wishlist");
+                        } catch (Exception ignored) {}
                     }
                 );
     }

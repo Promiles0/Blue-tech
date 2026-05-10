@@ -59,11 +59,13 @@ public class CartService {
 
         cartItemRepository.save(cartItem);
         String productName = variant.getProduct().getName();
-        notificationService.emitUserNotification(user, NotificationCategory.SHOPPING,
-                NotificationSeverity.INFO,
-                productName + " added to cart",
-                "You added " + productName + " to your cart.",
-                "/cart");
+        try {
+            notificationService.emitUserNotification(user, NotificationCategory.SHOPPING,
+                    NotificationSeverity.INFO,
+                    productName + " added to cart",
+                    "You added " + productName + " to your cart.",
+                    "/cart");
+        } catch (Exception ignored) {}
         return getCart(user);
     }
 
@@ -96,6 +98,7 @@ public class CartService {
                     .unitPrice(unitPrice)
                     .subTotal(unitPrice.multiply(new BigDecimal(item.getQuantity())))
                     .productImageUrl(imageUrl)
+                    .stockQuantity(item.getVariant().getStockQuantity())
                     .build();
         }).collect(Collectors.toList());
 
