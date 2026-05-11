@@ -10,9 +10,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notifications", indexes = {
-    @Index(name = "idx_notif_user_created", columnList = "user_id, created_at DESC"),
-    @Index(name = "idx_notif_audience_created", columnList = "audience, created_at DESC"),
+@Table(name = "notifications_v2", indexes = {
+    @Index(name = "idx_notif_user_created_v2", columnList = "user_id, created_at DESC"),
+    @Index(name = "idx_notif_audience_created_v2", columnList = "audience, created_at DESC"),
 })
 @Data
 @NoArgsConstructor
@@ -25,7 +25,7 @@ public class Notification {
     private Long notificationId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true)
     private NotificationAudience audience;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -33,15 +33,15 @@ public class Notification {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true)
     private NotificationCategory category;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true)
     @Builder.Default
     private NotificationSeverity severity = NotificationSeverity.INFO;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String title;
 
     @Column(columnDefinition = "TEXT")
@@ -53,7 +53,7 @@ public class Notification {
     private String groupKey;
 
     @Builder.Default
-    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
+    @Column(columnDefinition = "BOOLEAN DEFAULT false")
     private boolean isRead = false;
 
     private LocalDateTime readAt;
