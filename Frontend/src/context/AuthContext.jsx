@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import apiService from '../api/service'
 
 const AuthContext = createContext(null)
@@ -13,62 +13,66 @@ export function AuthProvider({ children }) {
     if (token && savedUser) {
       try { 
         const parsed = JSON.parse(savedUser)
-        Promise.resolve().then(() => setUser(parsed))
+        setUser(parsed)
       } catch (e) {
         console.error('Failed to parse saved user', e)
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
       }
     }
-    Promise.resolve().then(() => setLoading(false))
+    setLoading(false)
   }, [])
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     const { data } = await apiService.auth.login({ email, password })
-    // The interceptor unwraps ApiResponse.data, so data here is the AuthResponse { token, user }
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
     setUser(data.user)
     return data
-  }
+  }, [])
 
-  const register = async (name, email, password) => {
+  const register = useCallback(async (name, email, password) => {
     const { data } = await apiService.auth.register({ name, email, password })
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
     setUser(data.user)
     return data
-  }
+  }, [])
 
-  const googleLogin = async (token) => {
+  const googleLogin = useCallback(async (token) => {
     const { data } = await apiService.auth.googleLogin(token)
     localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user ?? data))
-    setUser(data.user ?? data)
+    const userData = data.user ?? data
+    localStorage.setItem('user', JSON.stringify(userData))
+    setUser(userData)
     return data
-  }
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     setUser(null)
-  }
+  }, [])
 
-  const updateUser = (updatedUser) => {
+  const updateUser = useCallback((updatedUser) => {
     localStorage.setItem('user', JSON.stringify(updatedUser))
     setUser(updatedUser)
-  }
+  }, [])
+
+  const value = useMemo(() => ({
+    user,
+    loading,
+    login,
+    register,
+    googleLogin,
+    logout,
+    updateUser,
+    isAuthenticated: !!user,
+    isAdmin: user?.role === 'ADMIN',
+  }), [user, loading, login, register, googleLogin, logout, updateUser])
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      loading,
-      login,
-      register,
-      googleLogin,
-      logout,
-      updateUser,
-      isAuthenticated: !!user,
-      isAdmin: user?.role === 'ADMIN',
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
@@ -14,9 +14,11 @@ const GoogleLogin = () => {
 
   // ... (debug useEffect remains same)
 
+  const isInitialized = useRef(false)
+
   useEffect(() => {
     const initializeGoogleSignIn = () => {
-      // ... (checks remain same)
+      if (!window.google?.accounts?.id || isInitialized.current) return
 
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
@@ -37,6 +39,7 @@ const GoogleLogin = () => {
           }
         },
       })
+      isInitialized.current = true
 
       window.google.accounts.id.renderButton(
         document.getElementById('google-signin-button'),
