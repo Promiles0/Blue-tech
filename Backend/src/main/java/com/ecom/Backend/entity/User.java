@@ -36,7 +36,7 @@ public class User {
     private String providerId; // ID from google
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255)")
     private RoleType role;
 
     @CreationTimestamp

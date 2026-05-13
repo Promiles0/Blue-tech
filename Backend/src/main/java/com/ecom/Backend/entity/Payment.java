@@ -26,11 +26,11 @@ public class Payment {
     private String transactionReference;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255)")
     private PaymentMethod method;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255)")
     private PaymentStatus status;
 
     @Column(nullable = false, precision = 10, scale = 2)
