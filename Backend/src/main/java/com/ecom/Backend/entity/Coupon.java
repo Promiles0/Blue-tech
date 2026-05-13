@@ -24,10 +24,10 @@ public class Coupon {
     private String code;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255)")
     private CouponKind kind;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(name = "coupon_value", nullable = false, precision = 10, scale = 2)
     private BigDecimal value;
 
     @Column(precision = 10, scale = 2)

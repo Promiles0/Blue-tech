@@ -31,7 +31,7 @@ public class Shipment {
     private String carrier;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255)")
     private ShipmentStatus status;
 
     @Column(columnDefinition = "TEXT")
