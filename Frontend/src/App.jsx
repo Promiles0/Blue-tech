@@ -38,6 +38,7 @@ import AdminAnalytics      from './pages/admin/AdminAnalytics'
 import AdminAudit          from './pages/admin/AdminAudit'
 import AdminNotifications  from './pages/admin/AdminNotifications'
 import AdminCoupons        from './pages/admin/AdminCoupons'
+import AdminHeroSlides     from './pages/admin/AdminHeroSlides'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 2 } },
@@ -98,8 +99,9 @@ function AdminSection() {
         <Route path="shipments"  element={<AdminShipments />} />
         <Route path="users"      element={<AdminUsers />} />
         <Route path="reviews"    element={<AdminReviews />} />
-        <Route path="coupons"    element={<AdminCoupons />} />
-        <Route path="analytics"      element={<AdminAnalytics />} />
+        <Route path="coupons"      element={<AdminCoupons />} />
+        <Route path="hero-slides"  element={<AdminHeroSlides />} />
+        <Route path="analytics"    element={<AdminAnalytics />} />
         <Route path="audit"          element={<AdminAudit />} />
         <Route path="notifications"  element={<AdminNotifications />} />
       </Route>

@@ -1,6 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
 import { useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { Reveal } from '../lib/motion'
 
 const SECTIONS = {

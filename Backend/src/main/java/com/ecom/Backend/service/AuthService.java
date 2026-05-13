@@ -22,6 +22,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -118,13 +119,20 @@ public class AuthService {
     }
 
     public AuthResponse loginUser(UserLoginRequest request) {
-        // 1. Authenticate the user (This throws an exception if password is bad)
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+        // 1. Authenticate the user (throws BadCredentialsException if wrong password)
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+        } catch (BadCredentialsException e) {
+            // Re-throw as RuntimeException so GlobalExceptionHandler handles it
+            // instead of Spring Security's ExceptionTranslationFilter (which returns
+            // a generic "Unauthorized" message).
+            throw new RuntimeException("Invalid email or password");
+        }
 
         // 2. Fetch User from DB to get the ID and details
         User user = userRepository.findByEmail(request.getEmail())

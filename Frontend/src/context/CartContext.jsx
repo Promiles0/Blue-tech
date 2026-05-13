@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import apiService from '../api/service'
 import { useAuth } from './AuthContext'
@@ -9,30 +9,37 @@ export function CartProvider({ children }) {
   const [items, setItems] = useState([])
   const { user, logout } = useAuth()
 
-  const count = items.reduce((sum, i) => sum + (i.quantity ?? 1), 0)
+  const count = items.length
   // Use cartTotal from backend when available, fallback to client calculation
   const [serverTotal, setServerTotal] = useState(0)
   const total = serverTotal || items.reduce((sum, i) => sum + parseFloat(i.unitPrice ?? 0) * (i.quantity ?? 1), 0)
   const cart = { items }
 
+  // Tracks the active user to discard stale in-flight fetch responses after an account switch
+  const activeUserRef = useRef(user?.userId ?? null)
+
   const fetchCart = useCallback(async () => {
+    const expectedUser = activeUserRef.current
     try {
       const { data } = await apiService.cart.get()
-      // data is CartResponse: { items: CartItemDetail[], cartTotal }
+      // Discard response if the user changed while the request was in flight
+      if (activeUserRef.current !== expectedUser) return
       setItems(data?.items ?? [])
       setServerTotal(parseFloat(data?.cartTotal ?? 0))
     } catch {
-      setItems([])
-      setServerTotal(0)
+      if (activeUserRef.current === expectedUser) {
+        setItems([])
+        setServerTotal(0)
+      }
     }
   }, [])
 
   useEffect(() => {
-    if (user) {
-      Promise.resolve().then(() => fetchCart())
-    } else {
-      Promise.resolve().then(() => setItems([]))
-    }
+    activeUserRef.current = user?.userId ?? null
+    // Always clear immediately so no previous user's items ever bleed through
+    setItems([])
+    setServerTotal(0)
+    if (user) fetchCart()
   }, [user, fetchCart])
 
   const addToCart = async (variantId, quantity = 1) => {

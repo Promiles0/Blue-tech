@@ -86,27 +86,27 @@ export default function Account() {
     }
     if (tab === 'address') {
       apiService.addresses.list()
-        .then(({ data }) => setAddresses(Array.isArray(data.data) ? data.data : []))
+        .then(({ data }) => setAddresses(Array.isArray(data) ? data : []))
         .catch(() => setAddresses([]))
     }
   }, [tab, user])
 
   const [showAddressForm, setShowAddressForm] = useState(false)
   const [addressForm, setAddressForm] = useState({
-    street: '', city: '', state: '', zipCode: '', country: 'Rwanda'
+    recipientName: '', phoneNumber: '', streetAddress: '', city: '', country: 'Rwanda', landmarks: ''
   })
 
   const handleAddAddress = async () => {
-    if (!addressForm.street || !addressForm.city) {
-      toast.error('Please fill in street and city')
+    if (!addressForm.recipientName || !addressForm.phoneNumber || !addressForm.streetAddress || !addressForm.city) {
+      toast.error('Please fill in name, phone, street and city')
       return
     }
     setLoading(true)
     try {
       const { data } = await apiService.addresses.add(addressForm)
-      setAddresses([...addresses, data.data])
+      setAddresses([...addresses, data])
       setShowAddressForm(false)
-      setAddressForm({ street: '', city: '', state: '', zipCode: '', country: 'Rwanda' })
+      setAddressForm({ recipientName: '', phoneNumber: '', streetAddress: '', city: '', country: 'Rwanda', landmarks: '' })
       toast.success('Address added')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to add address')
@@ -118,7 +118,7 @@ export default function Account() {
   const handleDeleteAddress = async (id) => {
     try {
       await apiService.addresses.delete(id)
-      setAddresses(addresses.filter(a => a.id !== id))
+      setAddresses(addresses.filter(a => a.addressId !== id))
       toast.success('Address removed')
     } catch {
       toast.error('Failed to remove address')
@@ -128,7 +128,7 @@ export default function Account() {
   const handleSetDefaultAddress = async (id) => {
     try {
       await apiService.addresses.setDefault(id)
-      setAddresses(addresses.map(a => ({ ...a, isDefault: a.id === id })))
+      setAddresses(addresses.map(a => ({ ...a, isDefault: a.addressId === id })))
       toast.success('Default address updated')
     } catch {
       toast.error('Failed to update default address')
@@ -152,8 +152,8 @@ export default function Account() {
         name: profileForm.name.trim(),
         phone: profileForm.phone.trim()
       })
-      
-      updateUser(response.data.data)
+
+      updateUser(response.data)
       setIsEditing(false)
       toast.success('Profile updated successfully')
     } catch (err) {
@@ -594,52 +594,62 @@ export default function Account() {
                     <h2 style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 32 }}>New Shipping Address</h2>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
                       <div className="form-group-noir">
-                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>Street Address</label>
-                        <input 
+                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>Recipient Name *</label>
+                        <input
                           className="noir-input"
-                          value={addressForm.street} 
-                          onChange={e => setAddressForm({...addressForm, street: e.target.value})}
-                          placeholder="e.g. 123 Designer Row" 
+                          value={addressForm.recipientName}
+                          onChange={e => setAddressForm({...addressForm, recipientName: e.target.value})}
+                          placeholder="Full name"
                           style={{ borderRadius: 12 }}
                         />
                       </div>
                       <div className="form-group-noir">
-                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>City</label>
-                        <input 
+                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>Phone Number *</label>
+                        <input
                           className="noir-input"
-                          value={addressForm.city} 
-                          onChange={e => setAddressForm({...addressForm, city: e.target.value})}
-                          placeholder="Kigali" 
-                          style={{ borderRadius: 12 }}
-                        />
-                      </div>
-                      <div className="form-group-noir">
-                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>State / Province</label>
-                        <input 
-                          className="noir-input"
-                          value={addressForm.state} 
-                          onChange={e => setAddressForm({...addressForm, state: e.target.value})}
-                          placeholder="Gasabo" 
-                          style={{ borderRadius: 12 }}
-                        />
-                      </div>
-                      <div className="form-group-noir">
-                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>Postal Code</label>
-                        <input 
-                          className="noir-input"
-                          value={addressForm.zipCode} 
-                          onChange={e => setAddressForm({...addressForm, zipCode: e.target.value})}
-                          placeholder="00000" 
+                          value={addressForm.phoneNumber}
+                          onChange={e => setAddressForm({...addressForm, phoneNumber: e.target.value})}
+                          placeholder="+250 XXX XXX XXX"
                           style={{ borderRadius: 12 }}
                         />
                       </div>
                       <div className="form-group-noir" style={{ gridColumn: 'span 2' }}>
-                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>Country</label>
-                        <input 
+                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>Street Address *</label>
+                        <input
                           className="noir-input"
-                          value={addressForm.country} 
+                          value={addressForm.streetAddress}
+                          onChange={e => setAddressForm({...addressForm, streetAddress: e.target.value})}
+                          placeholder="e.g. 123 Designer Row"
+                          style={{ borderRadius: 12 }}
+                        />
+                      </div>
+                      <div className="form-group-noir">
+                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>City *</label>
+                        <input
+                          className="noir-input"
+                          value={addressForm.city}
+                          onChange={e => setAddressForm({...addressForm, city: e.target.value})}
+                          placeholder="Kigali"
+                          style={{ borderRadius: 12 }}
+                        />
+                      </div>
+                      <div className="form-group-noir">
+                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>Country *</label>
+                        <input
+                          className="noir-input"
+                          value={addressForm.country}
                           onChange={e => setAddressForm({...addressForm, country: e.target.value})}
-                          placeholder="Rwanda" 
+                          placeholder="Rwanda"
+                          style={{ borderRadius: 12 }}
+                        />
+                      </div>
+                      <div className="form-group-noir" style={{ gridColumn: 'span 2' }}>
+                        <label className="label-muted" style={{ display: 'block', marginBottom: 10 }}>Landmarks (optional)</label>
+                        <input
+                          className="noir-input"
+                          value={addressForm.landmarks}
+                          onChange={e => setAddressForm({...addressForm, landmarks: e.target.value})}
+                          placeholder="Near, opposite, behind..."
                           style={{ borderRadius: 12 }}
                         />
                       </div>
@@ -688,47 +698,48 @@ export default function Account() {
                 ) : (
                   <div style={{ display: 'grid', gap: 20 }}>
                     {addresses.map(addr => (
-                      <motion.div 
-                        key={addr.id} 
+                      <motion.div
+                        key={addr.addressId}
                         layout
                         className="dashboard-panel"
-                        style={{ 
+                        style={{
                           padding: 28, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: 24
                         }}
                       >
                         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-                          <div style={{ 
-                            width: 48, height: 48, borderRadius: 14, background: addr.isDefault ? 'var(--accent-dim)' : 'rgba(255,255,255,0.03)', 
+                          <div style={{
+                            width: 48, height: 48, borderRadius: 14, background: addr.isDefault ? 'var(--accent-dim)' : 'rgba(255,255,255,0.03)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', color: addr.isDefault ? 'var(--accent)' : 'var(--muted)'
                           }}>
                             <MapPin size={20} />
                           </div>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-                              <p style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{addr.street}</p>
+                              <p style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{addr.streetAddress}</p>
                               {addr.isDefault && (
                                 <span className="status-pill status-pill--delivered" style={{ fontSize: 9, padding: '2px 8px' }}>
                                   Default
                                 </span>
                               )}
                             </div>
-                            <p style={{ fontSize: 14, color: 'var(--muted)' }}>{addr.city}, {addr.state} • {addr.country}</p>
+                            <p style={{ fontSize: 14, color: 'var(--muted)' }}>{addr.city} • {addr.country}</p>
+                            {addr.recipientName && <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 2 }}>{addr.recipientName} · {addr.phoneNumber}</p>}
                           </div>
                         </div>
-                        
+
                         <div style={{ display: 'flex', gap: 8 }}>
                           {!addr.isDefault && (
-                            <button 
-                              onClick={() => handleSetDefaultAddress(addr.id)}
+                            <button
+                              onClick={() => handleSetDefaultAddress(addr.addressId)}
                               className="sidebar-item"
                               style={{ padding: '8px 16px', fontSize: 12, color: 'var(--accent)' }}
                             >
                               Set Default
                             </button>
                           )}
-                          <button 
-                            onClick={() => handleDeleteAddress(addr.id)}
+                          <button
+                            onClick={() => handleDeleteAddress(addr.addressId)}
                             className="sidebar-item"
                             style={{ padding: '8px 16px', fontSize: 12, color: 'var(--error)' }}
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--error-dim)'}

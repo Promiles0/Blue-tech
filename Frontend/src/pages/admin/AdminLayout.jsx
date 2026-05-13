@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Truck, Users, MessageSquare, BarChart3, ScrollText,
-  LogOut, ArrowLeft, Bell, Tag,
+  LogOut, ArrowLeft, Bell, Tag, Image,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import AdminNotificationBell from '../../components/admin/AdminNotificationBell'
@@ -15,8 +15,9 @@ const NAV = [
   { to: '/admin/shipments',  label: 'Shipments',   icon: Truck },
   { to: '/admin/users',      label: 'Users',       icon: Users },
   { to: '/admin/reviews',    label: 'Reviews',     icon: MessageSquare },
-  { to: '/admin/coupons',    label: 'Coupons',     icon: Tag },
-  { to: '/admin/analytics',      label: 'Analytics',      icon: BarChart3 },
+  { to: '/admin/coupons',      label: 'Coupons',      icon: Tag },
+  { to: '/admin/hero-slides',  label: 'Hero Slides',  icon: Image },
+  { to: '/admin/analytics',    label: 'Analytics',    icon: BarChart3 },
   { to: '/admin/audit',          label: 'Audit Log',      icon: ScrollText },
   { to: '/admin/notifications',  label: 'Notifications',  icon: Bell },
 ]
