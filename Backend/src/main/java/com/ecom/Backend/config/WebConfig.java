@@ -28,11 +28,12 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        Path path = Paths.get(uploadDir);
-        String absolutePath = path.toFile().getAbsolutePath();
-        
-        // This maps 'http://localhost:8080/uploads/products/xyz.jpg' to the physical file on disk
+        // Use toUri() so the location is a valid file URI on both Windows and Unix
+        // (avoids backslash vs forward-slash issues on Windows paths)
+        String location = Paths.get(uploadDir).resolve("products").toAbsolutePath().normalize().toUri().toString();
+        if (!location.endsWith("/")) location += "/";
+
         registry.addResourceHandler("/uploads/products/**")
-                .addResourceLocations("file:" + absolutePath + "/");
+                .addResourceLocations(location);
     }
 }

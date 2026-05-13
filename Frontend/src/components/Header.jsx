@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X, ArrowRight } from 'lucide-react'
+import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X } from 'lucide-react'
 import NotificationBell from './site/NotificationBell'
 import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
@@ -12,15 +12,15 @@ import apiService from '../api/service'
 export default function Header() {
   const { user, logout, isAdmin }                           = useAuth()
   const { count }                                           = useCart()
-  const { setCartOpen, setPaletteOpen, setMobileNavOpen }   = useUI()
+  const { setCartOpen, setMobileNavOpen }                   = useUI()
   const navigate                                            = useNavigate()
   const location                                            = useLocation()
   const [userMenuOpen, setUserMenuOpen]                     = useState(false)
   const [browseOpen, setBrowseOpen]                         = useState(false)
   const [searchOpen, setSearchOpen]                         = useState(false)
   const [searchQuery, setSearchQuery]                       = useState('')
-  const [prevCount, setPrevCount]                           = useState(count)
   const [badgeKey, setBadgeKey]                             = useState(0)
+  const prevCountRef                                       = useRef(count)
   const userMenuRef                                         = useRef(null)
   const browseRef                                           = useRef(null)
   const searchRef                                           = useRef(null)
@@ -49,9 +49,9 @@ export default function Header() {
 
   // Cart badge pulse on count increase
   useEffect(() => {
-    if (count > prevCount) setBadgeKey(k => k + 1)
-    setPrevCount(count)
-  }, [count]) // eslint-disable-line
+    if (count > prevCountRef.current) setBadgeKey(k => k + 1)
+    prevCountRef.current = count
+  }, [count])
 
   // Close user menu and browse menu on outside click
   useEffect(() => {
@@ -76,9 +76,6 @@ export default function Header() {
     setSearchOpen(false)
     setSearchQuery('')
   }
-
-  const isActive = (path, search = '') =>
-    location.pathname === path && (!search || location.search === search)
 
   return (
     <motion.header

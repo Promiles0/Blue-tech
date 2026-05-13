@@ -81,13 +81,20 @@ public class OrderService {
                     return addressRepository.save(newAddr);
                 });
 
-        // 3. Calculate Total and Prepare Order
+        // 3. Pre-calculate total so we can set it before the first save (NOT NULL constraint)
         BigDecimal totalAmount = BigDecimal.ZERO;
-        
-        // 4. Create the Order (Snapshotting Address)
+        for (CartItem cartItem : cartItems) {
+            ProductVariant variant = cartItem.getVariant();
+            BigDecimal adj = variant.getPriceAdjustment() != null ? variant.getPriceAdjustment() : BigDecimal.ZERO;
+            BigDecimal unitPrice = variant.getProduct().getPrice().add(adj);
+            totalAmount = totalAmount.add(unitPrice.multiply(new BigDecimal(cartItem.getQuantity())));
+        }
+
+        // 4. Create the Order with totalAmount already set (Snapshotting Address)
         Order order = Order.builder()
                 .user(user)
                 .address(address)
+                .totalAmount(totalAmount)
                 .status(OrderStatus.PENDING)
                 .orderedAt(LocalDateTime.now())
                 .orderAddressStreet(request.getStreet())
@@ -96,24 +103,21 @@ public class OrderService {
                 .orderAddressPhoneNumber(request.getPhone())
                 .orderAddressRecipient(user.getName())
                 .build();
-        
-        // We save the order first to get an ID
+
         Order savedOrder = orderRepository.save(order);
 
-        // 5. Create Order Items and Reduce Stock Atomics
+        // 5. Create Order Items and Reduce Stock Atomically
         for (CartItem cartItem : cartItems) {
             ProductVariant variant = cartItem.getVariant();
-            
+
             // ATOMIC STOCK CHECK & REDUCE
             int rowsUpdated = variantRepository.reduceStockAtomic(variant.getVariantId(), cartItem.getQuantity());
             if (rowsUpdated == 0) {
                 throw new RuntimeException("Out of stock: " + variant.getProduct().getName() + " (" + variant.getSizeOrColor() + ")");
             }
 
-            // SNAPSHOT PRICE: Base Price + Adjustment
-            BigDecimal unitPrice = variant.getProduct().getPrice().add(variant.getPriceAdjustment());
-            BigDecimal itemTotal = unitPrice.multiply(new BigDecimal(cartItem.getQuantity()));
-            totalAmount = totalAmount.add(itemTotal);
+            BigDecimal adj = variant.getPriceAdjustment() != null ? variant.getPriceAdjustment() : BigDecimal.ZERO;
+            BigDecimal unitPrice = variant.getProduct().getPrice().add(adj);
 
             OrderItem orderItem = OrderItem.builder()
                     .order(savedOrder)
@@ -121,13 +125,9 @@ public class OrderService {
                     .quantity(cartItem.getQuantity())
                     .unitPrice(unitPrice)
                     .build();
-            
+
             orderItemRepository.save(orderItem);
         }
-
-        // 6. Update Final Total and Save Order again
-        savedOrder.setTotalAmount(totalAmount);
-        orderRepository.save(savedOrder);
 
         // 7. Clear the User's Cart
         cartItemRepository.deleteAll(cartItems);
@@ -144,7 +144,10 @@ public class OrderService {
         // 9. Send Email Confirmation
         emailService.sendOrderConfirmation(user.getEmail(), savedOrder.getOrderId().toString(), totalAmount.toString());
 
-        return mapToOrderResponse(savedOrder);
+        // Reload so orderItems collection is populated from DB
+        Order fullOrder = orderRepository.findById(savedOrder.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found after save"));
+        return mapToOrderResponse(fullOrder);
     }
 
     @Transactional
@@ -216,7 +219,8 @@ public class OrderService {
     }
 
     private OrderResponse mapToOrderResponse(Order order) {
-        List<OrderResponse.OrderItemResponse> items = order.getOrderItems().stream().map(oi -> 
+        List<OrderItem> rawItems = order.getOrderItems() != null ? order.getOrderItems() : List.of();
+        List<OrderResponse.OrderItemResponse> items = rawItems.stream().map(oi ->
             OrderResponse.OrderItemResponse.builder()
                     .productName(oi.getVariant().getProduct().getName())
                     .variantInfo(oi.getVariant().getSizeOrColor())

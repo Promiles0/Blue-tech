@@ -48,7 +48,7 @@ export default function Navbar() {
     setSearchQuery('')
   }
 
-  const isActive = (path) => location.pathname === path
+  // const isActive = (path) => location.pathname === path
 
   return (
     <nav style={{

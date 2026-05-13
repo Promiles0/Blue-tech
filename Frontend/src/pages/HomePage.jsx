@@ -5,10 +5,9 @@ import { motion, useReducedMotion } from 'framer-motion'
 import ProductCard from '../components/ProductCard'
 import Testimonials from '../components/site/Testimonials'
 import RecentlyViewed from '../components/site/RecentlyViewed'
+import HeroCarousel from '../components/site/HeroCarousel'
 import { Reveal, Parallax, Magnetic } from '../lib/motion'
 import apiService from '../api/service'
-
-const CATEGORIES_FALLBACK = ['Audio', 'Wearables', 'Cameras', 'Computing', 'Gaming', 'Accessories']
 
 // ── Word-by-word stagger ────────────────────────────────────────────────────
 const containerVariants = {
@@ -166,46 +165,10 @@ export default function Home() {
             </motion.div>
           </div>
 
-          {/* Right — hero image with Ken Burns */}
+          {/* Right — auto-sliding hero carousel */}
           <Reveal delay={0.15}>
             <Parallax speed={0.08}>
-              <div style={{ position: 'relative' }}>
-                <div style={{
-                  borderRadius: 16, overflow: 'hidden',
-                  aspectRatio: '4/5', background: '#1a1a1a',
-                }}>
-                  <img
-                    src="https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                    alt="Aurora Wireless headphones"
-                    className="ken-burns"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={e => { e.target.parentElement.style.background = '#1a1a1a' }}
-                  />
-                </div>
-
-                {/* Featured badge — first real product */}
-                {products[0] && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 1, duration: 0.4 }}
-                    style={{
-                      position: 'absolute', bottom: -18, left: -18,
-                      background: '#0f0f0f', border: '1px solid #1e1e1e',
-                      borderRadius: 12, padding: '14px 20px',
-                      boxShadow: 'var(--shadow-elegant)',
-                    }}
-                  >
-                    <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#444', marginBottom: 4 }}>FEATURED</p>
-                    <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, marginBottom: 3 }}>
-                      {products[0].name}
-                    </p>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b' }}>
-                      ${parseFloat(products[0].startingPrice ?? products[0].price ?? 0).toFixed(0)}
-                    </p>
-                  </motion.div>
-                )}
-              </div>
+              <HeroCarousel />
             </Parallax>
           </Reveal>
         </div>
