@@ -11,6 +11,11 @@ const apiService = {
     changePassword: (data) => api.put('/users/password', data),
   },
 
+  // --- USERS ---
+  users: {
+    updatePreferences: (data) => api.put('/users/preferences', data),
+  },
+
   // --- PRODUCTS ---
   products: {
     getAll: () => api.get('/products'),

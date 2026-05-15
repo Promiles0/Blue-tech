@@ -2,6 +2,7 @@ package com.ecom.Backend.controller;
 
 import com.ecom.Backend.dto.request.PasswordChangeRequest;
 import com.ecom.Backend.dto.request.ProfileUpdateRequest;
+import com.ecom.Backend.dto.request.UserPreferencesRequest;
 import com.ecom.Backend.dto.response.UserResponse;
 import com.ecom.Backend.entity.User;
 import com.ecom.Backend.service.AuthService;
@@ -21,21 +22,19 @@ public class UserController {
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> getProfile() {
         User user = authService.getCurrentAuthenticatedUser();
-        UserResponse response = UserResponse.builder()
-                .userId(user.getUserId())
-                .name(user.getName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .role(user.getRole())
-                .build();
-        return ResponseEntity.ok(ApiResponse.success("Profile fetched", response));
+        return ResponseEntity.ok(ApiResponse.success("Profile fetched", authService.mapToUserResponsePublic(user)));
     }
 
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(@Valid @RequestBody ProfileUpdateRequest request) {
         User user = authService.getCurrentAuthenticatedUser();
-        UserResponse response = authService.updateProfile(user, request);
-        return ResponseEntity.ok(ApiResponse.success("Profile updated", response));
+        return ResponseEntity.ok(ApiResponse.success("Profile updated", authService.updateProfile(user, request)));
+    }
+
+    @PutMapping("/preferences")
+    public ResponseEntity<ApiResponse<UserResponse>> updatePreferences(@RequestBody UserPreferencesRequest request) {
+        User user = authService.getCurrentAuthenticatedUser();
+        return ResponseEntity.ok(ApiResponse.success("Preferences updated", authService.updatePreferences(user, request)));
     }
 
     @PutMapping("/password")

@@ -1,120 +1,274 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Package, ChevronRight } from "lucide-react";
-import apiService from "../api/service";
+import { useState, useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { Package, Search, ChevronRight, ShoppingBag, Wallet, Loader2, SendHorizonal, BadgeCheck, Undo2, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import apiService from '../api/service'
 
-const STATUS_STYLES = {
-  PENDING:    "text-yellow-400/70 bg-yellow-400/10 border-yellow-400/20",
-  PROCESSING: "text-blue-400/70 bg-blue-400/10 border-blue-400/20",
-  SHIPPED:    "text-purple-400/70 bg-purple-400/10 border-purple-400/20",
-  DELIVERED:  "text-green-400/70 bg-green-400/10 border-green-400/20",
-  CANCELLED:  "text-red-400/70 bg-red-400/10 border-red-400/20",
-};
+const TABS = [
+  { id: 'all',        label: 'All Orders',  icon: ShoppingBag   },
+  { id: 'PENDING',    label: 'To Pay',      icon: Wallet        },
+  { id: 'PROCESSING', label: 'In Progress', icon: Loader2       },
+  { id: 'SHIPPED',    label: 'Shipped',     icon: SendHorizonal },
+  { id: 'DELIVERED',  label: 'Delivered',   icon: BadgeCheck    },
+  { id: 'CANCELLED',  label: 'Returns',     icon: Undo2         },
+]
 
-function StatusBadge({ status }) {
-  const styles = STATUS_STYLES[status] || STATUS_STYLES.PENDING;
-  return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-display font-semibold tracking-widest uppercase border ${styles}`}>
-      {status}
-    </span>
-  );
+const STATUS_CONFIG = {
+  PENDING:    { label: 'Pending',    color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.2)'  },
+  PROCESSING: { label: 'Processing', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
+  SHIPPED:    { label: 'Shipped',    color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
+  DELIVERED:  { label: 'Delivered',  color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.2)'  },
+  CANCELLED:  { label: 'Cancelled',  color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
 }
 
-function OrderHistoryPage() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+const fmt = (v) => `$${Number(v ?? 0).toFixed(2)}`
+const fmtDate = (v) => v ? new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
-  const totalSpent = orders.reduce((sum, order) => sum + Number(order.totalAmount ?? order.total ?? 0), 0);
-  const deliveredCount = orders.filter(o => o.status === 'DELIVERED').length;
+export default function OrderHistoryPage() {
+  const [orders, setOrders]   = useState([])
+  const [loading, setLoading] = useState(true)
+  const [tab, setTab]         = useState('all')
+  const [search, setSearch]   = useState('')
 
   useEffect(() => {
-    let cancelled = false;
-    Promise.resolve().then(() => setLoading(true));
-    
+    let cancelled = false
+    setLoading(true)
     apiService.orders.getUserOrders()
-      .then(({ data }) => {
-        if (!cancelled) setOrders(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {
-        if (!cancelled) setOrders([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .then(({ data }) => { if (!cancelled) setOrders(Array.isArray(data) ? data : []) })
+      .catch(() => { if (!cancelled) setOrders([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
-    return () => { cancelled = true; };
-  }, []);
+  const filtered = useMemo(() => {
+    let list = tab === 'all' ? orders : orders.filter(o => o.status === tab)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(o =>
+        String(o.orderId ?? o.id).includes(q) ||
+        o.items?.some(i => i.productName?.toLowerCase().includes(q))
+      )
+    }
+    return list
+  }, [orders, tab, search])
 
-  if (loading) {
-    return (
-      <div className="container mx-auto px-6 py-20 flex justify-center">
-        <div className="w-5 h-5 border border-primary/40 border-t-primary rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const counts = useMemo(() => {
+    const c = { all: orders.length }
+    TABS.slice(1).forEach(t => { c[t.id] = orders.filter(o => o.status === t.id).length })
+    return c
+  }, [orders])
+
+  const totalSpent    = orders.reduce((s, o) => s + Number(o.totalAmount ?? o.total ?? 0), 0)
+  const deliveredCount = orders.filter(o => o.status === 'DELIVERED').length
 
   return (
-    <div className="container mx-auto px-6 py-16 max-w-5xl">
-      <div className="section-heading" style={{ marginBottom: 28 }}>
-        <div>
-          <p className="label-muted">Order history</p>
-          <h1 className="font-display font-bold text-4xl text-white/90">My Orders</h1>
-          <p style={{ color: '#999', marginTop: 10, lineHeight: 1.8 }}>Track your latest purchases and quickly access order details from one polished dashboard.</p>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', background: '#050505', padding: '64px 0 120px', position: 'relative', overflow: 'hidden' }}>
+      {/* Orbs */}
+      <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(124,92,240,0.07) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '5%', right: '-5%', width: '30vw', height: '30vw', background: 'radial-gradient(circle, rgba(245,158,11,0.04) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
 
-      <div className="order-summary-meta" style={{ marginBottom: 32 }}>
-        <div className="dashboard-card-secondary">
-          <span className="label-muted">Orders placed</span>
-          <p style={{ fontSize: 22, fontWeight: 900, marginTop: 10 }}>{orders.length}</p>
-        </div>
-        <div className="dashboard-card-secondary">
-          <span className="label-muted">Total spent</span>
-          <p style={{ fontSize: 22, fontWeight: 900, marginTop: 10 }}>${totalSpent.toFixed(2)}</p>
-        </div>
-        <div className="dashboard-card-secondary">
-          <span className="label-muted">Delivered</span>
-          <p style={{ fontSize: 22, fontWeight: 900, marginTop: 10 }}>{deliveredCount}</p>
-        </div>
-      </div>
+      <div className="container-noir" style={{ position: 'relative', zIndex: 1, maxWidth: 860 }}>
 
-      {orders.length === 0 ? (
-        <div className="dashboard-panel text-center py-24">
-          <Package className="w-12 h-12 text-white/10 mx-auto mb-6" />
-          <p className="text-white text-xl font-semibold mb-2">No orders found</p>
-          <p className="text-[#999] max-w-md mx-auto">Once you place an order, it will appear here with real-time tracking and status updates.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 18 }}>
-          {orders.map((order) => (
-            <Link
-              key={order.orderId ?? order.id}
-              to={`/orders/${order.orderId ?? order.id}`}
-              className="order-card"
-              style={{ textDecoration: 'none' }}
-            >
-              <div className="order-card-head">
-                <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 18, background: 'rgba(124,92,240,0.12)', display: 'grid', placeItems: 'center', color: '#7c5cf0' }}>
-                    <Package size={22} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>Order #{order.orderId ?? order.id}</p>
-                    <p style={{ fontSize: 13, color: '#888' }}>{new Date(order.createdAt ?? order.orderedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', textAlign: 'right' }}>
-                  <StatusBadge status={order.status} />
-                  <p style={{ fontSize: 18, fontWeight: 800, color: '#f59e0b' }}>${parseFloat(order.totalAmount ?? order.total ?? 0).toFixed(2)}</p>
-                  <ChevronRight size={18} color="#7c5cf0" />
-                </div>
-              </div>
-            </Link>
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 40 }}>
+          <p className="label-muted" style={{ marginBottom: 10 }}>Account</p>
+          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff', marginBottom: 6 }}>My Orders</h1>
+          <p style={{ color: 'var(--muted)', fontSize: 15 }}>Track and manage all your purchases.</p>
+        </motion.div>
+
+        {/* Stats */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 36 }}>
+          {[
+            { label: 'Orders Placed', value: orders.length },
+            { label: 'Total Spent',   value: fmt(totalSpent), highlight: true },
+            { label: 'Delivered',     value: deliveredCount },
+          ].map(s => (
+            <div key={s.label} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 24px' }}>
+              <p className="label-muted" style={{ fontSize: 10, marginBottom: 10 }}>{s.label}</p>
+              <p style={{ fontSize: 26, fontWeight: 800, color: s.highlight ? 'var(--price)' : '#fff' }}>{s.value}</p>
+            </div>
           ))}
-        </div>
-      )}
-    </div>
-  );
-}
+        </motion.div>
 
-export default OrderHistoryPage;
+        {/* Search + Tabs */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+
+          {/* Search */}
+          <div style={{ position: 'relative', marginBottom: 24 }}>
+            <Search size={15} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', pointerEvents: 'none' }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by order number or product name…"
+              className="noir-input"
+              style={{ paddingLeft: 44, paddingRight: search ? 40 : 16, borderRadius: 12, fontSize: 14 }}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', padding: 0 }}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Filter tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: 32 }}>
+            {TABS.map(t => {
+              const active = tab === t.id
+              const count  = counts[t.id]
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  style={{
+                    flex: 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '18px 8px',
+                    fontSize: 14, fontWeight: active ? 700 : 400,
+                    border: 'none', borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                    background: 'none',
+                    color: active ? '#fff' : '#555',
+                    cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
+                    marginBottom: -1,
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#999' }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#555' }}
+                >
+                  <t.icon size={16} style={{ flexShrink: 0 }} />
+                  <span>{t.label}</span>
+                  {count > 0 && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, lineHeight: 1,
+                      background: active ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                      color: active ? '#fff' : '#555',
+                      borderRadius: 999, padding: '3px 7px',
+                    }}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </motion.div>
+
+        {/* Order list */}
+        {loading ? (
+          <div style={{ display: 'grid', gap: 14 }}>
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="skeleton" style={{ height: 110, borderRadius: 20 }} />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            style={{ textAlign: 'center', padding: '80px 40px', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 24 }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--accent)' }}>
+              <Package size={28} />
+            </div>
+            <p style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>
+              {search ? 'No orders match your search' : tab === 'all' ? 'No orders yet' : `No ${TABS.find(t => t.id === tab)?.label.toLowerCase()} orders`}
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--muted)', maxWidth: 300, margin: '0 auto' }}>
+              {search ? 'Try a different order number or product name.' : 'Once you place an order it will appear here.'}
+            </p>
+            {search && (
+              <button onClick={() => setSearch('')} className="noir-btn-outline" style={{ marginTop: 24, borderRadius: 10, fontSize: 13 }}>
+                Clear search
+              </button>
+            )}
+          </motion.div>
+        ) : (
+          <AnimatePresence mode="popLayout">
+            <div style={{ display: 'grid', gap: 14 }}>
+              {filtered.map((order, i) => {
+                const cfg      = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.PENDING
+                const items    = order.items ?? []
+                const thumbs   = items.slice(0, 4)
+                const extra    = items.length - 4
+
+                return (
+                  <motion.div
+                    key={order.orderId ?? order.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ delay: i * 0.04 }}
+                  >
+                    <Link
+                      to={`/orders/${order.orderId ?? order.id}`}
+                      style={{ textDecoration: 'none', display: 'block' }}
+                    >
+                      <div style={{
+                        background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)',
+                        borderRadius: 20, padding: '22px 24px', transition: 'border-color 0.2s, transform 0.2s',
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(124,92,240,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.transform = 'translateY(0)' }}
+                      >
+                        {/* Top row */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+                          <div>
+                            <p style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 4 }}>
+                              Order #{order.orderId ?? order.id}
+                            </p>
+                            <p style={{ fontSize: 13, color: 'var(--muted-dark)' }}>{fmtDate(order.createdAt ?? order.orderedAt)}</p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 999, padding: '4px 12px' }}>
+                              {cfg.label}
+                            </span>
+                            <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--price)' }}>{fmt(order.totalAmount ?? order.total)}</p>
+                            <ChevronRight size={16} style={{ color: 'var(--accent)' }} />
+                          </div>
+                        </div>
+
+                        {/* Product thumbnails */}
+                        {thumbs.length > 0 ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            {thumbs.map((item, idx) => (
+                              <div key={idx} style={{ width: 52, height: 52, borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+                                {item.imageUrl ? (
+                                  <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Package size={18} style={{ color: 'var(--muted-dark)' }} />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {extra > 0 && (
+                              <div style={{ width: 52, height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--muted)', flexShrink: 0 }}>
+                                +{extra}
+                              </div>
+                            )}
+                            <div style={{ marginLeft: 4 }}>
+                              <p style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>
+                                {items.length} {items.length === 1 ? 'item' : 'items'}
+                              </p>
+                              {items[0]?.productName && (
+                                <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {items.map(i => i.productName).join(', ')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                              <Package size={20} />
+                            </div>
+                            <p style={{ fontSize: 13, color: 'var(--muted)' }}>No item details available</p>
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </AnimatePresence>
+        )}
+      </div>
+    </div>
+  )
+}
