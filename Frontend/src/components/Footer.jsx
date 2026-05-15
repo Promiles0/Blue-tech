@@ -57,10 +57,10 @@ export default function Footer() {
                     width: 32, height: 32, borderRadius: 8,
                     border: '1px solid #1e1e1e',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#555', transition: 'color 0.2s, border-color 0.2s',
+                    color: '#fff', transition: 'color 0.2s, border-color 0.2s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#2e2e2e' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.borderColor = '#1e1e1e' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.borderColor = '#2e2e2e' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#1e1e1e' }}
                 >
                   <Icon size={14} />
                 </a>
@@ -70,7 +70,7 @@ export default function Footer() {
 
           {/* SHOP column — inline category expand */}
           <div>
-            <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: '#333', marginBottom: 16 }}>SHOP</h4>
+            <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: '#888', marginBottom: 16 }}>SHOP</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <Link to="/products" className="story-link" style={{ fontSize: 14, color: '#555', transition: 'color 0.2s' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#fff'}
@@ -115,15 +115,15 @@ export default function Footer() {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           flexWrap: 'wrap', gap: 12,
         }}>
-          <p style={{ color: '#333', fontSize: 13 }}>© 2026 NOIR Studio. All rights reserved.</p>
+          <p style={{ color: '#555', fontSize: 13 }}>© 2026 NOIR Studio. All rights reserved.</p>
           <div style={{ display: 'flex', gap: 20 }}>
             {[['Privacy', '#'], ['Terms', '#'], ['Cookies', '#']].map(([label, href]) => (
               <a
                 key={label}
                 href={href}
-                style={{ fontSize: 13, color: '#333', transition: 'color 0.2s' }}
+                style={{ fontSize: 13, color: '#555', transition: 'color 0.2s' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#888'}
-                onMouseLeave={e => e.currentTarget.style.color = '#333'}
+                onMouseLeave={e => e.currentTarget.style.color = '#555'}
               >
                 {label}
               </a>
@@ -138,7 +138,7 @@ export default function Footer() {
 function FooterCol({ title, links }) {
   return (
     <div>
-      <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: '#333', marginBottom: 16 }}>{title}</h4>
+      <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: '#888', marginBottom: 16 }}>{title}</h4>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {links.map(([label, to]) => (
           <Link
