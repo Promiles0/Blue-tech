@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Truck, Shield, RotateCcw } from 'lucide-react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import ProductCard from '../components/ProductCard'
 import Testimonials from '../components/site/Testimonials'
 import RecentlyViewed from '../components/site/RecentlyViewed'
@@ -53,6 +53,43 @@ function StaggeredHeadline({ lines }) {
         )
       )}
     </motion.span>
+  )
+}
+
+const TAGLINES = [
+  'Quietly engineered.',
+  'Boldly designed.',
+  'Built to last.',
+  'Chosen with care.',
+  'Made for the detail-obsessed.',
+]
+
+function RotatingTagline() {
+  const [index, setIndex] = useState(0)
+  const reduce = useReducedMotion()
+
+  useEffect(() => {
+    const id = setInterval(() => setIndex(i => (i + 1) % TAGLINES.length), 4000)
+    return () => clearInterval(id)
+  }, [])
+
+  if (reduce) return <span style={{ display: 'block' }}>{TAGLINES[0]}</span>
+
+  return (
+    <span style={{ display: 'block', minHeight: '2.2em', position: 'relative' }}>
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={index}
+          initial={{ opacity: 0, filter: 'blur(8px)', y: 8 }}
+          animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+          exit={{ opacity: 0, filter: 'blur(8px)', y: -8 }}
+          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          style={{ display: 'block' }}
+        >
+          {TAGLINES[index]}
+        </motion.span>
+      </AnimatePresence>
+    </span>
   )
 }
 
@@ -113,7 +150,7 @@ export default function Home() {
               }}
             >
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'block' }} />
-              New season — Autumn 2026
+              New season ~ 2026
             </motion.div>
 
             <h1 style={{
@@ -124,9 +161,8 @@ export default function Home() {
               marginBottom: 22,
             }}>
               <StaggeredHeadline lines={['Considered', 'objects.']} />
-              <br />
-              <span style={{ color: '#7c5cf0' }}>
-                <StaggeredHeadline lines={['Quietly', 'engineered.']} />
+              <span style={{ color: '#7c5cf0', display: 'block', marginTop: '0.05em' }}>
+                <RotatingTagline />
               </span>
             </h1>
 
@@ -275,7 +311,6 @@ export default function Home() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
                   { img: 'https://images.unsplash.com/photo-1655560378428-7605bda51749?q=80&w=2069&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', label: 'Precision audio' },
-                  { img: 'https://images.unsplash.com/photo-1523275335684-378s98b6baf30?w=500&q=80', label: 'Wearable craft' },
                 ].map(({ img, label }) => (
                   <div key={label} style={{ flex: 1, borderRadius: 16, overflow: 'hidden', background: '#141414', position: 'relative', minHeight: 180 }}>
                     <img src={img} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
