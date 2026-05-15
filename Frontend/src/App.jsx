@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'sonner'
 import { AuthProvider }    from './context/AuthContext'
 import { CartProvider }    from './context/CartContext'
 import { UIProvider }      from './context/UIContext'
@@ -58,7 +57,6 @@ export default function App() {
             <WishlistProvider>
               <NotificationProvider>
                 <UIProvider>
-                  <Toaster position="bottom-right" richColors />
                   <ScrollToTop />
                   <Routes>
                     {/* Admin section — no SiteLayout, ADMIN role required */}

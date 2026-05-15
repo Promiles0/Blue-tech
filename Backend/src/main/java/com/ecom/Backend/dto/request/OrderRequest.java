@@ -10,5 +10,6 @@ public class OrderRequest {
     private String zipCode;
     private String country;
     private String phone;
-    private String paymentMethod; // e.g. "COD"
+    private String paymentMethod;
+    private String couponCode; // optional, validated server-side
 }
