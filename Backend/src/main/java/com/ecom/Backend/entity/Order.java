@@ -37,7 +37,7 @@ public class Order {
     @Column(nullable = false, columnDefinition = "varchar(255)")
     private OrderStatus status;
 
-    private LocalDateTime orderedAt;
+    private LocalDateTime orderedAt; // kept for DB compatibility, use createdAt for logic
 
     // Snapshot of the address at the time of ordering
     private String orderAddressStreet;

@@ -20,7 +20,14 @@ export function WishlistProvider({ children }) {
       .catch(() => setWishlistIds(new Set()))
   }, [user])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    if (!user) {
+      setWishlistIds(new Set())
+      return
+    }
+    setWishlistIds(new Set())
+    load()
+  }, [user, load])
 
   const toggle = async (productId, productName) => {
     if (!user) return
