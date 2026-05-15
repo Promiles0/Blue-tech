@@ -3,7 +3,7 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 
 export default function Cart() {
-  const { items, count, total, updateQuantity, removeFromCart } = useCart()
+  const { items, count, total, updateQuantity, removeFromCart, clearCart } = useCart()
   const navigate = useNavigate()
 
   if (items.length === 0) return (
@@ -15,9 +15,9 @@ export default function Cart() {
     </div>
   )
 
-  const shipping   = total >= 100 ? 0 : 9.99
-  const tax        = total * 0.08
-  const orderTotal = total + shipping + tax
+  const shipping   = 0
+  const tax        = 0
+  const orderTotal = total
 
   return (
     <div style={{ padding: '48px 0 80px' }}>
@@ -81,7 +81,7 @@ export default function Cart() {
             })}
 
             <button
-              onClick={() => items.forEach(i => removeFromCart(i.cartItemId))}
+              onClick={clearCart}
               style={{ background: 'none', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', alignSelf: 'flex-start', padding: '4px 0', transition: 'color 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
               onMouseLeave={e => e.currentTarget.style.color = '#555'}
@@ -94,8 +94,7 @@ export default function Cart() {
           <div style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 16, padding: 28, position: 'sticky', top: 80 }}>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 24 }}>Order summary</h2>
             <Row label="Subtotal"  value={`$${total.toFixed(2)}`} />
-            <Row label="Shipping"  value={shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`} />
-            <Row label="Tax (8%)"  value={`$${tax.toFixed(2)}`} />
+            <Row label="Shipping"  value="Free" />
             <div style={{ borderTop: '1px solid #2a2a2a', margin: '16px 0' }} />
             <Row label="Total" value={`$${orderTotal.toFixed(2)}`} bold />
 

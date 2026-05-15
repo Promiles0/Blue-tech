@@ -32,10 +32,11 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         // We check if the Master Admin already exists
-        if (!userRepository.existsByEmail(adminEmail)) {
-            
+        User adminUser = userRepository.findByEmail(adminEmail).orElse(null);
+
+        if (adminUser == null) {
             // If not, we create the Master Admin account automatically
-            User adminUser = User.builder()
+            adminUser = User.builder()
                     .name(adminName)
                     .email(adminEmail)
                     .passwordHash(passwordEncoder.encode(adminPassword)) 
@@ -47,6 +48,15 @@ public class DataSeeder implements CommandLineRunner {
             System.out.println("==============================================");
             System.out.println(" MASTER ADMIN CREATED: " + adminEmail);
             System.out.println("==============================================");
+        } else {
+            // If it exists, ensure it has the ADMIN role
+            if (adminUser.getRole() != RoleType.ADMIN) {
+                adminUser.setRole(RoleType.ADMIN);
+                userRepository.save(adminUser);
+                System.out.println("==============================================");
+                System.out.println(" MASTER ADMIN ROLE FIXED TO ADMIN: " + adminEmail);
+                System.out.println("==============================================");
+            }
         }
     }
 }

@@ -76,6 +76,7 @@ export default function CheckoutPage() {
         country: newAddress.country,
         phone: newAddress.phone,
         paymentMethod: "COD",
+        couponCode: coupon?.code ?? null,
       };
     } else {
       const address = addresses.find((entry) => entry.addressId === selectedAddressId);
@@ -91,6 +92,7 @@ export default function CheckoutPage() {
         country: address.country,
         phone: address.phoneNumber,
         paymentMethod: "COD",
+        couponCode: coupon?.code ?? null,
       };
     }
 

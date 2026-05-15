@@ -108,8 +108,7 @@ public class SecurityConfig {
                                     "{\"success\":false,\"message\":\"Forbidden - insufficient permissions\",\"data\":null}");
                         }))
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) // OAuth2 needs a temporary session to
-                                                                                  // store state
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo.userService(oauth2UserService))

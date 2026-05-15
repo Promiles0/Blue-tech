@@ -5,6 +5,7 @@ import com.ecom.Backend.dto.request.PasswordChangeRequest;
 import com.ecom.Backend.dto.request.ProfileUpdateRequest;
 import com.ecom.Backend.dto.request.ResetPasswordRequest;
 import com.ecom.Backend.dto.request.UserLoginRequest;
+import com.ecom.Backend.dto.request.UserPreferencesRequest;
 import com.ecom.Backend.dto.request.UserRegisterRequest;
 import com.ecom.Backend.dto.response.AuthResponse;
 import com.ecom.Backend.dto.response.UserResponse;
@@ -81,7 +82,8 @@ public class AuthService {
                 .name(request.getName())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(RoleType.CUSTOMER) // Default role is customer
+                .role(RoleType.CUSTOMER)
+                .referralCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .build();
 
         // 3. Save to Database
@@ -226,6 +228,12 @@ public class AuthService {
         }
     }
 
+    public UserResponse updatePreferences(User user, UserPreferencesRequest request) {
+        if (request.getDefaultShippingSpeed() != null) user.setDefaultShippingSpeed(request.getDefaultShippingSpeed());
+        if (request.getPackagingPreference() != null) user.setPackagingPreference(request.getPackagingPreference());
+        return mapToUserResponse(userRepository.save(user));
+    }
+
     public UserResponse updateProfile(User user, ProfileUpdateRequest request) {
         user.setName(request.getName());
         user.setPhone(request.getPhone());
@@ -280,6 +288,10 @@ public class AuthService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    public UserResponse mapToUserResponsePublic(User user) {
+        return mapToUserResponse(user);
+    }
+
     private UserResponse mapToUserResponse(User user) {
         return UserResponse.builder()
                 .userId(user.getUserId())
@@ -288,6 +300,11 @@ public class AuthService {
                 .phone(user.getPhone())
                 .picture(user.getPicture())
                 .role(user.getRole())
+                .defaultShippingSpeed(user.getDefaultShippingSpeed())
+                .packagingPreference(user.getPackagingPreference())
+                .loyaltyPoints(user.getLoyaltyPoints())
+                .membershipTier(user.getMembershipTier())
+                .referralCode(user.getReferralCode())
                 .build();
     }
 }
