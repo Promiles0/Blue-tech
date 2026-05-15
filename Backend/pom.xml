@@ -138,6 +138,30 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.12</version>
+				<executions>
+					<execution>
+						<goals><goal>prepare-agent</goal></goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals><goal>report</goal></goals>
+					</execution>
+				</executions>
+				<configuration>
+					<excludes>
+						<exclude>com/ecom/Backend/dto/**</exclude>
+						<exclude>com/ecom/Backend/entity/**</exclude>
+						<exclude>com/ecom/Backend/enums/**</exclude>
+						<exclude>com/ecom/Backend/model/**</exclude>
+						<exclude>com/ecom/Backend/BackendApplication.class</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>

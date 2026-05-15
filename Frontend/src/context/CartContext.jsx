@@ -28,11 +28,9 @@ export function CartProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    if (user) {
-      Promise.resolve().then(() => fetchCart())
-    } else {
-      Promise.resolve().then(() => setItems([]))
-    }
+    setItems([])
+    setServerTotal(0)
+    if (user) fetchCart()
   }, [user, fetchCart])
 
   const addToCart = async (variantId, quantity = 1) => {

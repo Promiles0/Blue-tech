@@ -42,9 +42,6 @@ export default function ProductCard({ product }) {
   return (
     <Tilt max={6} style={{ height: '100%', display: 'block' }}>
       <div
-        onClick={() => setQuickViewProduct(product)}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
         style={{
           background: '#141414',
           border: `1px solid ${hover ? 'rgba(124,92,240,0.28)' : '#1e1e1e'}`,
@@ -54,9 +51,14 @@ export default function ProductCard({ product }) {
           height: '100%', display: 'flex', flexDirection: 'column',
           cursor: 'pointer',
         }}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
       >
         {/* ── Image area ──────────────────────────────────── */}
-        <div style={{ position: 'relative', aspectRatio: '4/5', background: '#1a1a1a', overflow: 'hidden', flexShrink: 0 }}>
+        <div 
+          style={{ position: 'relative', aspectRatio: '4/5', background: '#1a1a1a', overflow: 'hidden', flexShrink: 0 }}
+          onClick={() => setQuickViewProduct(product)}
+        >
 
           <img
             src={primaryImage}
@@ -106,11 +108,15 @@ export default function ProductCard({ product }) {
             </div>
           )}
 
-          {/* Wishlist button — stops propagation so card click doesn't fire */}
-          <button
-            type="button"
-            onClick={e => { e.preventDefault(); e.stopPropagation(); if (user) toggle(pid, product.name) }}
-            title={user ? (wishlisted ? 'Remove from wishlist' : 'Add to wishlist') : 'Sign in to save'}
+          {/* Wishlist button */}
+          <div
+            onClick={e => { 
+              e.preventDefault(); 
+              e.stopPropagation();
+              if (user) {
+                toggle(pid, product.name);
+              }
+            }}
             style={{
               position: 'absolute', top: 10, right: 10,
               background: wishlisted ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.08)',
@@ -119,14 +125,16 @@ export default function ProductCard({ product }) {
               borderRadius: '50%', width: 34, height: 34,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: wishlisted ? '#f87171' : '#fff', cursor: 'pointer',
-              opacity: hover || wishlisted ? 1 : 0,
+              opacity: 1,
               transition: 'opacity 0.25s, background 0.2s, color 0.2s',
+              zIndex: 100,
             }}
+            title={user ? (wishlisted ? 'Remove from wishlist' : 'Add to wishlist') : 'Sign in to save'}
             onMouseEnter={e => { if (!wishlisted) e.currentTarget.style.background = 'rgba(124,92,240,0.35)' }}
             onMouseLeave={e => { if (!wishlisted) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
           >
             <Heart size={14} fill={wishlisted ? 'currentColor' : 'none'} />
-          </button>
+          </div>
         </div>
 
         {/* ── Body ─────────────────────────────────────────── */}

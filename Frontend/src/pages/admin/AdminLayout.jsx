@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Truck, Users, MessageSquare, BarChart3, ScrollText,
@@ -117,6 +118,18 @@ export default function AdminLayout() {
         </div>
         <Outlet />
       </main>
+      <Toaster
+        theme="dark"
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#141414',
+            border: '1px solid #262626',
+            color: '#fff',
+            fontSize: '13px',
+          },
+        }}
+      />
     </div>
   )
 }

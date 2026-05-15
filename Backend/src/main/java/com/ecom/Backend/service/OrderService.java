@@ -2,6 +2,7 @@ package com.ecom.Backend.service;
 
 import com.ecom.Backend.dto.response.OrderResponse;
 import com.ecom.Backend.entity.*;
+import com.ecom.Backend.enums.CouponKind;
 import com.ecom.Backend.enums.OrderStatus;
 import com.ecom.Backend.repository.*;
 import com.ecom.Backend.exception.ResourceNotFoundException;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +28,7 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final AddressRepository addressRepository;
     private final ProductVariantRepository variantRepository;
+    private final CouponRepository couponRepository;
     private final AuditLogService auditLogService;
     private final AuthService authService;
     private final EmailService emailService;
@@ -60,11 +63,13 @@ public class OrderService {
             throw new RuntimeException("Cannot checkout with an empty cart");
         }
 
-        // 2. Resolve Shipping Address
-        // We try to find if this user already has this address, otherwise create it
+        // 2. Resolve Shipping Address — match on all key fields to avoid duplicates
         Address address = addressRepository.findByUser_UserId(user.getUserId())
                 .stream()
-                .filter(a -> a.getStreetAddress().equalsIgnoreCase(request.getStreet()) && a.getCity().equalsIgnoreCase(request.getCity()))
+                .filter(a -> a.getStreetAddress().equalsIgnoreCase(request.getStreet())
+                        && a.getCity().equalsIgnoreCase(request.getCity())
+                        && a.getCountry().equalsIgnoreCase(request.getCountry())
+                        && (request.getZipCode() == null || request.getZipCode().isBlank() || request.getZipCode().equalsIgnoreCase(a.getZipCode())))
                 .findFirst()
                 .orElseGet(() -> {
                     Address newAddr = Address.builder()
@@ -84,17 +89,17 @@ public class OrderService {
         // 3. Calculate Total and Prepare Order
         BigDecimal totalAmount = BigDecimal.ZERO;
         
-        // 4. Create the Order (Snapshotting Address)
+        // 4. Create the Order (Snapshotting Address) - but don't save yet
         Order order = Order.builder()
                 .user(user)
                 .address(address)
                 .status(OrderStatus.PENDING)
-                .orderedAt(LocalDateTime.now())
                 .orderAddressStreet(request.getStreet())
                 .orderAddressCity(request.getCity())
                 .orderAddressCountry(request.getCountry())
                 .orderAddressPhoneNumber(request.getPhone())
                 .orderAddressRecipient(user.getName())
+                .totalAmount(BigDecimal.ZERO) // Set initial value to avoid null constraint
                 .build();
         
         // We save the order first to get an ID
@@ -110,8 +115,9 @@ public class OrderService {
                 throw new RuntimeException("Out of stock: " + variant.getProduct().getName() + " (" + variant.getSizeOrColor() + ")");
             }
 
-            // SNAPSHOT PRICE: Base Price + Adjustment
-            BigDecimal unitPrice = variant.getProduct().getPrice().add(variant.getPriceAdjustment());
+            // SNAPSHOT PRICE: Base Price + Adjustment (null-safe)
+            BigDecimal adjustment = variant.getPriceAdjustment() != null ? variant.getPriceAdjustment() : BigDecimal.ZERO;
+            BigDecimal unitPrice = variant.getProduct().getPrice().add(adjustment);
             BigDecimal itemTotal = unitPrice.multiply(new BigDecimal(cartItem.getQuantity()));
             totalAmount = totalAmount.add(itemTotal);
 
@@ -125,14 +131,40 @@ public class OrderService {
             orderItemRepository.save(orderItem);
         }
 
-        // 6. Update Final Total and Save Order again
+        // 6. Apply coupon discount server-side if provided
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            Coupon coupon = couponRepository.findByCodeIgnoreCase(request.getCouponCode().trim())
+                    .orElseThrow(() -> new RuntimeException("Invalid coupon code"));
+
+            if (!coupon.isActive()) throw new RuntimeException("Coupon is no longer active");
+            if (coupon.getEndsAt() != null && coupon.getEndsAt().isBefore(LocalDateTime.now()))
+                throw new RuntimeException("Coupon has expired");
+            if (coupon.getStartsAt() != null && coupon.getStartsAt().isAfter(LocalDateTime.now()))
+                throw new RuntimeException("Coupon is not yet valid");
+            if (coupon.getMaxUses() != null && coupon.getUses() >= coupon.getMaxUses())
+                throw new RuntimeException("Coupon usage limit reached");
+            if (coupon.getMinSubtotal() != null && totalAmount.compareTo(coupon.getMinSubtotal()) < 0)
+                throw new RuntimeException("Order subtotal does not meet the minimum required for this coupon");
+
+            BigDecimal discount;
+            if (coupon.getKind() == CouponKind.PERCENT) {
+                discount = totalAmount.multiply(coupon.getValue()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            } else {
+                discount = coupon.getValue();
+            }
+            totalAmount = totalAmount.subtract(discount).max(BigDecimal.ZERO);
+            coupon.setUses(coupon.getUses() + 1);
+            couponRepository.save(coupon);
+        }
+
+        // 7. Update Final Total and Save Order again
         savedOrder.setTotalAmount(totalAmount);
         orderRepository.save(savedOrder);
 
-        // 7. Clear the User's Cart
+        // 8. Clear the User's Cart
         cartItemRepository.deleteAll(cartItems);
 
-        // 8. LOG MUTATION
+        // 9. LOG MUTATION
         auditLogService.log(
                 user.getUserId(),
                 "PLACE_ORDER",
@@ -141,7 +173,7 @@ public class OrderService {
                 null
         );
 
-        // 9. Send Email Confirmation
+        // 10. Send Email Confirmation
         emailService.sendOrderConfirmation(user.getEmail(), savedOrder.getOrderId().toString(), totalAmount.toString());
 
         return mapToOrderResponse(savedOrder);
