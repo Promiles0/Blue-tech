@@ -531,6 +531,7 @@ input, textarea, select { font-family: inherit; }
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 28px;
   padding: 32px 20px;
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }

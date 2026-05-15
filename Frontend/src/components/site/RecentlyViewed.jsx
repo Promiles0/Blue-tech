@@ -3,6 +3,13 @@ import { Link } from 'react-router-dom'
 import { Reveal } from '../../lib/motion'
 import { getRecentlyViewed } from '../../lib/recentlyViewed'
 
+// Already normalized by getRecentlyViewed, but guard at render time too
+function safeImageSrc(url) {
+  if (!url) return null
+  const m = url.match(/^\/uploads\/products\/(https?:\/\/.+)/)
+  return m ? m[1] : url
+}
+
 export default function RecentlyViewed() {
   const [items, setItems] = useState([])
 
@@ -27,8 +34,8 @@ export default function RecentlyViewed() {
           <div style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'thin' }}>
             {items.map((p, i) => (
               <Link
-                key={p.productId ?? p.id ?? i}
-                to={`/products/${p.productId ?? p.id}`}
+                key={`${p.id ?? i}-${i}`}
+                to={`/products/${p.id}`}
                 style={{
                   flexShrink: 0, width: 136,
                   background: '#141414', border: '1px solid #1e1e1e',
@@ -42,7 +49,7 @@ export default function RecentlyViewed() {
                 <div style={{ height: 116, overflow: 'hidden', background: '#1a1a1a' }}>
                   {p.imageUrl && (
                     <img
-                      src={p.imageUrl}
+                      src={safeImageSrc(p.imageUrl)}
                       alt={p.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onError={e => { e.target.style.display = 'none' }}

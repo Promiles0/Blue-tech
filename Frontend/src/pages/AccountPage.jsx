@@ -77,7 +77,7 @@ export default function Account() {
   useEffect(() => {
     if (user) {
       apiService.addresses.list()
-        .then(({ data }) => setAddresses(Array.isArray(data.data) ? data.data : []))
+        .then(({ data }) => setAddresses(Array.isArray(data) ? data : []))
         .catch(() => setAddresses([]))
     }
   }, [user])

@@ -20,6 +20,7 @@ const apiService = {
   products: {
     getAll: () => api.get('/products'),
     getAllPaginated: (params) => api.get(`/products?${params}`),
+    getNewest: (limit = 5) => api.get(`/products?page=0&size=${limit}&sort=createdAt,desc`),
     search: (params) => api.get(`/products/search?${params}`),
     getOne: (id) => api.get(`/products/${id}`),
   },
@@ -68,6 +69,11 @@ const apiService = {
     getOrderDetails: (id) => api.get(`/orders/${id}`),
   },
 
+  // --- HERO SLIDES ---
+  heroSlides: {
+    getActive: () => api.get('/hero-slides'),
+  },
+
   // --- ADMIN ---
   admin: {
     getDashboardStats: () => api.get('/admin/dashboard/stats'),
@@ -111,6 +117,12 @@ const apiService = {
     },
     audit: {
       getAll: (limit = 200) => api.get(`/admin/audit?limit=${limit}`),
+    },
+    heroSlides: {
+      getAll: () => api.get('/admin/hero-slides'),
+      create: (data) => api.post('/admin/hero-slides', data),
+      update: (id, data) => api.put(`/admin/hero-slides/${id}`, data),
+      delete: (id) => api.delete(`/admin/hero-slides/${id}`),
     },
   }
 };
