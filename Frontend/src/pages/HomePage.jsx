@@ -159,6 +159,7 @@ export default function Home() {
               fontWeight: 900, lineHeight: 1.05,
               letterSpacing: '-0.03em',
               marginBottom: 22,
+              color: '#fff',
             }}>
               <StaggeredHeadline lines={['Considered', 'objects.']} />
               <span style={{ color: '#7c5cf0', display: 'block', marginTop: '0.05em' }}>
@@ -244,7 +245,7 @@ export default function Home() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
               <div>
                 <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 6 }}>LATEST ARRIVALS</p>
-                <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em' }}>New this season</h2>
+                <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>New this season</h2>
               </div>
               <Link
                 to="/products"
@@ -298,7 +299,7 @@ export default function Home() {
                     display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
                     padding: 28,
                   }}>
-                    <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6 }}>
+                    <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6, color: '#fff' }}>
                       Craft before convenience
                     </p>
                     <p style={{ fontSize: 14, color: '#aaa', lineHeight: 1.65 }}>
@@ -315,7 +316,7 @@ export default function Home() {
                   <div key={label} style={{ flex: 1, borderRadius: 16, overflow: 'hidden', background: '#141414', position: 'relative', minHeight: 180 }}>
                     <img src={img} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 55%)', display: 'flex', alignItems: 'flex-end', padding: 18 }}>
-                      <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700 }}>{label}</span>
+                      <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, color: '#fff' }}>{label}</span>
                     </div>
                   </div>
                 ))}
@@ -341,7 +342,7 @@ export default function Home() {
               ].map(({ icon, title, desc }) => (
                 <div key={title}>
                   <div style={{ color: '#7c5cf0', marginBottom: 12 }}>{icon}</div>
-                  <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{title}</p>
+                  <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, marginBottom: 6, color: '#fff' }}>{title}</p>
                   <p style={{ fontSize: 13, color: '#555', lineHeight: 1.55 }}>{desc}</p>
                 </div>
               ))}

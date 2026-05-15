@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X } from 'lucide-react'
 import NotificationBell from './site/NotificationBell'
@@ -14,7 +14,6 @@ export default function Header() {
   const { count }                                           = useCart()
   const { setCartOpen, setMobileNavOpen }                   = useUI()
   const navigate                                            = useNavigate()
-  const location                                            = useLocation()
   const [userMenuOpen, setUserMenuOpen]                     = useState(false)
   const [browseOpen, setBrowseOpen]                         = useState(false)
   const [searchOpen, setSearchOpen]                         = useState(false)
@@ -127,9 +126,9 @@ export default function Header() {
           <Link
             to="/products"
             className="story-link"
-            style={{ fontSize: 14, fontWeight: 400, color: location.pathname === '/products' && !location.search ? '#fff' : '#888', transition: 'color 0.2s' }}
-            onMouseEnter={e => { if (location.pathname !== '/products' || location.search) e.currentTarget.style.color = '#ccc' }}
-            onMouseLeave={e => { if (location.pathname !== '/products' || location.search) e.currentTarget.style.color = '#888' }}
+            style={{ fontSize: 14, fontWeight: 400, color: '#fff', transition: 'color 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ccc' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#fff' }}
           >
             Shop
           </Link>
@@ -139,11 +138,11 @@ export default function Header() {
               onClick={() => setBrowseOpen(open => !open)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 14, fontWeight: 400, color: browseOpen ? '#fff' : '#888',
+                fontSize: 14, fontWeight: 400, color: '#fff',
                 background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.2s', padding: 0,
               }}
-              onMouseEnter={e => { if (!browseOpen) e.currentTarget.style.color = '#ccc' }}
-              onMouseLeave={e => { if (!browseOpen) e.currentTarget.style.color = '#888' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ccc' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#fff' }}
             >
               Browse
               <ChevronDown size={14} style={{ transform: browseOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
@@ -206,7 +205,7 @@ export default function Header() {
                               borderRadius: 12,
                               background: 'rgba(255,255,255,0.03)',
                               border: '1px solid rgba(255,255,255,0.06)',
-                              color: '#ccc',
+                              color: '#fff',
                               textDecoration: 'none',
                               fontSize: 14,
                               fontWeight: 500,
@@ -219,7 +218,7 @@ export default function Header() {
                             }}
                             onMouseLeave={e => {
                               e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
-                              e.currentTarget.style.color = '#ccc'
+                              e.currentTarget.style.color = '#fff'
                               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
                             }}
                           >
@@ -396,9 +395,9 @@ export default function Header() {
           <button
             onClick={() => setMobileNavOpen(true)}
             className="mobile-menu-btn"
-            style={{ background: 'none', border: 'none', color: '#888', padding: 8, alignItems: 'center', cursor: 'pointer', borderRadius: 6, transition: 'color 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-            onMouseLeave={e => e.currentTarget.style.color = '#888'}
+            style={{ background: 'none', border: 'none', color: '#fff', padding: 8, alignItems: 'center', cursor: 'pointer', borderRadius: 6, transition: 'color 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
+            onMouseLeave={e => e.currentTarget.style.color = '#fff'}
           >
             <Menu size={20} />
           </button>
@@ -416,12 +415,12 @@ function IconBtn({ children, onClick, title, active }) {
       style={{
         background: active ? 'rgba(124,92,240,0.12)' : 'none',
         border: 'none',
-        color: active ? '#a78bfa' : '#888',
+        color: active ? '#a78bfa' : '#fff',
         padding: 8, display: 'flex', alignItems: 'center',
         transition: 'color 0.2s, background 0.2s', borderRadius: 8, cursor: 'pointer',
       }}
-      onMouseEnter={e => { e.currentTarget.style.color = '#fff'; if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
-      onMouseLeave={e => { e.currentTarget.style.color = active ? '#a78bfa' : '#888'; e.currentTarget.style.background = active ? 'rgba(124,92,240,0.12)' : 'none' }}
+      onMouseEnter={e => { e.currentTarget.style.color = '#ccc'; if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+      onMouseLeave={e => { e.currentTarget.style.color = active ? '#a78bfa' : '#fff'; e.currentTarget.style.background = active ? 'rgba(124,92,240,0.12)' : 'none' }}
     >
       {children}
     </button>
@@ -433,7 +432,7 @@ function DropdownItem({ to, icon, onClick, danger, children }) {
     display: 'flex', alignItems: 'center', gap: 9,
     width: '100%', padding: '9px 10px', borderRadius: 8,
     fontSize: 13, fontWeight: 500, border: 'none', background: 'none',
-    color: danger ? '#f87171' : '#aaa',
+    color: danger ? '#f87171' : '#fff',
     cursor: 'pointer', transition: 'background 0.12s, color 0.12s',
     textDecoration: 'none',
   }
