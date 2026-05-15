@@ -168,7 +168,7 @@ if (!$actualDistributionDir) {
     }
   }
 }
-
+ 
 if (!$actualDistributionDir) {
   Write-Error "Could not find Maven distribution directory in extracted archive"
 }

@@ -25,7 +25,9 @@ export default function SiteLayout({ children }) {
         <Header />
         <MarqueeStrip />
 
+
         <AnimatePresence mode="wait" initial={false}>
+          
           <motion.main
             key={location.pathname}
             style={{ flex: 1 }}
@@ -34,10 +36,9 @@ export default function SiteLayout({ children }) {
             exit={reduce ? {} : { opacity: 0, y: -6 }}
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            {children}
           </motion.main>
+            {children}
         </AnimatePresence>
-
         {/* Hide newsletter on utility/auth pages */}
         {!['/login', '/register', '/account', '/checkout'].some(path => location.pathname.startsWith(path)) && (
           <NewsletterBand />

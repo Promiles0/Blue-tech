@@ -27,8 +27,9 @@ public class ProductVariant {
     @Column(nullable = false)
     private String sizeOrColor;
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal priceAdjustment;
+    @Column(nullable = false, precision = 10, scale = 2, columnDefinition = "decimal(10,2) default 0")
+    @Builder.Default
+    private BigDecimal priceAdjustment = BigDecimal.ZERO;
 
     @Column(nullable = false)
     private Integer stockQuantity;

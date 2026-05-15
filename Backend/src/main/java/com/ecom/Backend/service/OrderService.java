@@ -86,10 +86,10 @@ public class OrderService {
                     return addressRepository.save(newAddr);
                 });
 
-        // 3. Calculate Total and Prepare Order
+        // 3. Pre-calculate total so we can set it before the first save (NOT NULL constraint)
         BigDecimal totalAmount = BigDecimal.ZERO;
-        
-        // 4. Create the Order (Snapshotting Address) - but don't save yet
+
+        // 4. Create the Order (Snapshotting Address)
         Order order = Order.builder()
                 .user(user)
                 .address(address)
@@ -101,14 +101,13 @@ public class OrderService {
                 .orderAddressRecipient(user.getName())
                 .totalAmount(BigDecimal.ZERO) // Set initial value to avoid null constraint
                 .build();
-        
-        // We save the order first to get an ID
+
         Order savedOrder = orderRepository.save(order);
 
-        // 5. Create Order Items and Reduce Stock Atomics
+        // 5. Create Order Items and Reduce Stock Atomically
         for (CartItem cartItem : cartItems) {
             ProductVariant variant = cartItem.getVariant();
-            
+
             // ATOMIC STOCK CHECK & REDUCE
             int rowsUpdated = variantRepository.reduceStockAtomic(variant.getVariantId(), cartItem.getQuantity());
             if (rowsUpdated == 0) {
@@ -127,7 +126,7 @@ public class OrderService {
                     .quantity(cartItem.getQuantity())
                     .unitPrice(unitPrice)
                     .build();
-            
+
             orderItemRepository.save(orderItem);
         }
 
@@ -176,7 +175,10 @@ public class OrderService {
         // 10. Send Email Confirmation
         emailService.sendOrderConfirmation(user.getEmail(), savedOrder.getOrderId().toString(), totalAmount.toString());
 
-        return mapToOrderResponse(savedOrder);
+        // Reload so orderItems collection is populated from DB
+        Order fullOrder = orderRepository.findById(savedOrder.getOrderId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found after save"));
+        return mapToOrderResponse(fullOrder);
     }
 
     @Transactional
@@ -248,7 +250,8 @@ public class OrderService {
     }
 
     private OrderResponse mapToOrderResponse(Order order) {
-        List<OrderResponse.OrderItemResponse> items = order.getOrderItems().stream().map(oi -> 
+        List<OrderItem> rawItems = order.getOrderItems() != null ? order.getOrderItems() : List.of();
+        List<OrderResponse.OrderItemResponse> items = rawItems.stream().map(oi ->
             OrderResponse.OrderItemResponse.builder()
                     .productName(oi.getVariant().getProduct().getName())
                     .variantInfo(oi.getVariant().getSizeOrColor())
