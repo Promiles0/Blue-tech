@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Tag, X, Loader2 } from 'lucide-react'
 import api from '../../api/axios'
 
-export default function CouponInput({ onApply, onRemove, applied }) {
+export default function CouponInput({ onApply, onRemove, applied, compact }) {
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -27,8 +27,9 @@ export default function CouponInput({ onApply, onRemove, applied }) {
     return (
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 14px', borderRadius: 10,
-        background: 'rgba(124,92,240,0.1)', border: '1px solid rgba(124,92,240,0.25)',
+        padding: compact ? '0' : '10px 14px', borderRadius: 10,
+        background: compact ? 'transparent' : 'rgba(124,92,240,0.1)',
+        border: compact ? 'none' : '1px solid rgba(124,92,240,0.25)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Tag size={13} color="#a78bfa" />
@@ -53,36 +54,38 @@ export default function CouponInput({ onApply, onRemove, applied }) {
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Tag size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#555', pointerEvents: 'none' }} />
-          <input
-            value={code}
-            onChange={e => { setCode(e.target.value.toUpperCase()); setError('') }}
-            onKeyDown={e => e.key === 'Enter' && handleApply()}
-            placeholder="COUPON CODE"
-            className="noir-input"
-            style={{ paddingLeft: 34, letterSpacing: '0.08em', fontSize: 13 }}
-          />
-        </div>
+    <div style={{ flex: 1 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input
+          value={code}
+          onChange={e => { setCode(e.target.value.toUpperCase()); setError('') }}
+          onKeyDown={e => e.key === 'Enter' && handleApply()}
+          placeholder="Coupon code"
+          style={{
+            flex: 1, background: 'none', border: 'none', outline: 'none',
+            color: '#fff', fontSize: 13, letterSpacing: '0.06em',
+            fontFamily: 'inherit', padding: 0,
+          }}
+        />
         <button
           onClick={handleApply}
           disabled={loading || !code.trim()}
           style={{
-            padding: '0 18px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-            background: '#7c5cf0', color: '#fff', border: 'none', cursor: 'pointer',
-            opacity: loading || !code.trim() ? 0.5 : 1,
-            transition: 'opacity 0.2s, background 0.2s',
-            display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+            padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+            background: code.trim() ? '#7c5cf0' : 'transparent',
+            color: code.trim() ? '#fff' : '#444',
+            border: `1px solid ${code.trim() ? '#7c5cf0' : '#2a2a2a'}`,
+            cursor: loading || !code.trim() ? 'default' : 'pointer',
+            transition: 'all 0.2s', whiteSpace: 'nowrap',
+            display: 'flex', alignItems: 'center', gap: 5,
           }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#6b4fd8' }}
-          onMouseLeave={e => { e.currentTarget.style.background = '#7c5cf0' }}
+          onMouseEnter={e => { if (code.trim() && !loading) e.currentTarget.style.background = '#6b4fd8' }}
+          onMouseLeave={e => { if (code.trim()) e.currentTarget.style.background = '#7c5cf0' }}
         >
-          {loading ? <Loader2 size={13} className="animate-spin" /> : 'Apply'}
+          {loading ? <Loader2 size={11} className="animate-spin" /> : 'Apply'}
         </button>
       </div>
-      {error && <p style={{ fontSize: 12, color: '#f87171', marginTop: 6 }}>{error}</p>}
+      {error && <p style={{ fontSize: 11, color: '#f87171', marginTop: 4 }}>{error}</p>}
     </div>
   )
 }

@@ -1,8 +1,9 @@
 package com.ecom.Backend.enums;
 
 public enum PaymentMethod {
-    CREDIT_CARD,
-    PAYPAL,
-    STRIPE,
-    MOBILE_MONEY // Added for Rwandan market and mobile payments
+    CARD,           // Credit / Debit card
+    MOMO,           // MTN Mobile Money
+    AIRTEL_MONEY,   // Airtel Money
+    CASH,           // Pay in person (pickup or office visit)
+    CHEQUE          // Cheque (pickup or office visit)
 }

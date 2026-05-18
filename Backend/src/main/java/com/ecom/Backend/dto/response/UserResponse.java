@@ -17,9 +17,4 @@ public class UserResponse {
     private String phone;
     private String picture;
     private RoleType role;
-    private String defaultShippingSpeed;
-    private String packagingPreference;
-    private int loyaltyPoints;
-    private String membershipTier;
-    private String referralCode;
 }

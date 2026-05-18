@@ -10,6 +10,7 @@ public class OrderRequest {
     private String zipCode;
     private String country;
     private String phone;
-    private String paymentMethod;
-    private String couponCode; // optional, validated server-side
+    private String shippingMethod;  // STANDARD | EXPRESS | PICKUP
+    private String paymentMethod;   // CARD | MOMO | AIRTEL_MONEY | CASH | CHEQUE
+    private String couponCode;
 }
