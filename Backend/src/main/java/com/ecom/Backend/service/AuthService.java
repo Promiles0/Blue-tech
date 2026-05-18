@@ -1,5 +1,8 @@
 package com.ecom.Backend.service;
 
+import com.ecom.Backend.service.NotificationService;
+import com.ecom.Backend.enums.NotificationCategory;
+import com.ecom.Backend.enums.NotificationSeverity;
 import com.ecom.Backend.dto.request.GoogleLoginRequest;
 import com.ecom.Backend.dto.request.PasswordChangeRequest;
 import com.ecom.Backend.dto.request.ProfileUpdateRequest;
@@ -49,6 +52,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final CustomUserDetailsService userDetailsService;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Value("${app.google.web-client-id}")
     private String googleWebClientId;
@@ -101,15 +105,27 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
         String jwtToken = jwtService.generateToken(userDetails);
         
-        // 6. Send Welcome Email (wrapped in try-catch so registration doesn't fail if email fails)
+        // 6. Send Welcome Email
         try {
             emailService.sendEmail(
-                savedUser.getEmail(), 
-                "Welcome to Our Platform!", 
+                savedUser.getEmail(),
+                "Welcome to Our Platform!",
                 "<h1>Welcome " + savedUser.getName() + "!</h1><p>Thank you for joining us. Start shopping now!</p>"
             );
         } catch (Exception e) {
             System.err.println("Failed to send welcome email: " + e.getMessage());
+        }
+
+        // 7. Notify admin of new customer
+        try {
+            notificationService.emitAdminNotification(
+                NotificationCategory.ACCOUNT, NotificationSeverity.INFO,
+                "New Customer: " + savedUser.getName(),
+                savedUser.getEmail() + " just created an account.",
+                "/admin/users"
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to emit admin notification: " + e.getMessage());
         }
         
         return AuthResponse.builder()

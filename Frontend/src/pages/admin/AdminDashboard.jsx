@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   DollarSign, TrendingUp, ShoppingBag, Users,
-  AlertTriangle, Activity, Clock, UserPlus, Package,
+  AlertTriangle, Clock, UserPlus,
 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
@@ -13,7 +13,7 @@ import apiService from '../../api/service'
 import { money } from '../../lib/format'
 
 function fetchStats() {
-  return apiService.admin.getDashboardStats().then(r => r.data)
+  return apiService.admin.getDashboardStats().then(r => r.data?.data ?? r.data)
 }
 
 const STATUS_COLOR = {
@@ -56,20 +56,17 @@ export default function AdminDashboard() {
 
       {isError && !data && <ErrorBanner msg="Failed to load dashboard stats." />}
 
-      {/* KPI Grid — 4 cols × 2 rows */}
+      {/* KPI Grid — 3 essential + 3 secondary */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
+        <KPI icon={DollarSign}  label="Revenue 30d"    value={isLoading ? '—' : money(data?.revenue30d)} large />
+        <KPI icon={ShoppingBag} label="Orders 30d"     value={isLoading ? '—' : (data?.orders30d ?? 0).toLocaleString()} large />
+        <KPI icon={Users}       label="Total Customers" value={isLoading ? '—' : (data?.totalCustomers ?? 0).toLocaleString()} large />
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
-        <KPI icon={DollarSign}    label="Revenue 24h"     value={isLoading ? '—' : money(data?.revenue24h)} />
-        <KPI icon={TrendingUp}    label="Revenue 7d"      value={isLoading ? '—' : money(data?.revenue7d)} />
-        <KPI icon={Activity}      label="Revenue 30d"     value={isLoading ? '—' : money(data?.revenue30d)} />
-        <KPI icon={ShoppingBag}   label="AOV (30d)"       value={isLoading ? '—' : money(data?.aov)} />
-        <KPI icon={ShoppingBag}   label="Orders 30d"      value={isLoading ? '—' : (data?.orders30d ?? 0).toLocaleString()} />
-        <KPI icon={Clock}         label="Pending Orders"  value={isLoading ? '—' : (data?.pendingOrders ?? 0).toLocaleString()} accent="var(--admin-warning)" />
-        <KPI icon={Users}         label="Customers"       value={isLoading ? '—' : (data?.totalCustomers ?? 0).toLocaleString()} />
-        <KPI icon={UserPlus}      label="New Today"       value={isLoading ? '—' : (data?.newCustomers24h ?? 0).toLocaleString()} accent="var(--admin-success)" />
-        <KPI icon={AlertTriangle} label="Low Stock"       value={isLoading ? '—' : (data?.lowStockCount ?? 0).toLocaleString()} accent="var(--admin-warning)" />
-        <KPI icon={Package}       label="Variants"        value={isLoading ? '—' : (data?.totalVariants ?? 0).toLocaleString()} />
-        <KPI icon={ShoppingBag}   label="Total Orders"    value={isLoading ? '—' : (data?.totalOrders ?? 0).toLocaleString()} />
-        <KPI icon={DollarSign}    label="Total Revenue"   value={isLoading ? '—' : money(data?.totalRevenue)} />
+        <KPI icon={Clock}         label="Pending Orders" value={isLoading ? '—' : (data?.pendingOrders ?? 0).toLocaleString()} accent="var(--admin-warning)" />
+        <KPI icon={UserPlus}      label="New Today"      value={isLoading ? '—' : (data?.newCustomers24h ?? 0).toLocaleString()} accent="var(--admin-success)" />
+        <KPI icon={AlertTriangle} label="Low Stock"      value={isLoading ? '—' : (data?.lowStockCount ?? 0).toLocaleString()} accent="var(--admin-warning)" />
+        <KPI icon={TrendingUp}    label="AOV (30d)"      value={isLoading ? '—' : money(data?.aov)} />
       </div>
 
       {/* Row 2: Revenue chart + Low stock */}
@@ -245,15 +242,15 @@ export default function AdminDashboard() {
   )
 }
 
-function KPI({ icon: Icon, label, value, accent }) {
+function KPI({ icon: Icon, label, value, accent, large }) {
   const color = accent ?? 'var(--admin-primary)'
   return (
-    <div className="surface" style={{ borderRadius: 12, padding: '18px 20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--admin-muted)', marginBottom: 10 }}>
+    <div className="surface" style={{ borderRadius: 12, padding: large ? '22px 24px' : '16px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--admin-muted)', marginBottom: large ? 14 : 10 }}>
         <Icon size={12} style={{ color }} />
         {label}
       </div>
-      <div style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 700, letterSpacing: '-0.01em' }}>
+      <div style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: large ? 28 : 22, fontWeight: 700, letterSpacing: '-0.01em', color: accent ?? '#fff' }}>
         {value}
       </div>
     </div>
