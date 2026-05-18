@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Heart, ShoppingBag, User, X, Package, LogOut, LayoutDashboard } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -10,7 +10,6 @@ export default function Navbar() {
   const { user, logout, isAdmin } = useAuth()
   const { count }            = useCart()
   const navigate             = useNavigate()
-  const location             = useLocation()
   const [searchOpen, setSearchOpen]   = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -68,7 +67,7 @@ export default function Navbar() {
 
         {/* Center links */}
         <div className="nav-links" style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
-          <NavLink to="/products" active={location.pathname === '/products' && !location.search}>
+          <NavLink to="/products">
             Shop
           </NavLink>
 
@@ -80,10 +79,10 @@ export default function Navbar() {
           >
             <button
               onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
-              onMouseLeave={e => e.currentTarget.style.color = '#888'}
+              onMouseLeave={e => e.currentTarget.style.color = '#fff'}
               style={{
                 fontSize: 14, fontWeight: 400,
-                color: '#888', background: 'none', border: 'none', cursor: 'pointer',
+                color: '#fff', background: 'none', border: 'none', cursor: 'pointer',
                 transition: 'color 0.2s', padding: 0,
               }}
             >
@@ -107,11 +106,11 @@ export default function Navbar() {
                       to={`/products?category=${encodeURIComponent(cat.name)}`}
                       style={{
                         display: 'block', padding: '10px 12px', borderRadius: 14,
-                        color: '#ddd', textDecoration: 'none', background: '#141414',
+                        color: '#fff', textDecoration: 'none', background: '#141414',
                         transition: 'background 0.2s, color 0.2s',
                       }}
                       onMouseEnter={e => { e.currentTarget.style.background = '#1c1c1c'; e.currentTarget.style.color = '#fff' }}
-                      onMouseLeave={e => { e.currentTarget.style.background = '#141414'; e.currentTarget.style.color = '#ddd' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = '#141414'; e.currentTarget.style.color = '#fff' }}
                     >
                       {cat.name}
                     </Link>
@@ -237,18 +236,18 @@ export default function Navbar() {
   )
 }
 
-function NavLink({ to, active, children }) {
+function NavLink({ to, children }) {
   return (
     <Link
       to={to}
       style={{
         fontSize: 14, fontWeight: 400,
-        color: active ? '#fff' : '#888',
+        color: '#fff',
         transition: 'color 0.2s',
         textDecoration: 'none',
       }}
-      onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#ccc' }}
-      onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#888' }}
+      onMouseEnter={e => { e.currentTarget.style.color = '#ccc' }}
+      onMouseLeave={e => { e.currentTarget.style.color = '#fff' }}
     >
       {children}
     </Link>
@@ -260,12 +259,12 @@ function IconBtn({ children, onClick }) {
     <button
       onClick={onClick}
       style={{
-        background: 'none', border: 'none', color: '#888',
+        background: 'none', border: 'none', color: '#fff',
         padding: 8, display: 'flex', alignItems: 'center',
         transition: 'color 0.2s', borderRadius: 6,
       }}
-      onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-      onMouseLeave={e => e.currentTarget.style.color = '#888'}
+      onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
+      onMouseLeave={e => e.currentTarget.style.color = '#fff'}
     >
       {children}
     </button>
@@ -277,7 +276,7 @@ function DropdownItem({ to, icon, onClick, danger, children }) {
     display: 'flex', alignItems: 'center', gap: 9,
     width: '100%', padding: '9px 10px', borderRadius: 8,
     fontSize: 13, fontWeight: 500, border: 'none', background: 'none',
-    color: danger ? '#f87171' : '#aaa',
+    color: danger ? '#f87171' : '#fff',
     cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
     textDecoration: 'none',
   }
