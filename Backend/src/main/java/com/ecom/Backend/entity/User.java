@@ -52,27 +52,6 @@ public class User {
     private String resetToken;
     private LocalDateTime resetTokenExpiry;
 
-    // Order Preferences
-    @Column(columnDefinition = "varchar(50) default 'STANDARD'")
-    @Builder.Default
-    private String defaultShippingSpeed = "STANDARD";
-
-    @Column(columnDefinition = "varchar(50) default 'STANDARD'")
-    @Builder.Default
-    private String packagingPreference = "STANDARD";
-
-    // Loyalty & Rewards
-    @Column(nullable = false)
-    @Builder.Default
-    private int loyaltyPoints = 0;
-
-    @Column(columnDefinition = "varchar(20) default 'BRONZE'")
-    @Builder.Default
-    private String membershipTier = "BRONZE";
-
-    @Column(unique = true)
-    private String referralCode;
-
     // Relationships mapping (optional depending on how tight you want the coupling, but good for MVP)
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Order> orders;

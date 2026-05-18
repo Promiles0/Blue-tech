@@ -2,7 +2,6 @@ package com.ecom.Backend.controller;
 
 import com.ecom.Backend.dto.request.PasswordChangeRequest;
 import com.ecom.Backend.dto.request.ProfileUpdateRequest;
-import com.ecom.Backend.dto.request.UserPreferencesRequest;
 import com.ecom.Backend.dto.response.UserResponse;
 import com.ecom.Backend.entity.User;
 import com.ecom.Backend.service.AuthService;
@@ -29,12 +28,6 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(@Valid @RequestBody ProfileUpdateRequest request) {
         User user = authService.getCurrentAuthenticatedUser();
         return ResponseEntity.ok(ApiResponse.success("Profile updated", authService.updateProfile(user, request)));
-    }
-
-    @PutMapping("/preferences")
-    public ResponseEntity<ApiResponse<UserResponse>> updatePreferences(@RequestBody UserPreferencesRequest request) {
-        User user = authService.getCurrentAuthenticatedUser();
-        return ResponseEntity.ok(ApiResponse.success("Preferences updated", authService.updatePreferences(user, request)));
     }
 
     @PutMapping("/password")

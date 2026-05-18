@@ -174,12 +174,15 @@ export default function CartDrawer() {
                 >
                   Checkout →
                 </Link>
-                <button
+                <Link
+                  to="/cart"
                   onClick={() => setCartOpen(false)}
-                  style={{ width: '100%', marginTop: 8, background: 'none', border: 'none', color: '#444', fontSize: 13, cursor: 'pointer', padding: '8px' }}
+                  style={{ width: '100%', marginTop: 8, display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'none', border: '1px solid #2a2a2a', borderRadius: 10, color: '#888', fontSize: 13, cursor: 'pointer', padding: '10px', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#444' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#2a2a2a' }}
                 >
-                  Continue shopping
-                </button>
+                  View full cart
+                </Link>
               </div>
             )}
           </motion.div>
