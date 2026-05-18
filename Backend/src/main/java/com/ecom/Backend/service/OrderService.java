@@ -7,6 +7,9 @@ import com.ecom.Backend.enums.OrderStatus;
 import com.ecom.Backend.enums.ShippingMethod;
 import com.ecom.Backend.enums.PaymentMethod;
 import com.ecom.Backend.repository.*;
+import com.ecom.Backend.service.NotificationService;
+import com.ecom.Backend.enums.NotificationCategory;
+import com.ecom.Backend.enums.NotificationSeverity;
 import com.ecom.Backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +38,7 @@ public class OrderService {
     private final AuthService authService;
     private final EmailService emailService;
     private final ShipmentRepository shipmentRepository;
+    private final NotificationService notificationService;
 
     public List<OrderResponse> getAllOrders() {
         return orderRepository.findAll().stream()
@@ -210,6 +214,18 @@ public class OrderService {
         // 11. Send Email Confirmation
         emailService.sendOrderConfirmation(user.getEmail(), savedOrder.getOrderId().toString(), totalAmount.toString());
 
+        // 12. Notify customer
+        notificationService.emitUserNotification(user, NotificationCategory.ORDER, NotificationSeverity.SUCCESS,
+                "Order Confirmed",
+                "Your order #" + savedOrder.getOrderId() + " has been placed for " + totalAmount,
+                "/orders/" + savedOrder.getOrderId());
+
+        // 13. Notify admin
+        notificationService.emitAdminNotification(NotificationCategory.ORDER, NotificationSeverity.INFO,
+                "New Order #" + savedOrder.getOrderId(),
+                user.getName() + " placed an order for $" + totalAmount,
+                "/admin/orders");
+
         // Reload so orderItems collection is populated from DB
         Order fullOrder = orderRepository.findById(savedOrder.getOrderId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found after save"));
@@ -247,6 +263,18 @@ public class OrderService {
         // 2. Update Order Status
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
+
+        // Notify customer
+        notificationService.emitUserNotification(currentUser, NotificationCategory.ORDER, NotificationSeverity.WARNING,
+                "Order Cancelled",
+                "Your order #" + orderId + " has been cancelled and stock has been restored.",
+                "/orders/" + orderId);
+
+        // Notify admin
+        notificationService.emitAdminNotification(NotificationCategory.ORDER, NotificationSeverity.WARNING,
+                "Order #" + orderId + " Cancelled",
+                currentUser.getName() + " cancelled order #" + orderId,
+                "/admin/orders");
 
         // 3. Log Audit
         auditLogService.log(

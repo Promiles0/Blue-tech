@@ -37,6 +37,7 @@ export default function AdminNotificationBell() {
   const [open, setOpen]       = useState(false)
   const [items, setItems]     = useState([])
   const [loading, setLoading] = useState(false)
+  const [hoverId, setHoverId] = useState(null)
   const popoverRef = useRef(null)
   const navigate   = useNavigate()
   // adminUnread used directly as motion key — bumps the spring animation on each new notification
@@ -160,16 +161,18 @@ export default function AdminNotificationBell() {
                   <div
                     key={n.notificationId}
                     onClick={() => handleItemClick(n)}
+                    onMouseEnter={() => setHoverId(n.notificationId)}
+                    onMouseLeave={() => setHoverId(null)}
                     style={{
                       padding: '10px 14px',
                       borderBottom: '1px solid var(--admin-border)',
                       cursor: n.href ? 'pointer' : 'default',
-                      background: n.isRead ? 'transparent' : 'rgba(124,92,240,0.04)',
-                      transition: 'background 0.12s',
+                      transition: 'background 0.2s',
                       display: 'flex', gap: 9, alignItems: 'flex-start',
+                      background: hoverId === n.notificationId && n.href
+                        ? 'rgba(255,255,255,0.04)'
+                        : n.isRead ? 'transparent' : 'rgba(124,92,240,0.04)',
                     }}
-                    onMouseEnter={e => { if (n.href) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
-                    onMouseLeave={e => e.currentTarget.style.background = n.isRead ? 'transparent' : 'rgba(124,92,240,0.04)'}
                   >
                     <div style={{
                       width: 6, height: 6, borderRadius: '50%', flexShrink: 0, marginTop: 5,

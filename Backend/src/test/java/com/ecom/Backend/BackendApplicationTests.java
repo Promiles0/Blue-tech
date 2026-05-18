@@ -3,7 +3,7 @@ package com.ecom.Backend;
 import com.ecom.Backend.service.EmailService;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
@@ -30,7 +30,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 })
 class BackendApplicationTests {
 
-    @MockitoBean
+    @MockBean
     EmailService emailService;
 
     @Test

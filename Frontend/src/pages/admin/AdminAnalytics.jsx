@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query' 
+import { useQuery } from '@tanstack/react-query'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
+import { DollarSign, ShoppingBag, Package, TrendingUp } from 'lucide-react'
 import apiService from '../../api/service'
 import { money } from '../../lib/format'
 
@@ -17,13 +18,22 @@ const tooltipStyle = {
 }
 
 function fetchAnalytics() {
-  return apiService.admin.getAnalytics().then(r => r.data.data)
+  return apiService.admin.getAnalytics().then(r => {
+    const d = r.data?.data ?? r.data
+    if (!d) throw new Error('No analytics data')
+    return d
+  })
 }
 
 export default function AdminAnalytics() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-analytics'],
     queryFn: fetchAnalytics,
+  })
+
+  const { data: stats } = useQuery({
+    queryKey: ['admin-overview'],
+    queryFn: () => apiService.admin.getDashboardStats().then(r => r.data?.data ?? r.data),
   })
 
   return (
@@ -33,7 +43,25 @@ export default function AdminAnalytics() {
         <p style={{ color: 'var(--admin-muted)', fontSize: 13, marginTop: 4 }}>Revenue insights and growth metrics</p>
       </div>
 
-      {isError && <ErrorBanner msg="Failed to load analytics." />}
+      {isError && <ErrorBanner msg="Failed to load analytics. Make sure the backend is running." />}
+
+      {/* Stats strip */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
+        {[
+          { icon: DollarSign, label: 'Revenue 24h',   value: money(stats?.revenue24h) },
+          { icon: TrendingUp, label: 'Revenue 7d',    value: money(stats?.revenue7d) },
+          { icon: ShoppingBag,label: 'Total Orders',  value: (stats?.totalOrders ?? 0).toLocaleString() },
+          { icon: Package,    label: 'Total Variants',value: (stats?.totalVariants ?? 0).toLocaleString() },
+        ].map(s => (
+          <div key={s.label} className="surface" style={{ borderRadius: 12, padding: '16px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700,
+              letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--admin-muted)', marginBottom: 10 }}>
+              <s.icon size={12} style={{ color: 'var(--admin-primary)' }} />{s.label}
+            </div>
+            <div style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 700 }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
 
       {isLoading ? (
         <div style={{ color: 'var(--admin-muted)', fontSize: 13 }}>Loading…</div>
