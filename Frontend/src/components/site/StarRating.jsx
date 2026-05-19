@@ -34,7 +34,7 @@ export function StarInput({ value, onChange }) {
           <Star
             size={22}
             fill={i <= (hover || value) ? '#f59e0b' : 'none'}
-            color={i <= (hover || value) ? '#f59e0b' : '#444'}
+            color={i <= (hover || value) ? '#f59e0b' : 'var(--muted-dark)'}
             strokeWidth={1.5}
           />
         </button>

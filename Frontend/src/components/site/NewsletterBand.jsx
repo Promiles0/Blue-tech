@@ -25,9 +25,9 @@ export default function NewsletterBand() {
   }
 
   return (
-    <section style={{ padding: '80px 0', borderTop: '1px solid #141414' }}>
+    <section style={{ padding: '80px 0', borderTop: '1px solid var(--border)' }}>
       <div className="container-noir" style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 12 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 12 }}>
           STAY IN THE LOOP
         </p>
         <h2 style={{
@@ -38,14 +38,14 @@ export default function NewsletterBand() {
         }}>
           The quieter kind of newsletter
         </h2>
-        <p style={{ color: '#888', fontSize: 16, lineHeight: 1.7, marginBottom: 36 }}>
+        <p style={{ color: 'var(--muted)', fontSize: 16, lineHeight: 1.7, marginBottom: 36 }}>
           New arrivals, behind-the-scenes, and occasional notes on craft. Infrequent by design.
         </p>
 
         {subscribed ? (
           <div style={{
-            background: 'rgba(124,92,240,0.06)',
-            border: '1px solid rgba(124,92,240,0.2)',
+            background: 'var(--accent-dim)',
+            border: '1px solid var(--accent-dim2)',
             borderRadius: 14,
             padding: '28px 32px',
             maxWidth: 400,
@@ -53,8 +53,8 @@ export default function NewsletterBand() {
           }}>
             <div style={{
               width: 44, height: 44, borderRadius: '50%',
-              background: 'rgba(124,92,240,0.15)',
-              border: '1px solid rgba(124,92,240,0.3)',
+              background: 'var(--accent-dim2)',
+              border: '1px solid var(--accent-border)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 16px',
               fontSize: 20,
@@ -64,11 +64,11 @@ export default function NewsletterBand() {
             <p style={{
               fontFamily: '"Space Grotesk",sans-serif',
               fontSize: 17, fontWeight: 700,
-              color: '#fff', marginBottom: 8,
+              color: 'var(--text)', marginBottom: 8,
             }}>
               Subscription confirmed
             </p>
-            <p style={{ fontSize: 13, color: '#666', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 13, color: 'var(--muted-dark)', lineHeight: 1.6 }}>
               Thank you for subscribing. You'll hear from us when it matters.
             </p>
           </div>

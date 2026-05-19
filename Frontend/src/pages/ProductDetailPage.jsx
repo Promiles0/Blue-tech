@@ -112,16 +112,16 @@ export default function ProductDetail() {
       <div className="container-noir">
         <Link
           to="/products"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#888', marginBottom: 36, transition: 'color 0.2s' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.color = '#888'}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', marginBottom: 36, transition: 'color 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
         >
           <ArrowLeft size={14} /> Back to products
         </Link>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'start' }}>
           <div>
-            <div style={{ borderRadius: 16, overflow: 'hidden', background: '#141414', marginBottom: 12, aspectRatio: '4/3' }}>
+            <div style={{ borderRadius: 16, overflow: 'hidden', background: 'var(--surface)', marginBottom: 12, aspectRatio: '4/3' }}>
               <LensZoom
                 src={images[activeImage]?.imageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80'}
                 alt={product.name}
@@ -133,7 +133,7 @@ export default function ProductDetail() {
                   <button
                     key={index}
                     onClick={() => setActiveImage(index)}
-                    style={{ width: 72, height: 72, borderRadius: 8, overflow: 'hidden', border: `2px solid ${index === activeImage ? '#7c5cf0' : '#2a2a2a'}`, background: '#1a1a1a', padding: 0, cursor: 'pointer', transition: 'border-color 0.2s' }}
+                    style={{ width: 72, height: 72, borderRadius: 8, overflow: 'hidden', border: `2px solid ${index === activeImage ? 'var(--accent)' : 'var(--border)'}`, background: 'var(--card)', padding: 0, cursor: 'pointer', transition: 'border-color 0.2s' }}
                   >
                     <img src={img.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </button>
@@ -143,35 +143,35 @@ export default function ProductDetail() {
           </div>
 
           <div className="fade-in">
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 8 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 8 }}>
               {product.category?.name ?? product.categoryName ?? ''}
             </p>
-            <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', marginBottom: 12, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+            <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 12, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
               {product.name}
             </h1>
 
             {avgRating && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
                 <StarDisplay rating={Number(avgRating)} size={14} />
-                <span style={{ fontSize: 13, color: '#888' }}>
+                <span style={{ fontSize: 13, color: 'var(--muted)' }}>
                   {avgRating} ({reviews.length} review{reviews.length !== 1 ? 's' : ''})
                 </span>
               </div>
             )}
 
-            <p style={{ fontSize: 34, fontWeight: 900, color: '#f59e0b', marginBottom: 24, letterSpacing: '-0.01em' }}>
+            <p style={{ fontSize: 34, fontWeight: 900, color: 'var(--price)', marginBottom: 24, letterSpacing: '-0.01em' }}>
               ${price.toFixed(2)}
             </p>
 
             {product.description && (
-              <p style={{ fontSize: 15, color: '#888', lineHeight: 1.75, marginBottom: 28 }}>
+              <p style={{ fontSize: 15, color: 'var(--muted)', lineHeight: 1.75, marginBottom: 28 }}>
                 {product.description}
               </p>
             )}
 
             {product.variants?.length > 1 && (
               <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 10 }}>Options</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10 }}>Options</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {product.variants.map(variant => {
                     const variantId = variant.variantId ?? variant.id
@@ -185,9 +185,9 @@ export default function ProductDetail() {
                           borderRadius: 8,
                           fontSize: 13,
                           fontWeight: 500,
-                          background: selectedVariantId === variantId ? '#7c5cf0' : 'transparent',
-                          color: selectedVariantId === variantId ? '#fff' : '#888',
-                          border: `1px solid ${selectedVariantId === variantId ? '#7c5cf0' : '#2a2a2a'}`,
+                          background: selectedVariantId === variantId ? 'var(--accent)' : 'transparent',
+                          color: selectedVariantId === variantId ? '#fff' : 'var(--muted)',
+                          border: `1px solid ${selectedVariantId === variantId ? 'var(--accent)' : 'var(--border)'}`,
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                         }}
@@ -201,7 +201,7 @@ export default function ProductDetail() {
             )}
 
             {selectedVariant && (
-              <p style={{ fontSize: 13, color: stockQty > 0 ? '#22c55e' : '#ef4444', marginBottom: 16 }}>
+              <p style={{ fontSize: 13, color: stockQty > 0 ? 'var(--success)' : 'var(--error)', marginBottom: 16 }}>
                 {stockQty === 0 ? 'Out of stock' : stockQty <= 5 ? `Only ${stockQty} left` : `${stockQty} in stock`}
               </p>
             )}
@@ -209,15 +209,15 @@ export default function ProductDetail() {
             {selectedVariant && stockQty > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: '#ccc' }}>Qty</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: '1px solid #2a2a2a', borderRadius: 10, padding: '8px 16px', width: 'fit-content' }}>
-                  <button onClick={() => setQty(value => Math.max(1, value - 1))} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', display: 'flex' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', width: 'fit-content' }}>
+                  <button onClick={() => setQty(value => Math.max(1, value - 1))} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
                     <Minus size={14} />
                   </button>
-                  <span style={{ fontSize: 15, color: '#fff', minWidth: 20, textAlign: 'center' }}>{qty}</span>
+                  <span style={{ fontSize: 15, color: 'var(--text)', minWidth: 20, textAlign: 'center' }}>{qty}</span>
                   <button
                     onClick={() => setQty(value => Math.min(stockQty, value + 1))}
                     disabled={qty >= stockQty}
-                    style={{ background: 'none', border: 'none', color: qty >= stockQty ? '#333' : '#888', cursor: qty >= stockQty ? 'not-allowed' : 'pointer', display: 'flex' }}
+                    style={{ background: 'none', border: 'none', color: qty >= stockQty ? 'var(--muted-dark)' : 'var(--muted)', cursor: qty >= stockQty ? 'not-allowed' : 'pointer', display: 'flex' }}
                   >
                     <Plus size={14} />
                   </button>
@@ -247,8 +247,8 @@ export default function ProductDetail() {
 
         <div style={{ marginTop: 72 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>
-              Reviews {reviews.length > 0 && <span style={{ fontSize: 15, color: '#555', fontWeight: 400 }}>({reviews.length})</span>}
+            <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>
+              Reviews {reviews.length > 0 && <span style={{ fontSize: 15, color: 'var(--muted-dark)', fontWeight: 400 }}>({reviews.length})</span>}
             </h2>
           </div>
 
@@ -258,8 +258,8 @@ export default function ProductDetail() {
                 Thanks for your review!
               </div>
             ) : (
-              <div style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: '#ccc', marginBottom: 14 }}>Leave a review</p>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 14 }}>Leave a review</p>
                 <div style={{ marginBottom: 14 }}>
                   <StarInput value={reviewRating} onChange={setReviewRating} />
                 </div>
@@ -268,7 +268,7 @@ export default function ProductDetail() {
                   onChange={e => setReviewComment(e.target.value)}
                   placeholder="Share your thoughts…"
                   rows={3}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, background: '#0e0e0e', border: '1px solid #262626', color: '#fff', resize: 'vertical', outline: 'none', lineHeight: 1.6, fontFamily: 'inherit', marginBottom: 12 }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text)', resize: 'vertical', outline: 'none', lineHeight: 1.6, fontFamily: 'inherit', marginBottom: 12 }}
                 />
                 <button
                   onClick={async () => {
@@ -299,20 +299,20 @@ export default function ProductDetail() {
               </div>
             )
           ) : (
-            <div style={{ marginBottom: 24, fontSize: 13, color: '#555' }}>
-              <Link to="/login" style={{ color: '#7c5cf0' }}>Sign in</Link> to leave a review.
+            <div style={{ marginBottom: 24, fontSize: 13, color: 'var(--muted-dark)' }}>
+              <Link to="/login" style={{ color: 'var(--accent)' }}>Sign in</Link> to leave a review.
             </div>
           )}
 
           {reviews.length === 0 ? (
-            <p style={{ fontSize: 14, color: '#555' }}>No reviews yet. Be the first!</p>
+            <p style={{ fontSize: 14, color: 'var(--muted-dark)' }}>No reviews yet. Be the first!</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {reviews.map(review => (
-                <div key={review.reviewId ?? review.id} style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 12, padding: '18px 22px' }}>
+                <div key={review.reviewId ?? review.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8, gap: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{review.user?.name ?? review.userName ?? 'Anonymous'}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{review.user?.name ?? review.userName ?? 'Anonymous'}</span>
                       {review.verifiedBuyer && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#34d399' }}>
                           <BadgeCheck size={12} /> Verified
@@ -321,9 +321,9 @@ export default function ProductDetail() {
                     </div>
                     <StarDisplay rating={review.rating} size={12} />
                   </div>
-                  {review.comment && <p style={{ fontSize: 14, color: '#888', lineHeight: 1.65 }}>{review.comment}</p>}
+                  {review.comment && <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.65 }}>{review.comment}</p>}
                   {review.createdAt && (
-                    <p style={{ fontSize: 11, color: '#444', marginTop: 8 }}>
+                    <p style={{ fontSize: 11, color: 'var(--muted-dark)', marginTop: 8 }}>
                       {new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </p>
                   )}

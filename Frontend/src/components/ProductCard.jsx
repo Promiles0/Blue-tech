@@ -13,7 +13,7 @@ function getStatus(product) {
 }
 
 const STATUS = {
-  new:  { label: 'New',       bg: 'rgba(124,92,240,0.16)',  ring: 'rgba(124,92,240,0.4)',  color: '#a78bfa' },
+  new:  { label: 'New',       bg: 'var(--accent-dim2)',  ring: 'var(--accent-focus)',  color: 'var(--accent-light)' },
   low:  { label: 'Low stock', bg: 'rgba(251,146,60,0.16)',  ring: 'rgba(251,146,60,0.4)',  color: '#fb923c' },
 }
 
@@ -43,8 +43,8 @@ export default function ProductCard({ product }) {
     <Tilt max={6} style={{ height: '100%', display: 'block' }}>
       <div
         style={{
-          background: '#141414',
-          border: `1px solid ${hover ? 'rgba(124,92,240,0.28)' : '#1e1e1e'}`,
+          background: 'var(--surface)',
+          border: `1px solid ${hover ? 'var(--accent-border)' : 'var(--card)'}`,
           borderRadius: 12, overflow: 'hidden',
           transition: 'border-color 0.3s, box-shadow 0.3s',
           boxShadow: hover ? 'var(--shadow-elegant)' : 'none',
@@ -56,7 +56,7 @@ export default function ProductCard({ product }) {
       >
         {/* ── Image area ──────────────────────────────────── */}
         <div 
-          style={{ position: 'relative', aspectRatio: '4/5', background: '#1a1a1a', overflow: 'hidden', flexShrink: 0 }}
+          style={{ position: 'relative', aspectRatio: '4/5', background: 'var(--card)', overflow: 'hidden', flexShrink: 0 }}
           onClick={() => setQuickViewProduct(product)}
         >
 
@@ -119,19 +119,19 @@ export default function ProductCard({ product }) {
             }}
             style={{
               position: 'absolute', top: 10, right: 10,
-              background: wishlisted ? 'rgba(239,68,68,0.18)' : 'rgba(255,255,255,0.08)',
+              background: wishlisted ? 'rgba(239,68,68,0.18)' : 'var(--glass-bg2)',
               backdropFilter: 'blur(8px)',
-              border: `1px solid ${wishlisted ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.12)'}`,
+              border: `1px solid ${wishlisted ? 'rgba(239,68,68,0.4)' : 'var(--glass-border)'}`,
               borderRadius: '50%', width: 34, height: 34,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: wishlisted ? '#f87171' : '#fff', cursor: 'pointer',
+              color: wishlisted ? '#f87171' : 'var(--text)', cursor: 'pointer',
               opacity: 1,
               transition: 'opacity 0.25s, background 0.2s, color 0.2s',
               zIndex: 100,
             }}
             title={user ? (wishlisted ? 'Remove from wishlist' : 'Add to wishlist') : 'Sign in to save'}
-            onMouseEnter={e => { if (!wishlisted) e.currentTarget.style.background = 'rgba(124,92,240,0.35)' }}
-            onMouseLeave={e => { if (!wishlisted) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+            onMouseEnter={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--accent-border)' }}
+            onMouseLeave={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--glass-border)' }}
           >
             <Heart size={14} fill={wishlisted ? 'currentColor' : 'none'} />
           </div>
@@ -142,7 +142,7 @@ export default function ProductCard({ product }) {
           {categoryName && (
             <p style={{
               fontSize: 10, fontWeight: 700,
-              letterSpacing: '0.12em', color: '#444',
+              letterSpacing: '0.12em', color: 'var(--muted-dark)',
               marginBottom: 5, textTransform: 'uppercase',
             }}>
               {categoryName}
@@ -151,14 +151,14 @@ export default function ProductCard({ product }) {
           <p style={{
             fontFamily: '"Space Grotesk",sans-serif',
             fontSize: 15, fontWeight: 600,
-            color: hover ? '#a78bfa' : '#fff',
+            color: hover ? 'var(--accent-light)' : 'var(--text)',
             marginBottom: 8, lineHeight: 1.3,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             transition: 'color 0.25s',
           }}>
             {product.name}
           </p>
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#f59e0b' }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--price)' }}>
             ${price.toFixed(2)}
           </p>
         </div>

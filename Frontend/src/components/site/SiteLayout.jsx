@@ -1,6 +1,7 @@
 import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Toaster } from 'sonner'
+import { useTheme } from '../../context/ThemeContext'
 import ScrollProgress   from './ScrollProgress'
 import CursorSpotlight  from './CursorSpotlight'
 import MarqueeStrip     from './MarqueeStrip'
@@ -15,13 +16,14 @@ import ProductQuickView from './ProductQuickView'
 export default function SiteLayout({ children }) {
   const location = useLocation()
   const reduce   = useReducedMotion()
+  const { theme } = useTheme()
 
   return (
     <>
       <ScrollProgress />
       <CursorSpotlight />
 
-      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#0a0a0a', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
         <Header />
         <MarqueeStrip />
 
@@ -54,13 +56,13 @@ export default function SiteLayout({ children }) {
       <ProductQuickView />
 
       <Toaster
-        theme="dark"
+        theme={theme}
         position="top-right"
         toastOptions={{
           style: {
-            background: '#141414',
-            border: '1px solid #262626',
-            color: '#fff',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            color: 'var(--text)',
             fontSize: '13px',
           },
         }}

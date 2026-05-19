@@ -24,16 +24,16 @@ export default function StickyCartBar({ product, selectedVariant, onAdd, adding,
         >
           <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {product?.name}
               </p>
               {selectedVariant?.sizeOrColor && (
-                <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{selectedVariant.sizeOrColor}</p>
+                <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{selectedVariant.sizeOrColor}</p>
               )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
-              <span style={{ fontSize: 20, fontWeight: 900, color: '#f59e0b' }}>${price.toFixed(2)}</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--price)' }}>${price.toFixed(2)}</span>
               <button
                 onClick={onAdd}
                 disabled={adding || outOfStock || !selectedVariant}

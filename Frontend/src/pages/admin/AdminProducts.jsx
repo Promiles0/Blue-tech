@@ -187,7 +187,7 @@ export default function AdminProducts() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em' }}>Products</h1>
-          <p style={{ color: '#555', fontSize: 13, marginTop: 3 }}>{products.length} shown — manage your catalog</p>
+          <p style={{ color: 'var(--muted-dark)', fontSize: 13, marginTop: 3 }}>{products.length} shown — manage your catalog</p>
         </div>
         <button onClick={openCreate} className="noir-btn-primary" style={{ gap: 7, fontSize: 13, padding: '10px 18px' }}>
           <Plus size={15} /> Add Product
@@ -206,7 +206,7 @@ export default function AdminProducts() {
           <thead>
             <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
               {['Product', 'Category', 'Price', 'Variants', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: '#444', fontWeight: 600, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
+                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--muted-dark)', fontWeight: 600, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -222,7 +222,7 @@ export default function AdminProducts() {
                 </tr>
               ))
             ) : products.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: '#444' }}>No products yet. Add your first one!</td></tr>
+              <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: 'var(--muted-dark)' }}>No products yet. Add your first one!</td></tr>
             ) : products.map(p => (
               <tr key={p.productId ?? p.id} style={{ borderBottom: '1px solid #141414', transition: 'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#161616'}
@@ -232,16 +232,16 @@ export default function AdminProducts() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     {(p.primaryImageUrl ?? p.images?.[0]?.imageUrl) && (
                       <img src={p.primaryImageUrl ?? p.images[0].imageUrl} alt=""
-                        style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', background: '#1c1c1c' }}
+                        style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', background: 'var(--card)' }}
                         onError={e => { e.target.style.display = 'none' }}
                       />
                     )}
                     <span style={{ fontWeight: 500, color: '#ddd' }}>{p.name}</span>
                   </div>
                 </td>
-                <td style={{ padding: '14px 16px', color: '#555' }}>{p.categoryName ?? p.category?.name ?? '—'}</td>
+                <td style={{ padding: '14px 16px', color: 'var(--muted-dark)' }}>{p.categoryName ?? p.category?.name ?? '—'}</td>
                 <td style={{ padding: '14px 16px', color: '#f59e0b', fontWeight: 600 }}>${Number(p.startingPrice ?? p.price ?? 0).toFixed(2)}</td>
-                <td style={{ padding: '14px 16px', color: '#555' }}>{p.variants?.length ?? 0}</td>
+                <td style={{ padding: '14px 16px', color: 'var(--muted-dark)' }}>{p.variants?.length ?? 0}</td>
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <IconBtn icon={Pencil} onClick={() => openEdit(p)} title="Edit" />
@@ -257,7 +257,7 @@ export default function AdminProducts() {
         {totalPages > 1 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '12px 16px', borderTop: '1px solid #1a1a1a' }}>
             <IconBtn icon={ChevronLeft}  onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} />
-            <span style={{ fontSize: 12, color: '#555' }}>Page {page + 1} of {totalPages}</span>
+            <span style={{ fontSize: 12, color: 'var(--muted-dark)' }}>Page {page + 1} of {totalPages}</span>
             <IconBtn icon={ChevronRight} onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} />
           </div>
         )}
@@ -276,8 +276,8 @@ export default function AdminProducts() {
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700 }}>{modal === 'create' ? 'Add Product' : 'Edit Product'}</h2>
-              <button onClick={closeModal} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', padding: 4 }}
-                onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = '#555'}>
+              <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'var(--muted-dark)', cursor: 'pointer', padding: 4 }}
+                onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
                 <X size={18} />
               </button>
             </div>
@@ -326,7 +326,7 @@ export default function AdminProducts() {
             {/* Variants */}
             <SectionLabel>
               Variants
-              <button onClick={addVariant} style={{ marginLeft: 'auto', fontSize: 11, color: '#7c5cf0', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button onClick={addVariant} style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Plus size={12} /> Add variant
               </button>
             </SectionLabel>
@@ -351,7 +351,7 @@ export default function AdminProducts() {
                 <div style={{ paddingBottom: 0 }}>
                   {i === 0 && <div style={{ height: 20 }} />}
                   <button onClick={() => removeVariant(i)} disabled={form.variants.length === 1}
-                    style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#555', cursor: 'pointer', padding: '10px', display: 'flex', alignItems: 'center', opacity: form.variants.length === 1 ? 0.3 : 1 }}>
+                    style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '10px', display: 'flex', alignItems: 'center', opacity: form.variants.length === 1 ? 0.3 : 1 }}>
                     <X size={12} />
                   </button>
                 </div>
@@ -361,19 +361,19 @@ export default function AdminProducts() {
             {/* Images */}
             <SectionLabel style={{ marginTop: 20 }}>
               Images (URLs)
-              <button onClick={addImage} style={{ marginLeft: 'auto', fontSize: 11, color: '#7c5cf0', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button onClick={addImage} style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Plus size={12} /> Add URL
               </button>
             </SectionLabel>
             {form.images.map((img, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 8, marginBottom: 8, alignItems: 'center' }}>
                 <input className="noir-input" value={img.imageUrl} onChange={e => setImage(i, 'imageUrl', e.target.value)} placeholder="https://..." />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#555', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted-dark)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                   <input type="checkbox" checked={img.isPrimary} onChange={e => setImage(i, 'isPrimary', e.target.checked)} />
                   Primary
                 </label>
                 <button onClick={() => removeImage(i)}
-                  style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#555', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
+                  style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
                   <X size={12} />
                 </button>
               </div>
@@ -381,7 +381,7 @@ export default function AdminProducts() {
 
             {/* File uploads */}
             <div style={{ marginTop: 10, marginBottom: 4 }}>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#7c5cf0', cursor: 'pointer', border: '1px dashed #3a2a6a', borderRadius: 6, padding: '7px 12px' }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--accent)', cursor: 'pointer', border: '1px dashed #3a2a6a', borderRadius: 6, padding: '7px 12px' }}>
                 <Plus size={12} /> Upload from computer
                 <input type="file" accept="image/*" multiple style={{ display: 'none' }}
                   onChange={e => {
@@ -394,14 +394,14 @@ export default function AdminProducts() {
             </div>
             {fileUploads.map((fu, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: 12, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fu.file.name}</span>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#555', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                <span style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fu.file.name}</span>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted-dark)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                   <input type="checkbox" checked={fu.isPrimary}
                     onChange={e => setFileUploads(prev => prev.map((f, idx) => idx === i ? { ...f, isPrimary: e.target.checked } : f))} />
                   Primary
                 </label>
                 <button onClick={() => setFileUploads(prev => prev.filter((_, idx) => idx !== i))}
-                  style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: '#555', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
+                  style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
                   <X size={12} />
                 </button>
               </div>
@@ -423,7 +423,7 @@ export default function AdminProducts() {
 
 function SectionLabel({ children, style = {} }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#444', textTransform: 'uppercase', marginBottom: 10, ...style }}>
+    <div style={{ display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--muted-dark)', textTransform: 'uppercase', marginBottom: 10, ...style }}>
       {children}
     </div>
   )
@@ -431,7 +431,7 @@ function SectionLabel({ children, style = {} }) {
 
 const labelStyle = {
   display: 'flex', flexDirection: 'column', gap: 5,
-  fontSize: 12, color: '#555', fontWeight: 500,
+  fontSize: 12, color: 'var(--muted-dark)', fontWeight: 500,
 }
 
 function IconBtn({ icon: Icon, onClick, title, danger, loading, disabled }) {
@@ -443,12 +443,12 @@ function IconBtn({ icon: Icon, onClick, title, danger, loading, disabled }) {
       style={{
         width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'none', border: '1px solid #1e1e1e', borderRadius: 6,
-        color: danger ? '#ef4444' : '#555', cursor: disabled || loading ? 'not-allowed' : 'pointer',
+        color: danger ? '#ef4444' : 'var(--muted-dark)', cursor: disabled || loading ? 'not-allowed' : 'pointer',
         transition: 'border-color 0.15s, color 0.15s',
         opacity: disabled || loading ? 0.4 : 1,
       }}
-      onMouseEnter={e => { if (!disabled && !loading) { e.currentTarget.style.borderColor = danger ? '#ef4444' : '#3a3a3a'; e.currentTarget.style.color = danger ? '#ef4444' : '#fff' } }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.color = danger ? '#ef4444' : '#555' }}
+      onMouseEnter={e => { if (!disabled && !loading) { e.currentTarget.style.borderColor = danger ? '#ef4444' : 'var(--border-hover)'; e.currentTarget.style.color = danger ? '#ef4444' : '#fff' } }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--card)'; e.currentTarget.style.color = danger ? '#ef4444' : 'var(--muted-dark)' }}
     >
       <Icon size={13} />
     </button>

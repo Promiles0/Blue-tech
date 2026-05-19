@@ -46,7 +46,7 @@ export default function MobileNav() {
             style={{
               position: 'fixed', top: 0, left: 0, bottom: 0,
               width: 'min(320px, 85vw)',
-              background: '#0f0f0f', borderRight: '1px solid #1e1e1e',
+              background: 'var(--bg)', borderRight: '1px solid var(--border)',
               display: 'flex', flexDirection: 'column',
               padding: 24, zIndex: 201,
             }}
@@ -54,10 +54,10 @@ export default function MobileNav() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c5cf0', display: 'block' }} />
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
                 <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em' }}>NOIR</span>
               </div>
-              <button onClick={close} style={{ background: 'none', border: 'none', color: '#888', display: 'flex', padding: 8, cursor: 'pointer' }}>
+              <button onClick={close} style={{ background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', padding: 8, cursor: 'pointer' }}>
                 <X size={20} />
               </button>
             </div>
@@ -78,12 +78,12 @@ export default function MobileNav() {
                       display: 'block',
                       fontFamily: '"Space Grotesk",sans-serif',
                       fontSize: 26, fontWeight: 800,
-                      color: '#fff', padding: '10px 0',
+                      color: 'var(--text)', padding: '10px 0',
                       letterSpacing: '-0.02em',
                       transition: 'color 0.2s',
                     }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#7c5cf0'}
-                    onMouseLeave={e => e.currentTarget.style.color = '#fff'}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text)'}
                   >
                     {item.label}
                   </Link>
@@ -92,14 +92,14 @@ export default function MobileNav() {
             </nav>
 
             {/* Bottom actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '1px solid #1e1e1e', paddingTop: 24 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
               <button
                 onClick={() => { setPaletteOpen(true); close() }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
-                  background: '#141414', border: '1px solid #1e1e1e',
+                  background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 10, padding: '12px 16px',
-                  color: '#888', fontSize: 14, cursor: 'pointer',
+                  color: 'var(--muted)', fontSize: 14, cursor: 'pointer',
                 }}
               >
                 <Search size={15} /> Search products
@@ -108,15 +108,15 @@ export default function MobileNav() {
               {user ? (
                 <>
                   {isAdmin && (
-                    <Link to="/admin" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#7c5cf0', fontSize: 14, fontWeight: 700 }}>
+                    <Link to="/admin" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent)', fontSize: 14, fontWeight: 700 }}>
                       <User size={15} /> Admin panel
                     </Link>
                   )}
-                  <Link to="/account" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#888', fontSize: 14 }}>
+                  <Link to="/account" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 14 }}>
                     <User size={15} /> Profile
                   </Link>
                   {!isAdmin && (
-                    <Link to="/orders" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#888', fontSize: 14 }}>
+                    <Link to="/orders" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 14 }}>
                       <User size={15} /> My orders
                     </Link>
                   )}
@@ -132,7 +132,7 @@ export default function MobileNav() {
                   </button>
                 </>
               ) : (
-                <Link to="/login" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#888', fontSize: 14 }}>
+                <Link to="/login" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 14 }}>
                   <User size={15} /> Sign in
                 </Link>
               )}

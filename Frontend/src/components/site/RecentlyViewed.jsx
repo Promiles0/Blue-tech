@@ -38,15 +38,15 @@ export default function RecentlyViewed() {
                 to={`/products/${p.id}`}
                 style={{
                   flexShrink: 0, width: 136,
-                  background: '#141414', border: '1px solid #1e1e1e',
+                  background: 'var(--surface)', border: '1px solid #1e1e1e',
                   borderRadius: 10, overflow: 'hidden',
                   textDecoration: 'none', display: 'block',
                   transition: 'border-color 0.2s, transform 0.25s',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#2e2e2e'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.transform = 'none' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--card)'; e.currentTarget.style.transform = 'none' }}
               >
-                <div style={{ height: 116, overflow: 'hidden', background: '#1a1a1a' }}>
+                <div style={{ height: 116, overflow: 'hidden', background: 'var(--card)' }}>
                   {p.imageUrl && (
                     <img
                       src={safeImageSrc(p.imageUrl)}
@@ -60,7 +60,7 @@ export default function RecentlyViewed() {
                   <p style={{ fontSize: 12, fontWeight: 500, color: '#e5e5e5', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
                   </p>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b' }}>${parseFloat(p.price ?? 0).toFixed(2)}</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--price)' }}>${parseFloat(p.price ?? 0).toFixed(2)}</p>
                 </div>
               </Link>
             ))}

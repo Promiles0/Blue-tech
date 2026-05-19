@@ -12,7 +12,7 @@ const ACTION_COLORS = {
   create: '#22c55e',
   insert: '#22c55e',
   update: '#3b82f6',
-  grant:  '#7c5cf0',
+  grant:  'var(--accent)',
   revoke: '#f59e0b',
 }
 

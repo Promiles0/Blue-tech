@@ -103,14 +103,14 @@ export default function ProductQuickView() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.24, ease: [0.25, 0.1, 0.25, 1] }}
-              style={{ position: 'relative', width: 'min(920px, 100%)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', background: '#0f0f0f', border: '1px solid #2a2a2a', borderRadius: 20, boxShadow: '0 30px 80px rgba(0,0,0,0.6)', pointerEvents: 'auto' }}
+              style={{ position: 'relative', width: 'min(920px, 100%)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 20, boxShadow: '0 30px 80px rgba(0,0,0,0.6)', pointerEvents: 'auto' }}
             >
               <button
                 onClick={close}
                 aria-label="Close"
-                style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(28,28,28,0.85)', backdropFilter: 'blur(8px)', border: '1px solid #2a2a2a', borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaa', cursor: 'pointer', zIndex: 2, transition: 'color 0.15s, background 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = '#222' }}
-                onMouseLeave={e => { e.currentTarget.style.color = '#aaa'; e.currentTarget.style.background = 'rgba(28,28,28,0.85)' }}
+                style={{ position: 'absolute', top: 12, right: 12, background: 'var(--glass-bg2)', backdropFilter: 'blur(8px)', border: '1px solid var(--border)', borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', cursor: 'pointer', zIndex: 2, transition: 'color 0.15s, background 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.background = 'var(--border)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.background = 'var(--glass-bg2)' }}
               >
                 <X size={16} />
               </button>
@@ -127,7 +127,7 @@ export default function ProductQuickView() {
               ) : product ? (
                 <div className="qv-grid">
                   <div>
-                    <div style={{ aspectRatio: '4/5', background: '#141414', borderRadius: '20px 0 0 20px', overflow: 'hidden' }}>
+                    <div style={{ aspectRatio: '4/5', background: 'var(--surface)', borderRadius: '20px 0 0 20px', overflow: 'hidden' }}>
                       <img
                         src={images[activeImage]?.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80'}
                         alt={product.name}
@@ -141,7 +141,7 @@ export default function ProductQuickView() {
                           <button
                             key={index}
                             onClick={() => setActiveImage(index)}
-                            style={{ width: 52, height: 52, borderRadius: 8, overflow: 'hidden', border: `2px solid ${index === activeImage ? '#7c5cf0' : '#2a2a2a'}`, padding: 0, cursor: 'pointer', transition: 'border-color 0.2s' }}
+                            style={{ width: 52, height: 52, borderRadius: 8, overflow: 'hidden', border: `2px solid ${index === activeImage ? 'var(--accent)' : 'var(--border)'}`, padding: 0, cursor: 'pointer', transition: 'border-color 0.2s' }}
                           >
                             <img src={img.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </button>
@@ -151,28 +151,28 @@ export default function ProductQuickView() {
                   </div>
 
                   <div style={{ padding: '40px 32px 32px' }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 8 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 8 }}>
                       {product.categoryName ?? product.category?.name ?? ''}
                     </p>
                     <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 10, lineHeight: 1.2 }}>
                       {product.name}
                     </h2>
                     <div style={{ marginBottom: 18 }}>
-                      <p style={{ fontSize: 28, fontWeight: 900, color: '#f59e0b' }}>
+                      <p style={{ fontSize: 28, fontWeight: 900, color: 'var(--price)' }}>
                         ${price.toFixed(2)}
                       </p>
-                      {qty > 1 && <p style={{ fontSize: 12, color: '#666', marginTop: 2 }}>${unitPrice.toFixed(2)} each</p>}
+                      {qty > 1 && <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 2 }}>${unitPrice.toFixed(2)} each</p>}
                     </div>
 
                     {product.description && (
-                      <p style={{ fontSize: 14, color: '#888', lineHeight: 1.7, marginBottom: 22 }}>
+                      <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 22 }}>
                         {product.description.length > 200 ? `${product.description.slice(0, 200)}…` : product.description}
                       </p>
                     )}
 
                     {product.variants?.length > 0 && (
                       <div style={{ marginBottom: 18 }}>
-                        <p style={{ fontSize: 12, fontWeight: 600, color: '#aaa', marginBottom: 8 }}>Options</p>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>Options</p>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           {product.variants.map(variant => {
                             const variantId = variant.variantId ?? variant.id
@@ -181,7 +181,7 @@ export default function ProductQuickView() {
                               <button
                                 key={variantId}
                                 onClick={() => { setSelectedVariant(variant); setQty(1) }}
-                                style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: selectedVariantId === variantId ? '#7c5cf0' : 'transparent', color: selectedVariantId === variantId ? '#fff' : '#888', border: `1px solid ${selectedVariantId === variantId ? '#7c5cf0' : '#2a2a2a'}`, cursor: 'pointer', transition: 'all 0.18s' }}
+                                style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: selectedVariantId === variantId ? 'var(--accent)' : 'transparent', color: selectedVariantId === variantId ? '#fff' : 'var(--muted)', border: `1px solid ${selectedVariantId === variantId ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.18s' }}
                               >
                                 {variant.sizeOrColor ?? variant.skuCode}
                               </button>
@@ -192,16 +192,16 @@ export default function ProductQuickView() {
                     )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, color: '#aaa' }}>Qty</p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: '1px solid #2a2a2a', borderRadius: 10, padding: '8px 16px' }}>
-                        <button onClick={() => setQty(value => Math.max(1, value - 1))} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', display: 'flex' }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Qty</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px' }}>
+                        <button onClick={() => setQty(value => Math.max(1, value - 1))} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
                           <Minus size={14} />
                         </button>
-                        <span style={{ fontSize: 15, color: '#fff', minWidth: 20, textAlign: 'center' }}>{qty}</span>
+                        <span style={{ fontSize: 15, color: 'var(--text)', minWidth: 20, textAlign: 'center' }}>{qty}</span>
                         <button
                           onClick={() => setQty(value => stockQty > 0 ? Math.min(stockQty, value + 1) : value + 1)}
                           disabled={stockQty > 0 && qty >= stockQty}
-                          style={{ background: 'none', border: 'none', color: stockQty > 0 && qty >= stockQty ? '#333' : '#888', cursor: stockQty > 0 && qty >= stockQty ? 'not-allowed' : 'pointer', display: 'flex' }}
+                          style={{ background: 'none', border: 'none', color: stockQty > 0 && qty >= stockQty ? 'var(--muted-dark)' : 'var(--muted)', cursor: stockQty > 0 && qty >= stockQty ? 'not-allowed' : 'pointer', display: 'flex' }}
                         >
                           <Plus size={14} />
                         </button>
@@ -209,7 +209,7 @@ export default function ProductQuickView() {
                     </div>
 
                     {selectedVariant && (
-                      <p style={{ fontSize: 12, color: stockQty > 0 ? '#22c55e' : '#ef4444', marginBottom: 18 }}>
+                      <p style={{ fontSize: 12, color: stockQty > 0 ? 'var(--success)' : 'var(--error)', marginBottom: 18 }}>
                         {stockQty === 0 ? 'Out of stock' : stockQty <= 5 ? `Only ${stockQty} left` : `${stockQty} in stock`}
                       </p>
                     )}
@@ -247,14 +247,14 @@ export default function ProductQuickView() {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#444', fontSize: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted-dark)', fontSize: 12 }}>
                         <Truck size={13} />
                         Free shipping on orders over $200
                       </div>
                       <Link
                         to={`/products/${pid}`}
                         onClick={close}
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#7c5cf0', textDecoration: 'none' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent)', textDecoration: 'none' }}
                       >
                         View full details <ArrowRight size={12} />
                       </Link>

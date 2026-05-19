@@ -69,7 +69,7 @@ export default function AdminCategories() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em' }}>Categories</h1>
-          <p style={{ color: '#555', fontSize: 13, marginTop: 3 }}>{categories.length} categories</p>
+          <p style={{ color: 'var(--muted-dark)', fontSize: 13, marginTop: 3 }}>{categories.length} categories</p>
         </div>
         <button onClick={openCreate} className="noir-btn-primary" style={{ gap: 7, fontSize: 13, padding: '10px 18px' }}>
           <Plus size={15} /> Add Category
@@ -88,7 +88,7 @@ export default function AdminCategories() {
           <thead>
             <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
               {['Name', 'Description', 'Actions'].map(h => (
-                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: '#444', fontWeight: 600, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
+                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--muted-dark)', fontWeight: 600, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -104,7 +104,7 @@ export default function AdminCategories() {
                 </tr>
               ))
             ) : categories.length === 0 ? (
-              <tr><td colSpan={3} style={{ padding: '40px', textAlign: 'center', color: '#444' }}>No categories yet. Add your first one!</td></tr>
+              <tr><td colSpan={3} style={{ padding: '40px', textAlign: 'center', color: 'var(--muted-dark)' }}>No categories yet. Add your first one!</td></tr>
             ) : categories.map(cat => (
               <tr key={cat.categoryId} style={{ borderBottom: '1px solid #141414', transition: 'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#161616'}
@@ -113,7 +113,7 @@ export default function AdminCategories() {
                 <td style={{ padding: '14px 16px', fontWeight: 500, color: '#ddd' }}>
                   {cat.name ?? cat.categoryName}
                 </td>
-                <td style={{ padding: '14px 16px', color: '#555', maxWidth: 400 }}>
+                <td style={{ padding: '14px 16px', color: 'var(--muted-dark)', maxWidth: 400 }}>
                   {cat.description ?? <span style={{ opacity: 0.3 }}>—</span>}
                 </td>
                 <td style={{ padding: '14px 16px' }}>
@@ -137,8 +137,8 @@ export default function AdminCategories() {
           <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 16, width: '100%', maxWidth: 440, padding: '32px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <h2 style={{ fontSize: 17, fontWeight: 700 }}>{modal === 'create' ? 'New Category' : 'Edit Category'}</h2>
-              <button onClick={closeModal} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = '#555'}>
+              <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'var(--muted-dark)', cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
                 <X size={18} />
               </button>
             </div>
@@ -149,11 +149,11 @@ export default function AdminCategories() {
               </div>
             )}
 
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#555', fontWeight: 500, marginBottom: 14 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: 'var(--muted-dark)', fontWeight: 500, marginBottom: 14 }}>
               Name *
               <input className="noir-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Category name" autoFocus />
             </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#555', fontWeight: 500, marginBottom: 28 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: 'var(--muted-dark)', fontWeight: 500, marginBottom: 28 }}>
               Description
               <textarea className="noir-input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 placeholder="Optional description" rows={3} style={{ resize: 'vertical' }} />
@@ -178,11 +178,11 @@ function IconBtn({ icon: Icon, onClick, title, danger, loading }) {
       style={{
         width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'none', border: '1px solid #1e1e1e', borderRadius: 6,
-        color: danger ? '#ef4444' : '#555', cursor: loading ? 'not-allowed' : 'pointer',
+        color: danger ? '#ef4444' : 'var(--muted-dark)', cursor: loading ? 'not-allowed' : 'pointer',
         transition: 'border-color 0.15s, color 0.15s', opacity: loading ? 0.4 : 1,
       }}
-      onMouseEnter={e => { if (!loading) { e.currentTarget.style.borderColor = danger ? '#ef4444' : '#3a3a3a'; e.currentTarget.style.color = danger ? '#ef4444' : '#fff' } }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = '#1e1e1e'; e.currentTarget.style.color = danger ? '#ef4444' : '#555' }}
+      onMouseEnter={e => { if (!loading) { e.currentTarget.style.borderColor = danger ? '#ef4444' : 'var(--border-hover)'; e.currentTarget.style.color = danger ? '#ef4444' : '#fff' } }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--card)'; e.currentTarget.style.color = danger ? '#ef4444' : 'var(--muted-dark)' }}
     >
       <Icon size={13} />
     </button>

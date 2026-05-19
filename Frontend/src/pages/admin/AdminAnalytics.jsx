@@ -6,7 +6,7 @@ import {
 import apiService from '../../api/service'
 import { money } from '../../lib/format'
 
-const CHART_COLORS = ['#7c5cf0', '#f59e0b', '#22c55e', '#3b82f6', '#ef4444']
+const CHART_COLORS = ['var(--accent)', '#f59e0b', '#22c55e', '#3b82f6', '#ef4444']
 
 const tooltipStyle = {
   contentStyle: {

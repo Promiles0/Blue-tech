@@ -143,11 +143,11 @@ function StarRow({ rating }) {
 }
 
 const inputStyle = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--admin-border)',
+  background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
   borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, outline: 'none',
 }
 const selectStyle = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--admin-border)',
+  background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
   borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, cursor: 'pointer',
 }
 const ghostIconBtn = {

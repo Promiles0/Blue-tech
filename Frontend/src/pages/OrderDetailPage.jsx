@@ -7,9 +7,9 @@ import orderService from '../services/orderService'
 const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
 
 const STATUS_STYLES = {
-  PENDING:    { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.2)'  },
+  PENDING:    { color: 'var(--price)', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.2)'  },
   PROCESSING: { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
-  SHIPPED:    { color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
+  SHIPPED:    { color: 'var(--accent-light)', bg: 'var(--accent-dim)', border: 'var(--accent-dim2)' },
   DELIVERED:  { color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.2)'  },
   CANCELLED:  { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
 }
@@ -36,7 +36,7 @@ function TimelineStep({ label, sublabel, done, active, last, icon: Icon }) {
         <div style={{
           position: 'absolute', left: 15, top: 32, bottom: -8,
           width: 2,
-          background: done ? '#7c5cf0' : '#1e1e1e',
+          background: done ? 'var(--accent)' : 'var(--card)',
           transition: 'background 0.4s',
         }} />
       )}
@@ -44,17 +44,17 @@ function TimelineStep({ label, sublabel, done, active, last, icon: Icon }) {
       <div style={{
         width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: done ? '#7c5cf0' : active ? 'rgba(124,92,240,0.18)' : '#141414',
-        border: `2px solid ${done ? '#7c5cf0' : active ? 'rgba(124,92,240,0.5)' : '#2a2a2a'}`,
+        background: done ? 'var(--accent)' : active ? 'var(--accent-dim2)' : 'var(--surface)',
+        border: `2px solid ${done ? 'var(--accent)' : active ? 'var(--accent-focus)' : 'var(--border)'}`,
         transition: 'all 0.3s',
         zIndex: 1,
       }}>
-        <Icon size={14} color={done ? '#fff' : active ? '#7c5cf0' : '#555'} />
+        <Icon size={14} color={done ? '#fff' : active ? 'var(--accent)' : 'var(--muted-dark)'} />
       </div>
       {/* Text */}
       <div style={{ paddingBottom: last ? 0 : 28 }}>
-        <p style={{ fontSize: 14, fontWeight: 600, color: done || active ? '#fff' : '#555', marginBottom: 2 }}>{label}</p>
-        {sublabel && <p style={{ fontSize: 12, color: '#555' }}>{sublabel}</p>}
+        <p style={{ fontSize: 14, fontWeight: 600, color: done || active ? '#fff' : 'var(--muted-dark)', marginBottom: 2 }}>{label}</p>
+        {sublabel && <p style={{ fontSize: 12, color: 'var(--muted-dark)' }}>{sublabel}</p>}
       </div>
     </div>
   )
@@ -86,8 +86,8 @@ export default function OrderDetailPage() {
 
   if (error || !order) return (
     <div style={{ padding: '80px 24px', maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
-      <p style={{ color: '#888' }}>{error || 'Order not found.'}</p>
-      <Link to="/orders" style={{ color: '#7c5cf0', fontSize: 14, marginTop: 16, display: 'inline-block' }}>← Back to orders</Link>
+      <p style={{ color: 'var(--muted)' }}>{error || 'Order not found.'}</p>
+      <Link to="/orders" style={{ color: 'var(--accent)', fontSize: 14, marginTop: 16, display: 'inline-block' }}>← Back to orders</Link>
     </div>
   )
 
@@ -106,9 +106,9 @@ export default function OrderDetailPage() {
     <div style={{ padding: '48px 0 80px' }}>
       <div className="container-noir" style={{ maxWidth: 760 }}>
 
-        <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#999', marginBottom: 32, transition: 'color 0.2s' }}
+        <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', marginBottom: 32, transition: 'color 0.2s' }}
           onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.color = '#999'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
         >
           <ArrowLeft size={14} /> Back to orders
         </Link>
@@ -117,14 +117,14 @@ export default function OrderDetailPage() {
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18, gap: 16, flexWrap: 'wrap' }}>
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: '#444', textTransform: 'uppercase', marginBottom: 6 }}>Order</p>
-              <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>#{order.orderId}</h1>
-              <p style={{ fontSize: 13, color: '#999', marginTop: 6 }}>{fmt(order.createdAt)}</p>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--muted-dark)', textTransform: 'uppercase', marginBottom: 6 }}>Order</p>
+              <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' }}>#{order.orderId}</h1>
+              <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{fmt(order.createdAt)}</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12, minWidth: 190 }}>
               <StatusBadge status={order.status} />
-              <span style={{ fontSize: 24, fontWeight: 900, color: '#f59e0b' }}>${parseFloat(order.totalAmount ?? 0).toFixed(2)}</span>
-              <p style={{ color: '#999', fontSize: 13 }}>Items: {order.items?.length ?? 0}</p>
+              <span style={{ fontSize: 24, fontWeight: 900, color: 'var(--price)' }}>${parseFloat(order.totalAmount ?? 0).toFixed(2)}</span>
+              <p style={{ color: 'var(--muted)', fontSize: 13 }}>Items: {order.items?.length ?? 0}</p>
             </div>
           </div>
 
@@ -140,7 +140,7 @@ export default function OrderDetailPage() {
                 </div>
                 <span className="label-muted">Order date</span>
               </div>
-              <p style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: '#fff' }}>{fmt(order.createdAt)}</p>
+              <p style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{fmt(order.createdAt)}</p>
             </div>
             <div className="dashboard-card-secondary">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -161,22 +161,22 @@ export default function OrderDetailPage() {
                 </div>
                 <span className="label-muted">Payment</span>
               </div>
-              <p style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: '#fff' }}>{order.paymentMethod ?? 'Credit card'}</p>
-              <p style={{ fontSize: 12, color: '#999', marginTop: 4 }}>{order.paymentStatus ?? 'Completed'}</p>
+              <p style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{order.paymentMethod ?? 'Credit card'}</p>
+              <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{order.paymentStatus ?? 'Completed'}</p>
             </div>
             <div className="dashboard-card-secondary">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                 <div style={{ 
-                  width: 32, height: 32, borderRadius: 8, background: 'rgba(124,92,240,0.12)',
+                  width: 32, height: 32, borderRadius: 8, background: 'var(--accent-dim)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: '1px solid rgba(124,92,240,0.3)'
+                  border: '1px solid var(--accent-border)'
                 }}>
-                  <Truck size={16} style={{ color: '#7c5cf0' }} />
+                  <Truck size={16} style={{ color: 'var(--accent)' }} />
                 </div>
                 <span className="label-muted">Shipping</span>
               </div>
-              <p style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: '#fff' }}>{order.shippingMethod ?? 'Standard delivery'}</p>
-              <p style={{ fontSize: 12, color: '#999', marginTop: 4 }}>Estimated delivery: 3-5 days</p>
+              <p style={{ marginTop: 10, fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{order.shippingMethod ?? 'Standard delivery'}</p>
+              <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Estimated delivery: 3-5 days</p>
             </div>
           </div>
 
@@ -184,7 +184,7 @@ export default function OrderDetailPage() {
 
             {/* Timeline */}
             <div className="dashboard-panel">
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#555', textTransform: 'uppercase', marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--muted-dark)', textTransform: 'uppercase', marginBottom: 20 }}>
                 {order.status === 'CANCELLED' ? 'Cancelled' : 'Timeline'}
               </p>
               {order.status === 'CANCELLED' ? (
@@ -213,31 +213,31 @@ export default function OrderDetailPage() {
             <div className="order-details-grid">
               {(order.shippingRecipient || order.shippingStreet) && (
                 <div className="dashboard-panel">
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#555', textTransform: 'uppercase', marginBottom: 12 }}>Ship to</p>
-                  {order.shippingRecipient && <p style={{ fontSize: 14, fontWeight: 600, color: '#fff', marginBottom: 4 }}>{order.shippingRecipient}</p>}
-                  {order.shippingStreet  && <p style={{ fontSize: 13, color: '#999' }}>{order.shippingStreet}</p>}
-                  {order.shippingCity    && <p style={{ fontSize: 13, color: '#999' }}>{order.shippingCity}</p>}
-                  {order.shippingCountry && <p style={{ fontSize: 13, color: '#999' }}>{order.shippingCountry}</p>}
-                  {order.shippingPhoneNumber && <p style={{ fontSize: 12, color: '#555', marginTop: 6 }}>{order.shippingPhoneNumber}</p>}
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--muted-dark)', textTransform: 'uppercase', marginBottom: 12 }}>Ship to</p>
+                  {order.shippingRecipient && <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{order.shippingRecipient}</p>}
+                  {order.shippingStreet  && <p style={{ fontSize: 13, color: 'var(--muted)' }}>{order.shippingStreet}</p>}
+                  {order.shippingCity    && <p style={{ fontSize: 13, color: 'var(--muted)' }}>{order.shippingCity}</p>}
+                  {order.shippingCountry && <p style={{ fontSize: 13, color: 'var(--muted)' }}>{order.shippingCountry}</p>}
+                  {order.shippingPhoneNumber && <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 6 }}>{order.shippingPhoneNumber}</p>}
                 </div>
               )}
 
               {order.shipmentInfo && (
                 <div className="dashboard-panel">
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#555', textTransform: 'uppercase', marginBottom: 12 }}>Shipment</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--muted-dark)', textTransform: 'uppercase', marginBottom: 12 }}>Shipment</p>
                   {order.shipmentInfo.carrier && (
                     <p style={{ fontSize: 13, color: '#ccc', marginBottom: 4 }}>
-                      <span style={{ color: '#555' }}>Carrier: </span>{order.shipmentInfo.carrier}
+                      <span style={{ color: 'var(--muted-dark)' }}>Carrier: </span>{order.shipmentInfo.carrier}
                     </p>
                   )}
                   {order.shipmentInfo.trackingNumber && (
                     <p style={{ fontSize: 13, color: '#ccc', marginBottom: 4 }}>
-                      <span style={{ color: '#555' }}>Tracking: </span>
-                      <span style={{ fontFamily: 'monospace', color: '#a78bfa' }}>{order.shipmentInfo.trackingNumber}</span>
+                      <span style={{ color: 'var(--muted-dark)' }}>Tracking: </span>
+                      <span style={{ fontFamily: 'monospace', color: 'var(--accent-light)' }}>{order.shipmentInfo.trackingNumber}</span>
                     </p>
                   )}
                   {order.shipmentInfo.shippedAt && (
-                    <p style={{ fontSize: 12, color: '#555', marginTop: 6 }}>Shipped {fmt(order.shipmentInfo.shippedAt)}</p>
+                    <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 6 }}>Shipped {fmt(order.shipmentInfo.shippedAt)}</p>
                   )}
                 </div>
               )}
@@ -247,8 +247,8 @@ export default function OrderDetailPage() {
           {/* Items */}
           {order.items?.length > 0 && (
             <div className="dashboard-panel" style={{ overflow: 'hidden' }}>
-              <div style={{ padding: '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#555', textTransform: 'uppercase' }}>Items</p>
+              <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--glass-border)' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--muted-dark)', textTransform: 'uppercase' }}>Items</p>
               </div>
               {order.items.map((item, i) => (
                 <div key={i} style={{
@@ -257,18 +257,18 @@ export default function OrderDetailPage() {
                   borderBottom: i < order.items.length - 1 ? '1px solid #1a1a1a' : 'none',
                 }}>
                   <div>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{item.productName}</p>
-                    {item.variantInfo && <p style={{ fontSize: 12, color: '#999' }}>{item.variantInfo}</p>}
+                    <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)', marginBottom: 2 }}>{item.productName}</p>
+                    {item.variantInfo && <p style={{ fontSize: 12, color: 'var(--muted)' }}>{item.variantInfo}</p>}
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 13, color: '#999' }}>{item.quantity} × ${parseFloat(item.priceAtPurchase ?? 0).toFixed(2)}</p>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>${parseFloat(item.subtotal ?? 0).toFixed(2)}</p>
+                    <p style={{ fontSize: 13, color: 'var(--muted)' }}>{item.quantity} × ${parseFloat(item.priceAtPurchase ?? 0).toFixed(2)}</p>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>${parseFloat(item.subtotal ?? 0).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
               <div style={{ padding: '14px 20px', borderTop: '1px solid #1e1e1e', display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 13, color: '#555' }}>Total</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: '#f59e0b' }}>${parseFloat(order.totalAmount ?? 0).toFixed(2)}</span>
+                <span style={{ fontSize: 13, color: 'var(--muted-dark)' }}>Total</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--price)' }}>${parseFloat(order.totalAmount ?? 0).toFixed(2)}</span>
               </div>
             </div>
           )}

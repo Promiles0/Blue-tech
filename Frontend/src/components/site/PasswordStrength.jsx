@@ -38,7 +38,7 @@ export default function PasswordStrength({ password }) {
             key={i}
             style={{
               flex: 1, height: 3, borderRadius: 2,
-              background: i <= s ? level.color : '#2a2a2a',
+              background: i <= s ? level.color : 'var(--border)',
               transition: 'background 0.3s',
             }}
           />
@@ -46,7 +46,7 @@ export default function PasswordStrength({ password }) {
       </div>
       <p style={{ fontSize: 11, color: level.color, fontWeight: 600 }}>
         {level.label}
-        {s < 2 && <span style={{ color: '#555', fontWeight: 400 }}> — add uppercase, numbers or symbols</span>}
+        {s < 2 && <span style={{ color: 'var(--muted-dark)', fontWeight: 400 }}> — add uppercase, numbers or symbols</span>}
       </p>
     </div>
   )

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider }         from './context/ThemeContext'
 import { AuthProvider }    from './context/AuthContext'
 import { CartProvider }    from './context/CartContext'
 import { UIProvider }      from './context/UIContext'
@@ -51,28 +52,30 @@ function ScrollToTop() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <NotificationProvider>
-                <UIProvider>
-                  <ScrollToTop />
-                  <Routes>
-                    {/* Admin section — no SiteLayout, ADMIN role required */}
-                    <Route path="/admin/*" element={<AdminSection />} />
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <NotificationProvider>
+                  <UIProvider>
+                    <ScrollToTop />
+                    <Routes>
+                      {/* Admin section — no SiteLayout, ADMIN role required */}
+                      <Route path="/admin/*" element={<AdminSection />} />
 
-                    {/* Customer site — wrapped in SiteLayout */}
-                    <Route path="*" element={<CustomerSite />} />
-                  </Routes>
-                </UIProvider>
-              </NotificationProvider>
-            </WishlistProvider>
-          </CartProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+                      {/* Customer site — wrapped in SiteLayout */}
+                      <Route path="*" element={<CustomerSite />} />
+                    </Routes>
+                  </UIProvider>
+                </NotificationProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   )
 }
 

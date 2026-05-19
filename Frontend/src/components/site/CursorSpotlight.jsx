@@ -33,7 +33,7 @@ export default function CursorSpotlight() {
         height: SIZE,
         borderRadius: '50%',
         background:
-          'radial-gradient(circle, rgba(124,92,240,0.28) 0%, rgba(124,92,240,0.14) 30%, rgba(124,92,240,0.05) 55%, transparent 75%)',
+          'radial-gradient(circle, var(--accent-border) 0%, var(--accent-dim2) 30%, var(--accent-dim) 55%, transparent 75%)',
         filter: 'blur(40px)',
         pointerEvents: 'none',
         mixBlendMode: 'screen',

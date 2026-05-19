@@ -48,13 +48,13 @@ export default function Register() {
         position: 'absolute', top: '10%', left: '50%',
         transform: 'translateX(-50%)',
         width: 700, height: 700, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(124,92,240,0.13) 0%, transparent 65%)',
+        background: 'radial-gradient(circle, var(--accent-dim2) 0%, transparent 65%)',
         pointerEvents: 'none',
       }} />
       <div style={{
         position: 'absolute', bottom: '5%', left: '15%',
         width: 400, height: 400, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(124,92,240,0.07) 0%, transparent 65%)',
+        background: 'radial-gradient(circle, var(--accent-dim) 0%, transparent 65%)',
         pointerEvents: 'none',
       }} />
 
@@ -71,12 +71,12 @@ export default function Register() {
         position: 'relative', zIndex: 1,
       }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c5cf0', display: 'block' }} />
-          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: '#fff' }}>NOIR</span>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
+          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>NOIR</span>
         </Link>
 
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: '#7c5cf0', marginBottom: 8, textTransform: 'uppercase' }}>Get started</p>
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', marginBottom: 32, letterSpacing: '-0.02em' }}>Create account</h1>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>Get started</p>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>Create account</h1>
 
         {error && (
           <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '11px 14px', fontSize: 13, color: '#f87171', marginBottom: 20 }}>
@@ -99,7 +99,7 @@ export default function Register() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Min. 8 characters" className="noir-input auth-input" style={{ paddingRight: 44 }} />
               <button type="button" onClick={() => setShowPass(p => !p)}
-                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#888', display: 'flex', padding: 4 }}>
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', padding: 4 }}>
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -120,17 +120,17 @@ export default function Register() {
           <GoogleLogin />
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#888' }}>
+        <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: 'var(--muted)' }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: '#7c5cf0', fontWeight: 500 }}>Sign in</Link>
+          <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 500 }}>Sign in</Link>
         </p>
       </div>
 
       <style>{`
         .auth-input { min-height: 48px !important; border-radius: 10px !important; }
-        .auth-input:focus { box-shadow: 0 0 0 3px rgba(124,92,240,0.18) !important; }
+        .auth-input:focus { box-shadow: 0 0 0 3px var(--accent-dim2) !important; }
         .auth-submit-btn { border-radius: 10px !important; transition: background 0.2s, transform 0.15s, box-shadow 0.15s !important; }
-        .auth-submit-btn:hover:not(:disabled) { transform: translateY(-2px) !important; box-shadow: 0 8px 24px rgba(124,92,240,0.35) !important; }
+        .auth-submit-btn:hover:not(:disabled) { transform: translateY(-2px) !important; box-shadow: 0 8px 24px var(--accent-border) !important; }
         @media (max-width: 480px) {
           .auth-card { padding: 28px 20px !important; }
         }
@@ -142,7 +142,7 @@ export default function Register() {
 function Field({ label, children, style }) {
   return (
     <div style={{ marginBottom: 16, ...style }}>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#888', marginBottom: 6 }}>{label}</label>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--muted)', marginBottom: 6 }}>{label}</label>
       {children}
     </div>
   )

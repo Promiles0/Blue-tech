@@ -14,7 +14,7 @@ const SEV_COLOR = {
   success: '#22c55e',
   error:   '#ef4444',
   warning: '#f59e0b',
-  info:    '#7c5cf0',
+  info:    'var(--accent)',
 }
 
 const CATEGORIES = ['all', 'shopping', 'account', 'community', 'order', 'system', 'security', 'business']
@@ -111,7 +111,7 @@ export default function AdminNotifications() {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6)
 
-  const PIE_COLORS = ['#7c5cf0', '#f59e0b', '#22c55e', '#3b82f6', '#ef4444', '#ec4899']
+  const PIE_COLORS = ['var(--accent)', '#f59e0b', '#22c55e', '#3b82f6', '#ef4444', '#ec4899']
 
   return (
     <div style={{ padding: 40 }}>
@@ -132,7 +132,7 @@ export default function AdminNotifications() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               fontSize: 12, padding: '7px 13px', borderRadius: 8, cursor: 'pointer',
-              background: paused ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.05)',
+              background: paused ? 'rgba(245,158,11,0.1)' : 'var(--glass-bg2)',
               border: `1px solid ${paused ? 'rgba(245,158,11,0.3)' : 'var(--admin-border)'}`,
               color: paused ? '#f59e0b' : 'var(--admin-muted)',
               transition: 'all 0.15s',
@@ -147,8 +147,8 @@ export default function AdminNotifications() {
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               fontSize: 12, padding: '7px 13px', borderRadius: 8, cursor: 'pointer',
-              background: 'rgba(124,92,240,0.1)', border: '1px solid rgba(124,92,240,0.25)',
-              color: '#7c5cf0', transition: 'opacity 0.15s', opacity: loading ? 0.5 : 1,
+              background: 'var(--accent-dim)', border: '1px solid var(--accent-glow)',
+              color: 'var(--accent)', transition: 'opacity 0.15s', opacity: loading ? 0.5 : 1,
             }}
           >
             <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
@@ -240,7 +240,7 @@ export default function AdminNotifications() {
               style={{
                 fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20,
                 cursor: 'pointer', transition: 'all 0.12s', border: 'none',
-                background: catFilter === c ? 'var(--admin-primary)' : 'rgba(255,255,255,0.05)',
+                background: catFilter === c ? 'var(--admin-primary)' : 'var(--glass-bg2)',
                 color: catFilter === c ? '#fff' : 'var(--admin-muted)',
               }}
             >
@@ -270,7 +270,7 @@ export default function AdminNotifications() {
               style={{
                 padding: '12px 18px',
                 borderBottom: i < displayed.length - 1 ? '1px solid var(--admin-border)' : 'none',
-                background: n.isRead ? 'transparent' : 'rgba(124,92,240,0.03)',
+                background: n.isRead ? 'transparent' : 'var(--accent-dim)',
                 display: 'flex', gap: 12, alignItems: 'flex-start',
                 transition: 'background 0.12s',
               }}
@@ -278,8 +278,8 @@ export default function AdminNotifications() {
               {/* Severity dot */}
               <div style={{
                 width: 7, height: 7, borderRadius: '50%', flexShrink: 0, marginTop: 5,
-                background: SEV_COLOR[n.severity] ?? '#7c5cf0',
-                boxShadow: n.isRead ? 'none' : `0 0 8px ${SEV_COLOR[n.severity] ?? '#7c5cf0'}55`,
+                background: SEV_COLOR[n.severity] ?? 'var(--accent)',
+                boxShadow: n.isRead ? 'none' : `0 0 8px ${SEV_COLOR[n.severity] ?? 'var(--accent)'}55`,
               }} />
 
               <div style={{ flex: 1 }}>
@@ -291,7 +291,7 @@ export default function AdminNotifications() {
                     {!n.isRead && (
                       <button
                         onClick={() => markOne(n.notificationId)}
-                        style={{ fontSize: 10, color: '#7c5cf0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                        style={{ fontSize: 10, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                       >
                         Mark read
                       </button>
@@ -305,8 +305,8 @@ export default function AdminNotifications() {
                 <div style={{ marginTop: 5, display: 'flex', gap: 6 }}>
                   <span style={{
                     fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                    color: SEV_COLOR[n.severity] ?? '#7c5cf0',
-                    background: `${SEV_COLOR[n.severity] ?? '#7c5cf0'}18`,
+                    color: SEV_COLOR[n.severity] ?? 'var(--accent)',
+                    background: `${SEV_COLOR[n.severity] ?? 'var(--accent)'}18`,
                     padding: '1px 5px', borderRadius: 3,
                   }}>
                     {n.severity}
@@ -314,7 +314,7 @@ export default function AdminNotifications() {
                   {n.category && (
                     <span style={{
                       fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                      color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.05)',
+                      color: 'rgba(255,255,255,0.3)', background: 'var(--glass-bg2)',
                       padding: '1px 5px', borderRadius: 3,
                     }}>
                       {CAT_LABEL[n.category] ?? n.category}
@@ -323,7 +323,7 @@ export default function AdminNotifications() {
                   {n.href && (
                     <button
                       onClick={() => navigate(n.href)}
-                      style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#7c5cf0', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                     >
                       View →
                     </button>

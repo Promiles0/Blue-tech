@@ -19,7 +19,7 @@ function fetchStats() {
 const STATUS_COLOR = {
   PENDING:    '#f59e0b',
   PAID:       '#3b82f6',
-  PROCESSING: '#a78bfa',
+  PROCESSING: 'var(--accent-light)',
   SHIPPED:    '#22d3ee',
   DELIVERED:  '#22c55e',
   CANCELLED:  '#ef4444',
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
           ) : (
             <ResponsiveContainer width="100%" height={272}>
               <LineChart data={data?.revenueSeries ?? []} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" />
                 <XAxis
                   dataKey="date"
                   tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
                   <Tooltip {...tooltipStyle} formatter={v => [v, 'orders']} />
                   <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                     {pipelineData.map((d, i) => (
-                      <Cell key={i} fill={STATUS_COLOR[d.status] ?? '#7c5cf0'} />
+                      <Cell key={i} fill={STATUS_COLOR[d.status] ?? 'var(--accent)'} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -175,7 +175,7 @@ export default function AdminDashboard() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', marginTop: 14 }}>
                 {pipelineData.map(d => (
                   <div key={d.status} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_COLOR[d.status] ?? '#7c5cf0', flexShrink: 0 }} />
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_COLOR[d.status] ?? 'var(--accent)', flexShrink: 0 }} />
                     <span style={{ color: 'var(--admin-muted)' }}>{d.status}</span>
                     <span style={{ fontWeight: 700, color: '#fff' }}>{d.count}</span>
                   </div>
@@ -193,7 +193,7 @@ export default function AdminDashboard() {
             </h2>
             <button
               onClick={() => navigate('/admin/orders')}
-              style={{ fontSize: 12, color: '#7c5cf0', background: 'none', border: 'none', cursor: 'pointer' }}
+              style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}
             >
               View all →
             </button>
@@ -218,7 +218,7 @@ export default function AdminDashboard() {
                     key={o.orderId}
                     onClick={() => navigate('/admin/orders')}
                     style={{ cursor: 'pointer', borderTop: '1px solid var(--admin-border)', transition: 'background 0.12s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--glass-bg)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <td style={{ padding: '10px 0', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', fontSize: 11 }}>#{o.orderId}</td>
@@ -227,8 +227,8 @@ export default function AdminDashboard() {
                     <td style={{ padding: '10px 0' }}>
                       <span style={{
                         fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                        color: STATUS_COLOR[o.status] ?? '#aaa',
-                        background: `${STATUS_COLOR[o.status] ?? '#aaa'}18`,
+                        color: STATUS_COLOR[o.status] ?? 'var(--muted)',
+                        background: `${STATUS_COLOR[o.status] ?? 'var(--muted)'}18`,
                         padding: '2px 7px', borderRadius: 4,
                       }}>
                         {o.status}

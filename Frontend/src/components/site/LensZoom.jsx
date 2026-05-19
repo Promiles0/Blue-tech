@@ -30,7 +30,7 @@ export default function LensZoom({ src, alt }) {
           left: `calc(${lens.x}% - ${LENS / 2}px)`,
           top:  `calc(${lens.y}% - ${LENS / 2}px)`,
           borderRadius: '50%',
-          border: '2px solid rgba(124,92,240,0.6)',
+          border: '2px solid var(--accent-border)',
           boxShadow: '0 0 0 1px rgba(0,0,0,0.4)',
           backgroundImage: `url(${src})`,
           backgroundSize: `${ZOOM * 100}%`,

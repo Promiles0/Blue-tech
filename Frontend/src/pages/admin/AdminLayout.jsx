@@ -46,7 +46,7 @@ export default function AdminLayout() {
             <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 13, letterSpacing: '0.14em' }}>NOIR</span>
             <span style={{
               fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--admin-primary)',
-              background: 'rgba(124,92,240,0.14)', padding: '2px 6px', borderRadius: 4,
+              background: 'var(--accent-dim2)', padding: '2px 6px', borderRadius: 4,
             }}>ADMIN</span>
           </div>
         </div>
@@ -124,7 +124,7 @@ export default function AdminLayout() {
         position="top-right"
         toastOptions={{
           style: {
-            background: '#141414',
+            background: 'var(--surface)',
             border: '1px solid #262626',
             color: '#fff',
             fontSize: '13px',

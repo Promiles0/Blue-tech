@@ -16,8 +16,8 @@ export default function NotFoundPage() {
 
       {/* Ambient orbs */}
       <div aria-hidden style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        <div className="orb-1" style={{ position: 'absolute', top: '10%', left: '10%', width: 500, height: 500, borderRadius: '50%', background: 'rgba(124,92,240,0.07)', filter: 'blur(90px)' }} />
-        <div className="orb-2" style={{ position: 'absolute', bottom: '10%', right: '10%', width: 360, height: 360, borderRadius: '50%', background: 'rgba(124,92,240,0.05)', filter: 'blur(80px)' }} />
+        <div className="orb-1" style={{ position: 'absolute', top: '10%', left: '10%', width: 500, height: 500, borderRadius: '50%', background: 'var(--accent-dim)', filter: 'blur(90px)' }} />
+        <div className="orb-2" style={{ position: 'absolute', bottom: '10%', right: '10%', width: 360, height: 360, borderRadius: '50%', background: 'var(--accent-dim)', filter: 'blur(80px)' }} />
       </div>
 
       {/* Glowing 404 */}
@@ -29,7 +29,7 @@ export default function NotFoundPage() {
       >
         <div aria-hidden style={{
           position: 'absolute', inset: 0,
-          background: 'radial-gradient(circle, rgba(124,92,240,0.22) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, var(--accent-glow) 0%, transparent 70%)',
           filter: 'blur(40px)', transform: 'scale(2.2)',
         }} />
         <p style={{
@@ -38,7 +38,7 @@ export default function NotFoundPage() {
           fontWeight: 900, lineHeight: 1,
           letterSpacing: '-0.04em',
           position: 'relative',
-          background: 'linear-gradient(135deg, #7c5cf0 0%, #a78bfa 50%, #7c5cf0 100%)',
+          background: 'linear-gradient(135deg, #354380 0%, var(--accent-light) 50%, #354380 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
@@ -56,7 +56,7 @@ export default function NotFoundPage() {
           display: 'inline-flex', alignItems: 'center', gap: 8,
           border: '1px solid #1e1e1e', borderRadius: 100,
           padding: '5px 14px', marginBottom: 20,
-          fontSize: 12, color: '#555',
+          fontSize: 12, color: 'var(--muted-dark)',
         }}
       >
         <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'block' }} />
@@ -81,7 +81,7 @@ export default function NotFoundPage() {
         initial={reduce ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.34, duration: 0.4 }}
-        style={{ color: '#666', fontSize: 15, lineHeight: 1.7, maxWidth: 360, marginBottom: 44 }}
+        style={{ color: 'var(--muted-dark)', fontSize: 15, lineHeight: 1.7, maxWidth: 360, marginBottom: 44 }}
       >
         The page you're looking for doesn't exist or has been moved.
         Let's get you back somewhere familiar.

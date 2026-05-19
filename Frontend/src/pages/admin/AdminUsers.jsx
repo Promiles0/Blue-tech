@@ -149,7 +149,7 @@ function RoleBadge({ role }) {
   return (
     <span style={{
       fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
-      background: isAdmin ? 'rgba(124,92,240,0.2)' : 'rgba(255,255,255,0.08)',
+      background: isAdmin ? 'var(--accent-dim2)' : 'var(--glass-border)',
       color: isAdmin ? 'var(--admin-primary)' : 'var(--admin-muted)',
     }}>
       {role ?? 'USER'}
@@ -162,7 +162,7 @@ const dangerBadge = {
   background: 'rgba(239,68,68,0.15)', color: 'var(--admin-danger)',
 }
 const inputStyle = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--admin-border)',
+  background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
   borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, outline: 'none',
 }
 const primaryBtn = {

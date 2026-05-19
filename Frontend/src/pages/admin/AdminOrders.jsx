@@ -10,7 +10,7 @@ const STATUSES = ['all', 'PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'
 const STATUS_COLORS = {
   PENDING:    { bg: 'rgba(245,158,11,0.15)',  color: '#f59e0b' },
   PAID:       { bg: 'rgba(34,197,94,0.15)',   color: '#22c55e' },
-  PROCESSING: { bg: 'rgba(124,92,240,0.15)',  color: '#7c5cf0' },
+  PROCESSING: { bg: 'var(--accent-dim2)',  color: 'var(--accent)' },
   SHIPPED:    { bg: 'rgba(59,130,246,0.15)',  color: '#3b82f6' },
   DELIVERED:  { bg: 'rgba(34,197,94,0.15)',   color: '#22c55e' },
   CANCELLED:  { bg: 'rgba(239,68,68,0.15)',   color: '#ef4444' },
@@ -240,7 +240,7 @@ function OrderDrawer({ orderId, onClose }) {
             {/* Shipment */}
             <Section label="Shipment">
               {order?.shipment && (
-                <div style={{ fontSize: 13, marginBottom: 14, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
+                <div style={{ fontSize: 13, marginBottom: 14, padding: '8px 12px', background: 'var(--glass-bg)', borderRadius: 8 }}>
                   <span style={{ fontWeight: 500 }}>{order.shipment.carrier}</span>
                   {order.shipment.trackingNumber && <> · <span style={{ color: 'var(--admin-muted)' }}>{order.shipment.trackingNumber}</span></>}
                   <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--admin-muted)' }}>{order.shipment.status}</span>
@@ -287,7 +287,7 @@ function Row({ label, value }) {
 }
 
 const selectStyle = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--admin-border)',
+  background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
   borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, cursor: 'pointer',
 }
 const outlineBtn = {
@@ -308,6 +308,6 @@ const ghostIconBtn = {
   transition: 'color 0.15s',
 }
 const inputStyle = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid var(--admin-border)',
+  background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
   borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, outline: 'none',
 }
