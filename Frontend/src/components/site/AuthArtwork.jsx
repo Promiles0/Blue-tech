@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 
 const ORB_VARIANTS = [
-  { size: 380, x: '60%', y: '10%',  color: 'radial-gradient(circle, rgba(124,92,240,0.35) 0%, transparent 70%)', dur: 18 },
-  { size: 260, x: '10%', y: '55%',  color: 'radial-gradient(circle, rgba(167,139,250,0.2) 0%, transparent 70%)',  dur: 24 },
+  { size: 380, x: '60%', y: '10%',  color: 'radial-gradient(circle, var(--accent-border) 0%, transparent 70%)', dur: 18 },
+  { size: 260, x: '10%', y: '55%',  color: 'radial-gradient(circle, var(--accent-dim2) 0%, transparent 70%)',  dur: 24 },
   { size: 200, x: '75%', y: '70%',  color: 'radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%)', dur: 20 },
 ]
 
@@ -40,7 +40,7 @@ export default function AuthArtwork() {
       {/* Grid overlay */}
       <div style={{
         position: 'absolute', inset: 0,
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)',
+        backgroundImage: 'linear-gradient(var(--glass-bg) 1px, transparent 1px), linear-gradient(90deg, var(--glass-bg) 1px, transparent 1px)',
         backgroundSize: '48px 48px',
       }} />
 
@@ -51,8 +51,8 @@ export default function AuthArtwork() {
           style={{
             position: 'absolute', top: s.top, left: s.left,
             width: s.w, height: s.h,
-            background: 'rgba(124,92,240,0.07)',
-            border: '1px solid rgba(124,92,240,0.12)',
+            background: 'var(--accent-dim)',
+            border: '1px solid var(--accent-dim)',
             borderRadius: 8,
             backdropFilter: 'blur(2px)',
           }}
@@ -68,7 +68,7 @@ export default function AuthArtwork() {
         display: 'flex', flexDirection: 'column', gap: 6,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#7c5cf0', display: 'block' }} />
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
           <span style={{ fontWeight: 800, fontSize: 13, letterSpacing: '0.14em', color: '#fff' }}>NOIR</span>
         </div>
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', maxWidth: 160, lineHeight: 1.6 }}>

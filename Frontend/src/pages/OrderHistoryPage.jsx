@@ -14,9 +14,9 @@ const TABS = [
 ]
 
 const STATUS_CONFIG = {
-  PENDING:    { label: 'Pending',    color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.2)'  },
+  PENDING:    { label: 'Pending',    color: 'var(--price)', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.2)'  },
   PROCESSING: { label: 'Processing', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.2)'  },
-  SHIPPED:    { label: 'Shipped',    color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)' },
+  SHIPPED:    { label: 'Shipped',    color: 'var(--accent-light)', bg: 'var(--accent-dim)', border: 'var(--accent-dim2)' },
   DELIVERED:  { label: 'Delivered',  color: '#34d399', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.2)'  },
   CANCELLED:  { label: 'Cancelled',  color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
 }
@@ -32,7 +32,6 @@ export default function OrderHistoryPage() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     apiService.orders.getUserOrders()
       .then(({ data }) => { if (!cancelled) setOrders(Array.isArray(data) ? data : []) })
       .catch(() => { if (!cancelled) setOrders([]) })
@@ -62,16 +61,15 @@ export default function OrderHistoryPage() {
   const deliveredCount = orders.filter(o => o.status === 'DELIVERED').length
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', padding: '64px 0 120px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '64px 0 120px', position: 'relative', overflow: 'hidden' }}>
       {/* Orbs */}
-      <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(124,92,240,0.07) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, var(--accent-dim) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: '5%', right: '-5%', width: '30vw', height: '30vw', background: 'radial-gradient(circle, rgba(245,158,11,0.04) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
 
       <div className="container-noir" style={{ position: 'relative', zIndex: 1, maxWidth: 860 }}>
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 40 }}>
-          
           <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff', marginBottom: 6 }}>My Orders</h1>
           <p style={{ color: 'var(--muted)', fontSize: 15 }}>Track and manage all your purchases.</p>
         </motion.div>
@@ -84,7 +82,7 @@ export default function OrderHistoryPage() {
             { label: 'Total Spent',   value: fmt(totalSpent), highlight: true },
             { label: 'Delivered',     value: deliveredCount },
           ].map(s => (
-            <div key={s.label} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, padding: '20px 24px' }}>
+            <div key={s.label} style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: '20px 24px' }}>
               <p className="label-muted" style={{ fontSize: 10, marginBottom: 10 }}>{s.label}</p>
               <p style={{ fontSize: 26, fontWeight: 800, color: s.highlight ? 'var(--price)' : '#fff' }}>{s.value}</p>
             </div>
@@ -112,7 +110,7 @@ export default function OrderHistoryPage() {
           </div>
 
           {/* Filter tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.07)', marginBottom: 32 }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--glass-border)', marginBottom: 32 }}>
             {TABS.map(t => {
               const active = tab === t.id
               const count  = counts[t.id]
@@ -127,20 +125,20 @@ export default function OrderHistoryPage() {
                     fontSize: 14, fontWeight: active ? 700 : 400,
                     border: 'none', borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
                     background: 'none',
-                    color: active ? '#fff' : '#555',
+                    color: active ? '#fff' : 'var(--muted-dark)',
                     cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
                     marginBottom: -1,
                   }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.color = '#999' }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.color = '#555' }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--muted)' }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--muted-dark)' }}
                 >
                   <t.icon size={16} style={{ flexShrink: 0 }} />
                   <span>{t.label}</span>
                   {count > 0 && (
                     <span style={{
                       fontSize: 10, fontWeight: 700, lineHeight: 1,
-                      background: active ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
-                      color: active ? '#fff' : '#555',
+                      background: active ? 'var(--accent)' : 'var(--glass-border)',
+                      color: active ? '#fff' : 'var(--muted-dark)',
                       borderRadius: 999, padding: '3px 7px',
                     }}>
                       {count}
@@ -161,11 +159,11 @@ export default function OrderHistoryPage() {
           </div>
         ) : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            style={{ textAlign: 'center', padding: '80px 40px', background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 24 }}>
+            style={{ textAlign: 'center', padding: '80px 40px', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--glass-border)', borderRadius: 24 }}>
             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--accent)' }}>
               <Package size={28} />
             </div>
-            <p style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>
+            <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
               {search ? 'No orders match your search' : tab === 'all' ? 'No orders yet' : `No ${TABS.find(t => t.id === tab)?.label.toLowerCase()} orders`}
             </p>
             <p style={{ fontSize: 14, color: 'var(--muted)', maxWidth: 300, margin: '0 auto' }}>
@@ -199,11 +197,11 @@ export default function OrderHistoryPage() {
                       style={{ textDecoration: 'none', display: 'block' }}
                     >
                       <div style={{
-                        background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)',
+                        background: 'var(--glass-bg)', border: '1px solid var(--glass-border)',
                         borderRadius: 20, padding: '22px 24px', transition: 'border-color 0.2s, transform 0.2s',
                       }}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(124,92,240,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.transform = 'translateY(0)' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-border)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.transform = 'translateY(0)' }}
                       >
                         {/* Top row */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
@@ -226,7 +224,7 @@ export default function OrderHistoryPage() {
                         {thumbs.length > 0 ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             {thumbs.map((item, idx) => (
-                              <div key={idx} style={{ width: 52, height: 52, borderRadius: 12, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+                              <div key={idx} style={{ width: 52, height: 52, borderRadius: 12, overflow: 'hidden', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', flexShrink: 0 }}>
                                 {item.imageUrl ? (
                                   <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 ) : (
@@ -237,12 +235,12 @@ export default function OrderHistoryPage() {
                               </div>
                             ))}
                             {extra > 0 && (
-                              <div style={{ width: 52, height: 52, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--muted)', flexShrink: 0 }}>
+                              <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--muted)', flexShrink: 0 }}>
                                 +{extra}
                               </div>
                             )}
                             <div style={{ marginLeft: 4 }}>
-                              <p style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>
+                              <p style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
                                 {items.length} {items.length === 1 ? 'item' : 'items'}
                               </p>
                               {items[0]?.productName && (

@@ -9,7 +9,7 @@ const SEV_COLOR = {
   success: '#22c55e',
   error:   '#ef4444',
   warning: '#f59e0b',
-  info:    '#7c5cf0',
+  info:    'var(--accent)',
 }
 
 const CATEGORY_LABEL = {
@@ -46,37 +46,55 @@ export default function AdminNotificationBell() {
     setLoading(true)
     try {
       const { data } = await api.get('/notifications/admin?limit=50')
-      setItems(data ?? [])
+      setItems(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error('fetch admin notifications error', err)
+      setItems([])
     } finally {
       setLoading(false)
     }
   }, [])
 
-  const markAllRead = async () => {
+  const markAllRead = useCallback(async () => {
     try {
-      await api.post('/notifications/admin/mark-all-read')
-      setItems(prev => prev.map(n => ({ ...n, isRead: true })))
+      await api.post('/notifications/admin/markAllRead')
+      setItems(prev => prev.map(i => ({ ...i, isRead: true })))
       fetchAdminUnreadCount()
-    } catch { /* mark-all-read is best-effort */ }
-  }
+    } catch (err) { console.error('markAllRead failed', err) }
+  }, [fetchAdminUnreadCount])
 
-  const handleOpen = async () => {
-    setOpen(true)
-    await fetchItems()
-  }
+  const handleItemClick = useCallback(async (n) => {
+    try {
+      if (!n.isRead) {
+        await api.post(`/notifications/${n.notificationId}/markRead`)
+        setItems(prev => prev.map(i => i.notificationId === n.notificationId ? { ...i, isRead: true } : i))
+        fetchAdminUnreadCount()
+      }
+    } catch (err) { console.error('markRead failed', err) }
+
+    if (n.href) {
+      navigate(n.href)
+      setOpen(false)
+    }
+  }, [navigate, fetchAdminUnreadCount])
+
+  const handleOpen = useCallback(() => {
+    if (!open) {
+      fetchItems()
+      fetchAdminUnreadCount()
+      setOpen(true)
+    } else setOpen(false)
+  }, [open, fetchItems, fetchAdminUnreadCount])
 
   useEffect(() => {
-    if (!open) return
-    const onDown = (e) => {
+    const onDocClick = (e) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target)) setOpen(false)
     }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
 
-  const handleItemClick = (n) => {
-    if (n.href) { setOpen(false); navigate(n.href) }
-  }
+  useEffect(() => { fetchAdminUnreadCount() }, [fetchAdminUnreadCount])
 
   return (
     <div ref={popoverRef} style={{ position: 'relative' }}>
@@ -167,7 +185,7 @@ export default function AdminNotificationBell() {
                       padding: '10px 14px',
                       borderBottom: '1px solid var(--admin-border)',
                       cursor: n.href ? 'pointer' : 'default',
-                      transition: 'background 0.2s',
+                      transition: 'background 0.12s',
                       display: 'flex', gap: 9, alignItems: 'flex-start',
                       background: hoverId === n.notificationId && n.href
                         ? 'rgba(255,255,255,0.04)'
@@ -176,14 +194,14 @@ export default function AdminNotificationBell() {
                   >
                     <div style={{
                       width: 6, height: 6, borderRadius: '50%', flexShrink: 0, marginTop: 5,
-                      background: SEV_COLOR[n.severity] ?? '#7c5cf0',
+                      background: SEV_COLOR[n.severity] ?? 'var(--accent)',
                     }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: n.isRead ? 400 : 600, color: n.isRead ? 'var(--admin-muted)' : '#fff' }}>
                           {n.title}
                         </span>
-                        {!n.isRead && <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#7c5cf0', flexShrink: 0, marginTop: 4 }} />}
+                        {!n.isRead && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, marginTop: 4 }} />}
                       </div>
                       {n.body && (
                         <div style={{ fontSize: 11, color: 'var(--admin-muted)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -193,7 +211,7 @@ export default function AdminNotificationBell() {
                       <div style={{ marginTop: 3, display: 'flex', gap: 6, alignItems: 'center' }}>
                         <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>{timeAgo(n.createdAt)}</span>
                         {n.category && (
-                          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.04)', padding: '1px 4px', borderRadius: 3 }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', background: 'var(--glass-bg)', padding: '1px 4px', borderRadius: 3 }}>
                             {CATEGORY_LABEL[n.category] ?? n.category}
                           </span>
                         )}

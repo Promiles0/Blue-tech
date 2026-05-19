@@ -39,20 +39,20 @@ export default function CategoryPage() {
     <div style={{ padding: '48px 0 80px' }}>
       <div className="container-noir">
         <Link to="/products"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#888', marginBottom: 36, transition: 'color 0.2s' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.color = '#888'}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', marginBottom: 36, transition: 'color 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
         >
           <ArrowLeft size={14} /> All products
         </Link>
 
         <div style={{ marginBottom: 40 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: '#7c5cf0', textTransform: 'uppercase', marginBottom: 8 }}>Category</p>
-          <h1 style={{ fontSize: 36, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>Category</p>
+          <h1 style={{ fontSize: 36, fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' }}>
             {category?.name ?? slug}
           </h1>
           {!loading && (
-            <p style={{ fontSize: 13, color: '#555', marginTop: 6 }}>{products.length} product{products.length !== 1 ? 's' : ''}</p>
+            <p style={{ fontSize: 13, color: 'var(--muted-dark)', marginTop: 6 }}>{products.length} product{products.length !== 1 ? 's' : ''}</p>
           )}
         </div>
 
@@ -62,13 +62,13 @@ export default function CategoryPage() {
           </div>
         ) : !category ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <p style={{ color: '#888', marginBottom: 16 }}>Category not found.</p>
-            <Link to="/products" style={{ color: '#7c5cf0', fontSize: 14 }}>Browse all products →</Link>
+            <p style={{ color: 'var(--muted)', marginBottom: 16 }}>Category not found.</p>
+            <Link to="/products" style={{ color: 'var(--accent)', fontSize: 14 }}>Browse all products →</Link>
           </div>
         ) : products.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <p style={{ color: '#888', marginBottom: 16 }}>No products in this category yet.</p>
-            <Link to="/products" style={{ color: '#7c5cf0', fontSize: 14 }}>Browse all products →</Link>
+            <p style={{ color: 'var(--muted)', marginBottom: 16 }}>No products in this category yet.</p>
+            <Link to="/products" style={{ color: 'var(--accent)', fontSize: 14 }}>Browse all products →</Link>
           </div>
         ) : (
           <div className="grid-4">
@@ -84,7 +84,7 @@ export default function CategoryPage() {
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 48 }}>
             {[...Array(Math.min(totalPages, 10))].map((_, i) => (
               <button key={i} onClick={() => setPage(i)}
-                style={{ width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 500, background: i === page ? '#7c5cf0' : '#141414', color: i === page ? '#fff' : '#888', border: `1px solid ${i === page ? '#7c5cf0' : '#2a2a2a'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
+                style={{ width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 500, background: i === page ? 'var(--accent)' : 'var(--surface)', color: i === page ? 'var(--brand-text)' : 'var(--muted)', border: `1px solid ${i === page ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
                 {i + 1}
               </button>
             ))}

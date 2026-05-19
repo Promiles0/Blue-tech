@@ -16,15 +16,11 @@ export default function MarqueeStrip() {
     <div
       className="marquee"
       style={{
-        background: 'rgba(20,20,20,0.6)',
-        color: 'var(--muted)',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--accent)',
+        color: 'rgba(255,255,255,0.9)',
         overflow: 'hidden',
-        padding: '12px 0',
+        padding: '11px 0',
         flexShrink: 0,
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
       }}
     >
       <div
@@ -49,7 +45,7 @@ export default function MarqueeStrip() {
               fontWeight: 600,
               letterSpacing: '0.2em',
               textTransform: 'uppercase',
-              color: 'var(--muted)',
+              color: 'rgba(255,255,255,0.9)',
             }}
           >
             <span
@@ -58,7 +54,7 @@ export default function MarqueeStrip() {
                 width: 4,
                 height: 4,
                 borderRadius: '50%',
-                background: 'var(--accent)',
+                background: 'rgba(255,255,255,0.5)',
               }}
             />
             {msg}

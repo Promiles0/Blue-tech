@@ -176,7 +176,7 @@ export default function AdminCoupons() {
             <tbody>
               {coupons.map(c => (
                 <tr key={c.couponId} style={{ borderBottom: '1px solid var(--admin-border)' }}>
-                  <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, color: '#a78bfa', fontFamily: 'monospace', letterSpacing: '0.06em' }}>{c.code}</td>
+                  <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, color: 'var(--accent-light)', fontFamily: 'monospace', letterSpacing: '0.06em' }}>{c.code}</td>
                   <td style={{ padding: '12px 14px', fontSize: 12, color: 'var(--admin-muted)' }}>{c.kind}</td>
                   <td style={{ padding: '12px 14px', fontSize: 13, color: '#fff', fontWeight: 600 }}>
                     {c.kind === 'PERCENT' ? `${c.value}%` : `$${parseFloat(c.value).toFixed(2)}`}
@@ -194,8 +194,8 @@ export default function AdminCoupons() {
                     <span style={{
                       fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
                       padding: '3px 9px', borderRadius: 100,
-                      color: c.isActive ? '#34d399' : '#888',
-                      background: c.isActive ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.05)',
+                      color: c.isActive ? '#34d399' : 'var(--muted)',
+                      background: c.isActive ? 'rgba(52,211,153,0.1)' : 'var(--glass-bg2)',
                       border: `1px solid ${c.isActive ? 'rgba(52,211,153,0.2)' : 'transparent'}`,
                     }}>
                       {c.isActive ? 'Active' : 'Paused'}

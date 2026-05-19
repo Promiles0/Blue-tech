@@ -158,7 +158,7 @@ export default function HeroCarousel() {
     return (
       <div style={{
         aspectRatio: '4/5', borderRadius: 16,
-        background: 'linear-gradient(135deg, #111 0%, #1a1a1a 100%)',
+        background: 'var(--surface)',
       }} />
     )
   }
@@ -167,7 +167,7 @@ export default function HeroCarousel() {
 
   return (
     <div
-      style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '4/5', background: '#111' }}
+      style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '4/5', background: 'var(--surface)' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
@@ -196,10 +196,10 @@ export default function HeroCarousel() {
             />
           ) : (
             <div style={{
-              width: '100%', height: '100%', background: '#1a1a1a',
+              width: '100%', height: '100%', background: 'var(--card)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <span style={{ color: '#333', fontSize: 13 }}>No image available</span>
+              <span style={{ color: 'var(--muted)', fontSize: 13 }}>No image available</span>
             </div>
           )}
 
@@ -225,7 +225,7 @@ export default function HeroCarousel() {
             }}>
               {slide.name}
             </p>
-            <p style={{ fontSize: 15, fontWeight: 600, color: '#f59e0b' }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--price)' }}>
               ${parseFloat(slide.price).toFixed(0)}
             </p>
           </motion.div>
@@ -292,7 +292,7 @@ export default function HeroCarousel() {
               width: i === current ? 22 : 6,
               height: 6,
               borderRadius: 3,
-              background: i === current ? '#7c5cf0' : 'rgba(255,255,255,0.28)',
+              background: i === current ? 'var(--accent)' : 'rgba(255,255,255,0.28)',
               border: 'none', cursor: 'pointer', padding: 0,
               transition: 'width 0.35s ease, background 0.25s ease',
             }}
@@ -304,12 +304,12 @@ export default function HeroCarousel() {
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         height: 2, zIndex: 10,
-        background: 'rgba(255,255,255,0.08)',
+        background: 'var(--glass-border)',
       }}>
         <div style={{
           height: '100%',
           width: `${progress * 100}%`,
-          background: '#7c5cf0',
+          background: 'var(--accent)',
           transition: 'width 50ms linear',
         }} />
       </div>

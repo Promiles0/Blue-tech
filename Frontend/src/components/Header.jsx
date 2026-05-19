@@ -1,18 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X } from 'lucide-react'
+import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X, Moon, Sun } from 'lucide-react'
 import NotificationBell from './site/NotificationBell'
 import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useUI } from '../context/UIContext'
+import { useTheme } from '../context/ThemeContext'
 import apiService from '../api/service'
 
 export default function Header() {
   const { user, logout, isAdmin }                           = useAuth()
   const { count }                                           = useCart()
   const { setCartOpen, setMobileNavOpen }                   = useUI()
+  const { theme, toggleTheme }                              = useTheme()
   const navigate                                            = useNavigate()
   const [userMenuOpen, setUserMenuOpen]                     = useState(false)
   const [browseOpen, setBrowseOpen]                         = useState(false)
@@ -52,7 +54,7 @@ export default function Header() {
     prevCountRef.current = count
   }, [count])
 
-  // Close user menu and browse menu on outside click
+  // Close menus on outside click
   useEffect(() => {
     const onDown = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false)
@@ -89,14 +91,13 @@ export default function Header() {
         aria-hidden
         style={{
           position: 'absolute', inset: 0,
-          backgroundColor: bgStyle,
+          backgroundColor: theme === 'light' ? 'var(--glass-bg)' : bgStyle,
           backdropFilter: filterStyle,
           WebkitBackdropFilter: filterStyle,
           borderBottom: '1px solid',
-          borderBottomColor: borderStyle,
-          // Subtle inner highlight for the "liquid" sheen
+          borderBottomColor: theme === 'light' ? 'var(--border)' : borderStyle,
           boxShadow:
-            'inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(255,255,255,0.02)',
+            'inset 0 1px 0 var(--overlay-strong), inset 0 -1px 0 var(--glass-bg)',
         }}
       />
       {/* Soft top gradient sheen */}
@@ -105,7 +106,7 @@ export default function Header() {
         style={{
           position: 'absolute', inset: 0,
           background:
-            'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 60%), radial-gradient(80% 120% at 50% -20%, rgba(124,92,240,0.10), transparent 60%)',
+            'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 60%), radial-gradient(80% 120% at 50% -20%, var(--accent-dim), transparent 60%)',
           pointerEvents: 'none',
         }}
       />
@@ -117,8 +118,8 @@ export default function Header() {
 
         {/* Logo */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c5cf0', display: 'block' }} />
-          <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em' }}>NOIR</span>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
+          <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>NOIR</span>
         </Link>
 
         {/* Center nav — hidden on mobile */}
@@ -126,9 +127,9 @@ export default function Header() {
           <Link
             to="/products"
             className="story-link"
-            style={{ fontSize: 14, fontWeight: 400, color: '#fff', transition: 'color 0.2s' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#ccc' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#fff' }}
+            style={{ fontSize: 14, fontWeight: 400, color: 'var(--text)', transition: 'color 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
           >
             Shop
           </Link>
@@ -138,11 +139,11 @@ export default function Header() {
               onClick={() => setBrowseOpen(open => !open)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 14, fontWeight: 400, color: '#fff',
+                fontSize: 14, fontWeight: 400, color: 'var(--text)',
                 background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.2s', padding: 0,
               }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#ccc' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#fff' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
             >
               Browse
               <ChevronDown size={14} style={{ transform: browseOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
@@ -156,11 +157,11 @@ export default function Header() {
                     position: 'fixed',
                     top: 'var(--header-h, 58px)',
                     left: 0, right: 0,
-                    background: 'rgba(10,10,12,0.97)',
+                    background: 'var(--bg)',
                     backdropFilter: 'blur(24px)',
                     WebkitBackdropFilter: 'blur(24px)',
-                    borderBottom: '1px solid rgba(255,255,255,0.07)',
-                    boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+                    borderBottom: '1px solid var(--glass-border)',
+                    boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
                     zIndex: 99,
                     padding: '36px 0 40px',
                   }}
@@ -170,10 +171,10 @@ export default function Header() {
 
                       {/* Left — label */}
                       <div>
-                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#7c5cf0', marginBottom: 12 }}>
+                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>
                           Shop by category
                         </p>
-                        <p style={{ fontSize: 13, color: '#444', lineHeight: 1.6, maxWidth: 200 }}>
+                        <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 200 }}>
                           Explore our full range of considered products.
                         </p>
                         <Link
@@ -182,7 +183,7 @@ export default function Header() {
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
                             marginTop: 20, fontSize: 13, fontWeight: 600,
-                            color: '#7c5cf0', textDecoration: 'none',
+                            color: 'var(--accent)', textDecoration: 'none',
                             transition: 'opacity 0.15s',
                           }}
                           onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
@@ -203,23 +204,21 @@ export default function Header() {
                               display: 'block',
                               padding: '14px 16px',
                               borderRadius: 12,
-                              background: 'rgba(255,255,255,0.03)',
-                              border: '1px solid rgba(255,255,255,0.06)',
-                              color: '#fff',
+                              background: 'var(--glass-bg)',
+                              border: '1px solid var(--glass-border)',
+                              color: 'var(--text)',
                               textDecoration: 'none',
                               fontSize: 14,
                               fontWeight: 500,
                               transition: 'background 0.15s, color 0.15s, border-color 0.15s',
                             }}
                             onMouseEnter={e => {
-                              e.currentTarget.style.background = 'rgba(124,92,240,0.1)'
-                              e.currentTarget.style.color = '#fff'
-                              e.currentTarget.style.borderColor = 'rgba(124,92,240,0.25)'
+                              e.currentTarget.style.background = 'var(--accent-dim)'
+                              e.currentTarget.style.borderColor = 'var(--accent-border)'
                             }}
                             onMouseLeave={e => {
-                              e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
-                              e.currentTarget.style.color = '#fff'
-                              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                              e.currentTarget.style.background = 'var(--glass-bg)'
+                              e.currentTarget.style.borderColor = 'var(--glass-border)'
                             }}
                           >
                             {cat.name}
@@ -257,13 +256,13 @@ export default function Header() {
                 >
                   <div style={{
                     display: 'flex', alignItems: 'center',
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(124,92,240,0.35)',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--accent-border)',
                     borderRadius: 10, padding: '0 12px',
                     height: 36, width: '100%',
-                    boxShadow: '0 0 0 3px rgba(124,92,240,0.08)',
+                    boxShadow: '0 0 0 3px var(--accent-dim)',
                   }}>
-                    <Search size={14} style={{ color: '#7c5cf0', flexShrink: 0, marginRight: 8 }} />
+                    <Search size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginRight: 8 }} />
                     <input
                       ref={searchInputRef}
                       value={searchQuery}
@@ -271,7 +270,7 @@ export default function Header() {
                       placeholder="Search…"
                       style={{
                         flex: 1, background: 'none', border: 'none',
-                        outline: 'none', color: '#fff', fontSize: 13,
+                        outline: 'none', color: 'var(--text)', fontSize: 13,
                         fontFamily: 'inherit',
                       }}
                     />
@@ -279,7 +278,7 @@ export default function Header() {
                       <button
                         type="button"
                         onClick={() => setSearchQuery('')}
-                        style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', display: 'flex', padding: 0, marginLeft: 4 }}
+                        style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', padding: 0, marginLeft: 4 }}
                       >
                         <X size={12} />
                       </button>
@@ -297,6 +296,10 @@ export default function Header() {
             </IconBtn>
           </div>
 
+          <IconBtn onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+          </IconBtn>
+
           {/* Only show customer icons if not admin */}
           {!isAdmin && (
             <Link to="/wishlist">
@@ -308,29 +311,29 @@ export default function Header() {
 
           {/* Cart → drawer — hidden for admin */}
           {!isAdmin && (
-          <div style={{ position: 'relative' }}>
-            <IconBtn onClick={() => setCartOpen(true)}>
-              <ShoppingBag size={18} />
-            </IconBtn>
-            {count > 0 && (
-              <motion.span
-                key={badgeKey}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                style={{
-                  position: 'absolute', top: 2, right: 2,
-                  background: '#7c5cf0', color: '#fff',
-                  borderRadius: '50%', width: 15, height: 15,
-                  fontSize: 9, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  pointerEvents: 'none',
-                }}
-              >
-                {count > 9 ? '9+' : count}
-              </motion.span>
-            )}
-          </div>
+            <div style={{ position: 'relative' }}>
+              <IconBtn onClick={() => setCartOpen(true)}>
+                <ShoppingBag size={18} />
+              </IconBtn>
+              {count > 0 && (
+                <motion.span
+                  key={badgeKey}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                  style={{
+                    position: 'absolute', top: 2, right: 2,
+                    background: 'var(--accent)', color: 'var(--brand-text)',
+                    borderRadius: '50%', width: 15, height: 15,
+                    fontSize: 9, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {count > 9 ? '9+' : count}
+                </motion.span>
+              )}
+            </div>
           )}
 
           {/* Account — avatar circle when logged in */}
@@ -340,15 +343,15 @@ export default function Header() {
                 onClick={() => setUserMenuOpen(o => !o)}
                 style={{
                   width: 32, height: 32, borderRadius: '50%',
-                  background: userMenuOpen ? '#6b4fd8' : '#7c5cf0',
-                  color: '#fff', fontSize: 13, fontWeight: 700,
+                  background: userMenuOpen ? 'var(--accent-hover)' : 'var(--accent)',
+                  color: 'var(--brand-text)', fontSize: 13, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: `2px solid ${userMenuOpen ? 'rgba(124,92,240,0.6)' : 'transparent'}`,
+                  border: `2px solid ${userMenuOpen ? 'var(--accent-border)' : 'transparent'}`,
                   cursor: 'pointer', transition: 'background 0.2s, border-color 0.2s',
                   outline: 'none',
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = '#6b4fd8'}
-                onMouseLeave={e => { if (!userMenuOpen) e.currentTarget.style.background = '#7c5cf0' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
+                onMouseLeave={e => { if (!userMenuOpen) e.currentTarget.style.background = 'var(--accent)' }}
                 title={user.name ?? user.email}
               >
                 {(user.name ?? user.email ?? 'U').charAt(0).toUpperCase()}
@@ -356,24 +359,24 @@ export default function Header() {
               {userMenuOpen && (
                 <div style={{
                   position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-                  background: '#141414', border: '1px solid #2a2a2a',
+                  background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 14, padding: '6px', minWidth: 180,
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.7)', zIndex: 100,
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.3)', zIndex: 100,
                 }}>
                   {/* User info header */}
-                  <div style={{ padding: '10px 12px 10px', borderBottom: '1px solid #222', marginBottom: 4 }}>
+                  <div style={{ padding: '10px 12px 10px', borderBottom: '1px solid var(--border)', marginBottom: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
                         width: 30, height: 30, borderRadius: '50%',
-                        background: '#7c5cf0', color: '#fff',
+                        background: 'var(--accent)', color: 'var(--brand-text)',
                         fontSize: 12, fontWeight: 700,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                       }}>
                         {(user.name ?? user.email ?? 'U').charAt(0).toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: '#fff', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</p>
-                        <p style={{ fontSize: 11, color: '#555', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</p>
+                        <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</p>
                       </div>
                     </div>
                   </div>
@@ -381,11 +384,11 @@ export default function Header() {
                   {!isAdmin && <DropdownItem to="/orders"        icon={<Package size={14} />}  onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>}
                   {!isAdmin && <DropdownItem to="/notifications" icon={<Bell size={14} />}     onClick={() => setUserMenuOpen(false)}>Notifications</DropdownItem>}
                   {isAdmin && (
-                    <DropdownItem to="/admin" icon={<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: '#7c5cf0' }}>ADM</span>} onClick={() => setUserMenuOpen(false)}>
+                    <DropdownItem to="/admin" icon={<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--accent)' }}>ADM</span>} onClick={() => setUserMenuOpen(false)}>
                       Admin panel
                     </DropdownItem>
                   )}
-                  <div style={{ height: 1, background: '#2a2a2a', margin: '4px 6px' }} />
+                  <div style={{ height: 1, background: 'var(--border)', margin: '4px 6px' }} />
                   <DropdownItem danger icon={<LogOut size={14} />} onClick={() => { logout(); setUserMenuOpen(false); navigate('/') }}>
                     Sign out
                   </DropdownItem>
@@ -400,9 +403,9 @@ export default function Header() {
           <button
             onClick={() => setMobileNavOpen(true)}
             className="mobile-menu-btn"
-            style={{ background: 'none', border: 'none', color: '#fff', padding: 8, alignItems: 'center', cursor: 'pointer', borderRadius: 6, transition: 'color 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
-            onMouseLeave={e => e.currentTarget.style.color = '#fff'}
+            style={{ background: 'none', border: 'none', color: 'var(--text)', padding: 8, alignItems: 'center', cursor: 'pointer', borderRadius: 6, transition: 'color 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--muted)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text)'}
           >
             <Menu size={20} />
           </button>
@@ -418,14 +421,14 @@ function IconBtn({ children, onClick, title, active }) {
       onClick={onClick}
       title={title}
       style={{
-        background: active ? 'rgba(124,92,240,0.12)' : 'none',
+        background: active ? 'var(--accent-dim)' : 'none',
         border: 'none',
-        color: active ? '#a78bfa' : '#fff',
+        color: active ? 'var(--accent-light)' : 'var(--text)',
         padding: 8, display: 'flex', alignItems: 'center',
         transition: 'color 0.2s, background 0.2s', borderRadius: 8, cursor: 'pointer',
       }}
-      onMouseEnter={e => { e.currentTarget.style.color = '#ccc'; if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
-      onMouseLeave={e => { e.currentTarget.style.color = active ? '#a78bfa' : '#fff'; e.currentTarget.style.background = active ? 'rgba(124,92,240,0.12)' : 'none' }}
+      onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)'; if (!active) e.currentTarget.style.background = 'var(--overlay-hover)' }}
+      onMouseLeave={e => { e.currentTarget.style.color = active ? 'var(--accent-light)' : 'var(--text)'; e.currentTarget.style.background = active ? 'var(--accent-dim)' : 'none' }}
     >
       {children}
     </button>
@@ -437,7 +440,7 @@ function DropdownItem({ to, icon, onClick, danger, children }) {
     display: 'flex', alignItems: 'center', gap: 9,
     width: '100%', padding: '9px 10px', borderRadius: 8,
     fontSize: 13, fontWeight: 500, border: 'none', background: 'none',
-    color: danger ? '#f87171' : '#fff',
+    color: danger ? '#f87171' : 'var(--text)',
     cursor: 'pointer', transition: 'background 0.12s, color 0.12s',
     textDecoration: 'none',
   }
@@ -448,7 +451,7 @@ function DropdownItem({ to, icon, onClick, danger, children }) {
         to={to}
         onClick={onClick}
         style={base}
-        onMouseEnter={e => Object.assign(e.currentTarget.style, { background: '#1e1e1e', color: '#fff' })}
+        onMouseEnter={e => Object.assign(e.currentTarget.style, { background: 'var(--overlay-hover)', color: 'var(--text)' })}
         onMouseLeave={e => Object.assign(e.currentTarget.style, { background: 'none', color: base.color })}
       >
         {icon}{children}
@@ -459,7 +462,7 @@ function DropdownItem({ to, icon, onClick, danger, children }) {
     <button
       onClick={onClick}
       style={base}
-      onMouseEnter={e => Object.assign(e.currentTarget.style, { background: danger ? 'rgba(239,68,68,0.08)' : '#1e1e1e', color: danger ? '#f87171' : '#fff' })}
+      onMouseEnter={e => Object.assign(e.currentTarget.style, { background: danger ? 'var(--danger-soft)' : 'var(--overlay-hover)', color: danger ? 'var(--error)' : 'var(--text)' })}
       onMouseLeave={e => Object.assign(e.currentTarget.style, { background: 'none', color: base.color })}
     >
       {icon}{children}

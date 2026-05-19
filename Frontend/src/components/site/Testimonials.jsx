@@ -21,7 +21,7 @@ function Card({ name, rating, text }) {
         ))}
       </div>
       <p style={{ fontSize: 14, color: '#ccc', lineHeight: 1.65, marginBottom: 14 }}>"{text}"</p>
-      <p style={{ fontSize: 11, fontWeight: 700, color: '#555', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{name}</p>
+      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted-dark)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{name}</p>
     </div>
   )
 }
@@ -74,7 +74,7 @@ export default function Testimonials() {
   return (
     <section style={{ padding: '72px 0', overflow: 'hidden' }}>
       <div className="container-noir" style={{ marginBottom: 40 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 8 }}>TESTIMONIALS</p>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 8 }}>TESTIMONIALS</p>
         <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em' }}>
           What customers say
         </h2>

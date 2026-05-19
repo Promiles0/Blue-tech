@@ -144,9 +144,9 @@ export default function Home() {
               transition={{ duration: 0.4 }}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
-                border: '1px solid #1e1e1e', borderRadius: 100,
+                border: '1px solid var(--border)', borderRadius: 100,
                 padding: '6px 14px', marginBottom: 28,
-                fontSize: 13, color: '#555',
+                fontSize: 13, color: 'var(--muted-dark)',
               }}
             >
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'block' }} />
@@ -159,10 +159,10 @@ export default function Home() {
               fontWeight: 900, lineHeight: 1.05,
               letterSpacing: '-0.03em',
               marginBottom: 22,
-              color: '#fff',
+              color: 'var(--text)',
             }}>
               <StaggeredHeadline lines={['Considered', 'objects.']} />
-              <span style={{ color: '#7c5cf0', display: 'block', marginTop: '0.05em' }}>
+              <span style={{ color: 'var(--accent)', display: 'block', marginTop: '0.05em' }}>
                 <RotatingTagline />
               </span>
             </h1>
@@ -171,7 +171,7 @@ export default function Home() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.65 }}
-              style={{ color: '#888', fontSize: 16, lineHeight: 1.75, maxWidth: 420, marginBottom: 36 }}
+              style={{ color: 'var(--muted)', fontSize: 16, lineHeight: 1.75, maxWidth: 420, marginBottom: 36 }}
             >
               A curated collection of audio, wearables, and computing —
               selected for people who choose what surrounds them with care.
@@ -213,7 +213,7 @@ export default function Home() {
 
       {/* ── Category tabs ──────────────────────────────────── */}
       {categories.length > 0 && (
-        <section style={{ borderTop: '1px solid #141414', borderBottom: '1px solid #141414', overflowX: 'auto' }}>
+        <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
           <div className="container-noir" style={{ display: 'flex', minWidth: 560 }}>
             {categories.map(cat => (
               <button
@@ -222,14 +222,14 @@ export default function Home() {
                 style={{
                   flex: 1, padding: '18px 8px',
                   fontSize: 14, fontWeight: 500,
-                  color: activeCategory === cat.name ? '#fff' : '#555',
+                  color: activeCategory === cat.name ? 'var(--text)' : 'var(--muted-dark)',
                   background: 'none', border: 'none',
-                  borderBottom: `2px solid ${activeCategory === cat.name ? '#7c5cf0' : 'transparent'}`,
+                  borderBottom: `2px solid ${activeCategory === cat.name ? 'var(--accent)' : 'transparent'}`,
                   cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
                   whiteSpace: 'nowrap',
                 }}
-                onMouseEnter={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = '#bbb' }}
-                onMouseLeave={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = '#555' }}
+                onMouseEnter={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = 'var(--text-secondary)' }}
+                onMouseLeave={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = 'var(--muted-dark)' }}
               >
                 {cat.name}
               </button>
@@ -244,14 +244,14 @@ export default function Home() {
           <Reveal>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
               <div>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#7c5cf0', marginBottom: 6 }}>LATEST ARRIVALS</p>
-                <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>New this season</h2>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 6 }}>LATEST ARRIVALS</p>
+                <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }}>New this season</h2>
               </div>
               <Link
                 to="/products"
-                style={{ fontSize: 14, color: '#555', display: 'flex', alignItems: 'center', gap: 4, transition: 'color 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                onMouseLeave={e => e.currentTarget.style.color = '#555'}
+                style={{ fontSize: 14, color: 'var(--muted-dark)', display: 'flex', alignItems: 'center', gap: 4, transition: 'color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
               >
                 View all <ArrowRight size={14} />
               </Link>
@@ -287,7 +287,7 @@ export default function Home() {
               minHeight: 400,
             }}>
               <Parallax speed={0.06}>
-                <div style={{ borderRadius: 16, overflow: 'hidden', height: '100%', minHeight: 360, background: '#141414', position: 'relative' }}>
+                <div style={{ borderRadius: 16, overflow: 'hidden', height: '100%', minHeight: 360, background: 'var(--surface)', position: 'relative' }}>
                   <img
                     src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=800&q=80"
                     alt="Craft"
@@ -299,10 +299,10 @@ export default function Home() {
                     display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
                     padding: 28,
                   }}>
-                    <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6, color: '#fff' }}>
+                    <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6, color: 'var(--brand-text)' }}>
                       Craft before convenience
                     </p>
-                    <p style={{ fontSize: 14, color: '#aaa', lineHeight: 1.65 }}>
+                    <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.65 }}>
                       Every product is chosen for how it feels to live with, not just how it performs on a spec sheet.
                     </p>
                   </div>
@@ -313,10 +313,10 @@ export default function Home() {
                 {[
                   { img: 'https://images.unsplash.com/photo-1655560378428-7605bda51749?q=80&w=2069&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', label: 'Precision audio' },
                 ].map(({ img, label }) => (
-                  <div key={label} style={{ flex: 1, borderRadius: 16, overflow: 'hidden', background: '#141414', position: 'relative', minHeight: 180 }}>
+                  <div key={label} style={{ flex: 1, borderRadius: 16, overflow: 'hidden', background: 'var(--surface)', position: 'relative', minHeight: 180 }}>
                     <img src={img} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 55%)', display: 'flex', alignItems: 'flex-end', padding: 18 }}>
-                      <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, color: '#fff' }}>{label}</span>
+                      <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--brand-text)' }}>{label}</span>
                     </div>
                   </div>
                 ))}
@@ -331,7 +331,7 @@ export default function Home() {
         <section style={{ padding: '0 0 72px' }}>
           <div className="container-noir">
             <div style={{
-              background: '#0f0f0f', border: '1px solid #141414',
+              background: 'var(--bg)', border: '1px solid var(--border)',
               borderRadius: 16, padding: '44px 48px',
               display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32,
             }}>
@@ -341,9 +341,9 @@ export default function Home() {
                 { icon: <RotateCcw size={22} />, title: '30-day returns', desc: "If it isn't right, send it back." },
               ].map(({ icon, title, desc }) => (
                 <div key={title}>
-                  <div style={{ color: '#7c5cf0', marginBottom: 12 }}>{icon}</div>
-                  <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, marginBottom: 6, color: '#fff' }}>{title}</p>
-                  <p style={{ fontSize: 13, color: '#555', lineHeight: 1.55 }}>{desc}</p>
+                  <div style={{ color: 'var(--accent)', marginBottom: 12 }}>{icon}</div>
+                  <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>{title}</p>
+                  <p style={{ fontSize: 13, color: 'var(--muted-dark)', lineHeight: 1.55 }}>{desc}</p>
                 </div>
               ))}
             </div>

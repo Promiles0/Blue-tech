@@ -24,7 +24,7 @@ export default function Footer() {
   const hasMore = categories.length > CAT_LIMIT
 
   return (
-    <footer style={{ borderTop: '1px solid #141414', marginTop: 0 }}>
+    <footer style={{ borderTop: '1px solid var(--border)', marginTop: 0, background: 'var(--bg-surface-2)' }}>
       <div className="container-noir" style={{ padding: '60px 24px 0' }}>
         <div style={{
           display: 'grid',
@@ -37,10 +37,10 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#7c5cf0', display: 'block' }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
               <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em' }}>NOIR</span>
             </div>
-            <p style={{ color: '#555', fontSize: 14, lineHeight: 1.7, maxWidth: 220, marginBottom: 20 }}>
+            <p style={{ color: 'var(--muted-dark)', fontSize: 14, lineHeight: 1.7, maxWidth: 220, marginBottom: 20 }}>
               Considered objects for a quieter, more deliberate digital life.
             </p>
             {/* Social */}
@@ -55,12 +55,12 @@ export default function Footer() {
                   href={href}
                   style={{
                     width: 32, height: 32, borderRadius: 8,
-                    border: '1px solid #1e1e1e',
+                    border: '1px solid var(--border)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', transition: 'color 0.2s, border-color 0.2s',
+                    color: 'var(--text)', transition: 'color 0.2s, border-color 0.2s',
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#ccc'; e.currentTarget.style.borderColor = '#2e2e2e' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#1e1e1e' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.borderColor = 'var(--border-hover)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.borderColor = 'var(--border)' }}
                 >
                   <Icon size={14} />
                 </a>
@@ -70,11 +70,11 @@ export default function Footer() {
 
           {/* SHOP column — inline category expand */}
           <div>
-            <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: '#888', marginBottom: 16 }}>SHOP</h4>
+            <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: 'var(--muted)', marginBottom: 16 }}>SHOP</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Link to="/products" className="story-link" style={{ fontSize: 14, color: '#555', transition: 'color 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                onMouseLeave={e => e.currentTarget.style.color = '#555'}>
+              <Link to="/products" className="story-link" style={{ fontSize: 14, color: 'var(--muted-dark)', transition: 'color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
                 All products
               </Link>
               {visibleCats.map(cat => (
@@ -82,9 +82,9 @@ export default function Footer() {
                   key={cat.categoryId}
                   to={`/products?category=${encodeURIComponent(cat.name ?? '')}`}
                   className="story-link"
-                  style={{ fontSize: 14, color: '#555', transition: 'color 0.2s' }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-                  onMouseLeave={e => e.currentTarget.style.color = '#555'}
+                  style={{ fontSize: 14, color: 'var(--muted-dark)', transition: 'color 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
                 >
                   {cat.name}
                 </Link>
@@ -93,7 +93,7 @@ export default function Footer() {
                 <button
                   onClick={() => setShowAllCats(v => !v)}
                   style={{
-                    fontSize: 13, color: '#7c5cf0', background: 'none',
+                    fontSize: 13, color: 'var(--accent)', background: 'none',
                     border: 'none', padding: 0, cursor: 'pointer',
                     textAlign: 'left', marginTop: 2,
                     transition: 'opacity 0.2s',
@@ -111,19 +111,19 @@ export default function Footer() {
         </div>
 
 <div style={{
-          borderTop: '1px solid #141414', padding: '20px 0',
+          borderTop: '1px solid var(--border)', padding: '20px 0',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           flexWrap: 'wrap', gap: 12,
         }}>
-          <p style={{ color: '#555', fontSize: 13 }}>© 2026 NOIR Studio. All rights reserved.</p>
+          <p style={{ color: 'var(--muted-dark)', fontSize: 13 }}>© 2026 NOIR Studio. All rights reserved.</p>
           <div style={{ display: 'flex', gap: 20 }}>
             {[['Privacy', '#'], ['Terms', '#'], ['Cookies', '#']].map(([label, href]) => (
               <a
                 key={label}
                 href={href}
-                style={{ fontSize: 13, color: '#555', transition: 'color 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#888'}
-                onMouseLeave={e => e.currentTarget.style.color = '#555'}
+                style={{ fontSize: 13, color: 'var(--muted-dark)', transition: 'color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--muted)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
               >
                 {label}
               </a>
@@ -138,16 +138,16 @@ export default function Footer() {
 function FooterCol({ title, links }) {
   return (
     <div>
-      <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: '#888', marginBottom: 16 }}>{title}</h4>
+      <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: 'var(--muted)', marginBottom: 16 }}>{title}</h4>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {links.map(([label, to]) => (
           <Link
             key={label}
             to={to}
             className="story-link"
-            style={{ fontSize: 14, color: '#555', transition: 'color 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#fff'}
-            onMouseLeave={e => e.currentTarget.style.color = '#555'}
+            style={{ fontSize: 14, color: 'var(--muted-dark)', transition: 'color 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
           >
             {label}
           </Link>

@@ -52,17 +52,17 @@ export default function HelpPage() {
             <h1 style={{ fontSize: 36, fontWeight: 900, marginBottom: 12, letterSpacing: '-0.03em' }}>
               {section.title}
             </h1>
-            <div style={{ width: 40, height: 2, background: '#7c5cf0' }} />
+            <div style={{ width: 40, height: 2, background: 'var(--accent)' }} />
           </div>
         </Reveal>
 
         <Reveal delay={0.1}>
-          <div style={{ color: '#aaa', fontSize: 16, lineHeight: 1.8 }}>
+          <div style={{ color: 'var(--muted)', fontSize: 16, lineHeight: 1.8 }}>
             {section.content ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
                 {section.content.map((item, i) => (
                   <div key={i}>
-                    <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{item.q}</h3>
+                    <h3 style={{ color: 'var(--text)', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{item.q}</h3>
                     <p>{item.a}</p>
                   </div>
                 ))}
@@ -75,10 +75,10 @@ export default function HelpPage() {
           </div>
         </Reveal>
 
-        <div style={{ marginTop: 80, padding: '32px', background: '#111', borderRadius: 16, textAlign: 'center' }}>
-          <h4 style={{ color: '#fff', marginBottom: 12 }}>Still have questions?</h4>
-          <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>Our team is available Mon–Fri, 9am–5pm EST.</p>
-          <a href="mailto:support@noir.com" style={{ color: '#7c5cf0', fontWeight: 600, textDecoration: 'none' }}>
+        <div style={{ marginTop: 80, padding: '32px', background: 'var(--surface)', borderRadius: 16, textAlign: 'center' }}>
+          <h4 style={{ color: 'var(--text)', marginBottom: 12 }}>Still have questions?</h4>
+          <p style={{ color: 'var(--muted-dark)', fontSize: 14, marginBottom: 20 }}>Our team is available Mon–Fri, 9am–5pm EST.</p>
+          <a href="mailto:support@noir.com" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
             support@noir.com
           </a>
         </div>

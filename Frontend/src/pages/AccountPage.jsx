@@ -122,9 +122,9 @@ export default function Account() {
   if (!user) return null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', padding: '72px 0 120px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '72px 0 120px', position: 'relative', overflow: 'hidden' }}>
       {/* Ambient orbs */}
-      <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, rgba(124,92,240,0.07) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, var(--accent-dim) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: '10%', right: '-5%', width: '30vw', height: '30vw', background: 'radial-gradient(circle, rgba(245,158,11,0.04) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
 
       <div className="container-noir" style={{ position: 'relative', zIndex: 1, maxWidth: 720 }}>
@@ -132,7 +132,7 @@ export default function Account() {
         {/* Page header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 56 }}>
           <p className="label-muted" style={{ marginBottom: 10 }}>Account</p>
-          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff', marginBottom: 6 }}>My Profile</h1>
+          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 6 }}>My Profile</h1>
           <p style={{ color: 'var(--muted)', fontSize: 15 }}>Manage your personal details, addresses and security.</p>
         </motion.div>
 
@@ -140,11 +140,11 @@ export default function Account() {
         <Section title="Account Details" delay={0.05}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, var(--accent), #a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, var(--accent), var(--accent-light))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: 'var(--text)', flexShrink: 0 }}>
                 {(user.name ?? user.email ?? 'U')[0].toUpperCase()}
               </div>
               <div>
-                <p style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>{user.name}</p>
+                <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>{user.name}</p>
                 <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>Member since {formatDate(user.createdAt)}</p>
               </div>
             </div>
@@ -176,7 +176,7 @@ export default function Account() {
               </div>
 
               {/* Change Password — only visible in edit mode */}
-              <div style={{ marginTop: 28, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--glass-bg2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
                   <Lock size={14} style={{ color: 'var(--muted)' }} />
                   <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Change Password</p>
@@ -207,8 +207,8 @@ export default function Account() {
 
         {/* ── Section 2: Payment Methods ── */}
         <Section title="Payment Methods" delay={0.1}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 0', borderBottom: '1px solid var(--glass-bg2)' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CreditCard size={20} style={{ color: 'var(--muted)' }} />
             </div>
             <div>
@@ -228,12 +228,12 @@ export default function Account() {
         <Section title="Shopping Addresses" delay={0.15}>
           <div style={{ display: 'grid', gap: 12, marginBottom: addresses.length > 0 ? 20 : 0 }}>
             {addresses.map(addr => (
-              <motion.div key={addr.id} layout style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 20px', borderRadius: 14, background: 'rgba(255,255,255,0.02)', border: `1px solid ${addr.isDefault ? 'rgba(124,92,240,0.25)' : 'rgba(255,255,255,0.06)'}` }}>
+              <motion.div key={addr.id} layout style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 20px', borderRadius: 14, background: 'var(--glass-bg)', border: `1px solid ${addr.isDefault ? 'var(--accent-glow)' : 'var(--glass-border)'}` }}>
                 <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
                   <MapPin size={16} style={{ color: addr.isDefault ? 'var(--accent)' : 'var(--muted)', flexShrink: 0 }} />
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{addr.street}</p>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{addr.street}</p>
                       {addr.isDefault && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Default</span>}
                     </div>
                     <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>{addr.city}{addr.state ? `, ${addr.state}` : ''} · {addr.country}</p>
@@ -258,8 +258,8 @@ export default function Account() {
           </div>
 
           {showAddrForm ? (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '24px', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 20 }}>New Address</p>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '24px', borderRadius: 16, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 20 }}>New Address</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <Field label="Street"><input className="noir-input" value={addrForm.street} onChange={e => setAddrForm(f => ({ ...f, street: e.target.value }))} placeholder="123 Main St" style={{ borderRadius: 10 }} /></Field>
                 <Field label="City"><input className="noir-input" value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} placeholder="Kigali" style={{ borderRadius: 10 }} /></Field>
@@ -317,7 +317,7 @@ export default function Account() {
         </Section>
 
         {/* Sign out */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} style={{ marginTop: 48, paddingTop: 32, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} style={{ marginTop: 48, paddingTop: 32, borderTop: '1px solid var(--glass-bg2)' }}>
           <button
             onClick={() => { logout(); navigate('/') }}
             style={{ fontSize: 13, fontWeight: 600, color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.8, transition: 'opacity 0.15s' }}
@@ -342,7 +342,7 @@ function Section({ title, children, delay = 0 }) {
       style={{ marginBottom: 40 }}
     >
       <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted-dark)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 16 }}>{title}</p>
-      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, padding: '28px 28px' }}>
+      <div style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 20, padding: '28px 28px' }}>
         {children}
       </div>
     </motion.div>
@@ -360,9 +360,9 @@ function Field({ label, children, style }) {
 
 function InfoRow({ label, value, last }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: last ? 'none' : '1px solid var(--glass-bg)' }}>
       <span style={{ fontSize: 13, color: 'var(--muted)' }}>{label}</span>
-      <span style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{value}</span>
+      <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>{value}</span>
     </div>
   )
 }
@@ -372,13 +372,13 @@ function SettingRow({ icon, label, value, onClick, last }) {
   return (
     <div
       onClick={onClick}
-      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.04)', cursor: isClickable ? 'pointer' : 'default', transition: 'opacity 0.15s' }}
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderBottom: last ? 'none' : '1px solid var(--glass-bg)', cursor: isClickable ? 'pointer' : 'default', transition: 'opacity 0.15s' }}
       onMouseEnter={e => { if (isClickable) e.currentTarget.style.opacity = '0.7' }}
       onMouseLeave={e => { if (isClickable) e.currentTarget.style.opacity = '1' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ color: 'var(--muted)' }}>{icon}</span>
-        <span style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>{label}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>{value}</span>
@@ -390,19 +390,19 @@ function SettingRow({ icon, label, value, onClick, last }) {
 
 function SelectRow({ icon, label, value, options, onChange, last }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: last ? 'none' : '1px solid var(--glass-bg)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ color: 'var(--muted)' }}>{icon}</span>
-        <span style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{label}</span>
+        <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>{label}</span>
       </div>
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
         style={{
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          background: 'var(--glass-bg2)',
+          border: '1px solid var(--border)',
           borderRadius: 8,
-          color: '#fff',
+          color: 'var(--text)',
           fontSize: 13,
           fontWeight: 500,
           padding: '7px 32px 7px 12px',
@@ -416,11 +416,11 @@ function SelectRow({ icon, label, value, options, onChange, last }) {
           fontFamily: 'inherit',
           transition: 'border-color 0.15s',
         }}
-        onFocus={e => e.target.style.borderColor = 'rgba(124,92,240,0.5)'}
-        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+        onFocus={e => e.target.style.borderColor = 'var(--accent-focus)'}
+        onBlur={e => e.target.style.borderColor = 'var(--border)'}
       >
         {options.map(opt => (
-          <option key={opt.value} value={opt.value} style={{ background: '#1a1a1a', color: '#fff' }}>
+          <option key={opt.value} value={opt.value} style={{ background: 'var(--card)', color: 'var(--text)' }}>
             {opt.label}
           </option>
         ))}

@@ -1,14 +1,16 @@
 import { useEffect } from 'react'
 import { motion, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
+import { useTheme } from '../../context/ThemeContext'
 
 const SIZE = 640
 
 export default function CursorSpotlight() {
-  const reduce = useReducedMotion()
-  const rawX   = useMotionValue(-SIZE)
-  const rawY   = useMotionValue(-SIZE)
-  const x      = useSpring(rawX, { stiffness: 120, damping: 22, mass: 0.4 })
-  const y      = useSpring(rawY, { stiffness: 120, damping: 22, mass: 0.4 })
+  const reduce      = useReducedMotion()
+  const { theme }   = useTheme()
+  const rawX        = useMotionValue(-SIZE)
+  const rawY        = useMotionValue(-SIZE)
+  const x           = useSpring(rawX, { stiffness: 120, damping: 22, mass: 0.4 })
+  const y           = useSpring(rawY, { stiffness: 120, damping: 22, mass: 0.4 })
 
   useEffect(() => {
     if (reduce) return
@@ -23,6 +25,8 @@ export default function CursorSpotlight() {
 
   if (reduce) return null
 
+  const isLight = theme === 'light'
+
   return (
     <motion.div
       style={{
@@ -32,11 +36,12 @@ export default function CursorSpotlight() {
         width: SIZE,
         height: SIZE,
         borderRadius: '50%',
-        background:
-          'radial-gradient(circle, rgba(124,92,240,0.28) 0%, rgba(124,92,240,0.14) 30%, rgba(124,92,240,0.05) 55%, transparent 75%)',
+        background: isLight
+          ? 'radial-gradient(circle, rgba(0,12,123,0.14) 20%, rgba(0,12,123,0.14) 30%, rgba(109,40,217,0.03) 50%, transparent 75%)'
+          : 'radial-gradient(circle, var(--accent-border) 0%, var(--accent-dim2) 30%, var(--accent-dim) 55%, transparent 75%)',
         filter: 'blur(40px)',
         pointerEvents: 'none',
-        mixBlendMode: 'screen',
+        mixBlendMode: isLight ? 'multiply' : 'screen',
         zIndex: 0,
         x,
         y,

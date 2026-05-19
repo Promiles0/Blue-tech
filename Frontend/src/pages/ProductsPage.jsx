@@ -100,10 +100,10 @@ export default function Products() {
 
         {/* Header */}
         <div style={{ marginBottom: 36 }}>
-          <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', marginBottom: 6, letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 6, letterSpacing: '-0.02em' }}>
             {searchQ ? `Results for "${searchQ}"` : category !== 'All' ? category : 'All Products'}
           </h1>
-          <p style={{ color: '#888', fontSize: 14 }}>
+          <p style={{ color: 'var(--muted)', fontSize: 14 }}>
             {totalItems === 0
               ? 'No products found'
               : `Showing ${totalItems ? page * PRODUCTS_PER_PAGE + 1 : 0}-${Math.min(totalItems, (page + 1) * PRODUCTS_PER_PAGE)} of ${totalItems} products`}
@@ -114,7 +114,7 @@ export default function Products() {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 32, flexWrap: 'wrap' }}>
           {/* Search */}
           <div style={{ position: 'relative', flex: 1, minWidth: 180, maxWidth: 300 }}>
-            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: searchQ ? '#7c5cf0' : '#555', pointerEvents: 'none', transition: 'color 0.2s' }} />
+            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: searchQ ? 'var(--accent)' : 'var(--muted-dark)', pointerEvents: 'none', transition: 'color 0.2s' }} />
             <input
               value={searchQ}
               onChange={e => setParam('search', e.target.value)}
@@ -122,19 +122,19 @@ export default function Products() {
               style={{
                 width: '100%', height: 40,
                 paddingLeft: 36, paddingRight: searchQ ? 36 : 14,
-                background: 'rgba(255,255,255,0.03)',
-                border: `1px solid ${searchQ ? 'rgba(124,92,240,0.35)' : 'rgba(255,255,255,0.08)'}`,
-                borderRadius: 10, color: '#fff', fontSize: 13,
+                background: 'var(--glass-bg)',
+                border: `1px solid ${searchQ ? 'var(--accent-border)' : 'var(--glass-border)'}`,
+                borderRadius: 10, color: 'var(--text)', fontSize: 13,
                 outline: 'none', fontFamily: 'inherit',
                 transition: 'border-color 0.2s, box-shadow 0.2s',
-                boxShadow: searchQ ? '0 0 0 3px rgba(124,92,240,0.08)' : 'none',
+                boxShadow: searchQ ? '0 0 0 3px var(--accent-dim)' : 'none',
               }}
-              onFocus={e => { e.target.style.borderColor = 'rgba(124,92,240,0.4)'; e.target.style.boxShadow = '0 0 0 3px rgba(124,92,240,0.08)' }}
-              onBlur={e => { if (!searchQ) { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none' } }}
+              onFocus={e => { e.target.style.borderColor = 'var(--accent-focus)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-dim)' }}
+              onBlur={e => { if (!searchQ) { e.target.style.borderColor = 'var(--glass-border)'; e.target.style.boxShadow = 'none' } }}
             />
             {searchQ && (
               <button onClick={() => setParam('search', '')}
-                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#888', display: 'flex', padding: 2, cursor: 'pointer' }}>
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', padding: 2, cursor: 'pointer' }}>
                 <X size={14} />
               </button>
             )}
@@ -153,8 +153,8 @@ export default function Products() {
                       position: 'relative',
                       padding: '7px 14px', borderRadius: 100, fontSize: 13, fontWeight: 500,
                       background: 'transparent',
-                      color: active ? '#fff' : '#888',
-                      border: `1px solid ${active ? 'transparent' : '#2a2a2a'}`,
+                      color: active ? 'var(--brand-text)' : 'var(--muted)',
+                      border: `1px solid ${active ? 'transparent' : 'var(--border)'}`,
                       cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
                     }}
                   >
@@ -163,7 +163,7 @@ export default function Products() {
                         layoutId="active-pill"
                         style={{
                           position: 'absolute', inset: 0,
-                          background: '#7c5cf0', borderRadius: 100,
+                          background: 'var(--accent)', borderRadius: 100,
                         }}
                         transition={{ type: 'spring', stiffness: 380, damping: 34 }}
                       />
@@ -178,16 +178,16 @@ export default function Products() {
           {/* Sort dropdown */}
           <div style={{ position: 'relative', marginLeft: 'auto' }}>
             <button onClick={() => setSortOpen(p => !p)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#141414', border: '1px solid #2a2a2a', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              <SlidersHorizontal size={14} style={{ color: '#888' }} />
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: 'var(--text)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <SlidersHorizontal size={14} style={{ color: 'var(--muted)' }} />
               {currentSort.label}
-              <ChevronDown size={14} style={{ color: '#888' }} />
+              <ChevronDown size={14} style={{ color: 'var(--muted)' }} />
             </button>
             {sortOpen && (
-              <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: '#1c1c1c', border: '1px solid #2a2a2a', borderRadius: 10, overflow: 'hidden', minWidth: 180, zIndex: 20 }}>
+              <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', minWidth: 180, zIndex: 20 }}>
                 {SORT_OPTIONS.map(opt => (
                   <button key={opt.value} onClick={() => { setParam('sort', opt.value); setSortOpen(false) }}
-                    style={{ width: '100%', padding: '10px 16px', fontSize: 13, background: opt.value === sort ? 'rgba(124,92,240,0.12)' : 'none', color: opt.value === sort ? '#7c5cf0' : '#ccc', border: 'none', textAlign: 'left', cursor: 'pointer', display: 'block' }}>
+                    style={{ width: '100%', padding: '10px 16px', fontSize: 13, background: opt.value === sort ? 'var(--accent-dim)' : 'none', color: opt.value === sort ? 'var(--accent)' : 'var(--text-secondary)', border: 'none', textAlign: 'left', cursor: 'pointer', display: 'block' }}>
                     {opt.label}
                   </button>
                 ))}
@@ -203,7 +203,7 @@ export default function Products() {
           </div>
         ) : displayProducts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <p style={{ fontSize: 16, color: '#888' }}>No products found.</p>
+            <p style={{ fontSize: 16, color: 'var(--muted)' }}>No products found.</p>
           </div>
         ) : (
           <div className="grid-4">
@@ -221,7 +221,7 @@ export default function Products() {
             {[...Array(Math.min(totalPages, 10))].map((_, i) => (
               <button key={i}
                 onClick={() => { const n = new URLSearchParams(searchParams); n.set('page', i); setSearchParams(n) }}
-                style={{ width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 500, background: i === page ? '#7c5cf0' : '#141414', color: i === page ? '#fff' : '#888', border: `1px solid ${i === page ? '#7c5cf0' : '#2a2a2a'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
+                style={{ width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 500, background: i === page ? 'var(--accent)' : 'var(--surface)', color: i === page ? 'var(--brand-text)' : 'var(--muted)', border: `1px solid ${i === page ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
                 {i + 1}
               </button>
             ))}

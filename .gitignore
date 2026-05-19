@@ -38,3 +38,6 @@ Backend/.env
 Frontend/.env
 !*.env.example
 !**/.env.example
+.env
+Frontend/.env
+Backend/.env

@@ -256,7 +256,7 @@ export default function AdminHeroSlides() {
                 src={slide.imageUrl}
                 alt={slide.altText || slide.label}
                 style={{ width: 60, height: 48, objectFit: 'cover', borderRadius: 8, flexShrink: 0, border: '1px solid var(--admin-border)' }}
-                onError={e => { e.target.style.background = '#222'; e.target.src = '' }}
+                onError={e => { e.target.style.background = 'var(--border)'; e.target.src = '' }}
               />
 
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -269,7 +269,7 @@ export default function AdminHeroSlides() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 6,
-                  background: slide.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)',
+                  background: slide.isActive ? 'rgba(34,197,94,0.12)' : 'var(--glass-border)',
                   color: slide.isActive ? '#22c55e' : 'var(--admin-muted)',
                   border: `1px solid ${slide.isActive ? 'rgba(34,197,94,0.3)' : 'var(--admin-border)'}`,
                 }}>

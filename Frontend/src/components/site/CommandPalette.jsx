@@ -113,11 +113,11 @@ export default function CommandPalette() {
               position: 'fixed',
               top: 80, left: '50%', transform: 'translateX(-50%)',
               width: 'min(580px, calc(100vw - 32px))',
-              background: 'rgba(14,14,16,0.96)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
               borderRadius: 18,
               overflow: 'hidden',
-              boxShadow: '0 32px 96px rgba(0,0,0,0.85), 0 0 0 1px rgba(124,92,240,0.08)',
+              boxShadow: '0 32px 96px rgba(0,0,0,0.85), 0 0 0 1px var(--accent-dim)',
               zIndex: 301,
               backdropFilter: 'blur(24px)',
             }}
@@ -126,9 +126,9 @@ export default function CommandPalette() {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '16px 20px',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              borderBottom: '1px solid var(--glass-border)',
             }}>
-              <Search size={17} style={{ color: '#7c5cf0', flexShrink: 0 }} />
+              <Search size={17} style={{ color: 'var(--accent)', flexShrink: 0 }} />
               <input
                 ref={inputRef}
                 value={query}
@@ -137,7 +137,7 @@ export default function CommandPalette() {
                 placeholder="Search products, categories…"
                 style={{
                   flex: 1, background: 'none', border: 'none',
-                  outline: 'none', color: '#fff', fontSize: 15,
+                  outline: 'none', color: 'var(--text)', fontSize: 15,
                   fontFamily: 'inherit',
                 }}
               />
@@ -146,22 +146,22 @@ export default function CommandPalette() {
                   onClick={goSearch}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
-                    fontSize: 12, color: '#7c5cf0',
-                    background: 'rgba(124,92,240,0.1)',
-                    border: '1px solid rgba(124,92,240,0.2)',
+                    fontSize: 12, color: 'var(--accent)',
+                    background: 'var(--accent-dim)',
+                    border: '1px solid var(--accent-dim2)',
                     borderRadius: 8, padding: '4px 10px',
                     cursor: 'pointer', whiteSpace: 'nowrap',
                     transition: 'background 0.15s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(124,92,240,0.2)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(124,92,240,0.1)'}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dim2)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-dim)'}
                 >
                   See all <ArrowRight size={11} />
                 </button>
               ) : (
                 <kbd style={{
-                  fontSize: 11, color: '#444',
-                  border: '1px solid #2a2a2a', borderRadius: 6,
+                  fontSize: 11, color: 'var(--muted-dark)',
+                  border: '1px solid var(--border)', borderRadius: 6,
                   padding: '3px 8px', fontFamily: 'inherit',
                 }}>
                   Esc
@@ -187,7 +187,7 @@ export default function CommandPalette() {
             {/* Results */}
             {!loading && results.length > 0 && (
               <div style={{ maxHeight: 380, overflowY: 'auto' }}>
-                <div style={{ padding: '8px 20px 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: '#444', textTransform: 'uppercase' }}>
+                <div style={{ padding: '8px 20px 4px', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--muted-dark)', textTransform: 'uppercase' }}>
                   Products
                 </div>
                 {results.map((p, i) => {
@@ -203,25 +203,25 @@ export default function CommandPalette() {
                       onMouseLeave={() => setActiveIdx(-1)}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 14,
-                        padding: '10px 20px', background: isActive ? 'rgba(124,92,240,0.08)' : 'none',
+                        padding: '10px 20px', background: isActive ? 'var(--accent-dim)' : 'none',
                         border: 'none', cursor: 'pointer', transition: 'background 0.1s', textAlign: 'left',
-                        borderLeft: `2px solid ${isActive ? '#7c5cf0' : 'transparent'}`,
+                        borderLeft: `2px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
                       }}
                     >
-                      <div style={{ width: 46, height: 46, borderRadius: 8, overflow: 'hidden', background: '#1c1c1c', flexShrink: 0 }}>
+                      <div style={{ width: 46, height: 46, borderRadius: 8, overflow: 'hidden', background: 'var(--card)', flexShrink: 0 }}>
                         {img
                           ? <img src={img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : <div style={{ width: '100%', height: '100%', background: '#2a2a2a' }} />
+                          : <div style={{ width: '100%', height: '100%', background: 'var(--border)' }} />
                         }
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 14, fontWeight: 500, color: isActive ? '#fff' : '#ddd', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
-                        <p style={{ fontSize: 12, color: '#555' }}>
+                        <p style={{ fontSize: 14, fontWeight: 500, color: isActive ? 'var(--text)' : 'var(--text-secondary)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
+                        <p style={{ fontSize: 12, color: 'var(--muted-dark)' }}>
                           {p.categoryName ?? ''}{p.categoryName ? ' · ' : ''}
-                          <span style={{ color: '#f59e0b', fontWeight: 600 }}>${price.toFixed(2)}</span>
+                          <span style={{ color: 'var(--price)', fontWeight: 600 }}>${price.toFixed(2)}</span>
                         </p>
                       </div>
-                      <ArrowRight size={13} style={{ color: isActive ? '#7c5cf0' : '#333', flexShrink: 0, transition: 'color 0.1s' }} />
+                      <ArrowRight size={13} style={{ color: isActive ? 'var(--accent)' : 'var(--muted)', flexShrink: 0, transition: 'color 0.1s' }} />
                     </button>
                   )
                 })}
@@ -231,15 +231,15 @@ export default function CommandPalette() {
             {/* No results */}
             {!loading && query.trim() && results.length === 0 && (
               <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-                <p style={{ fontSize: 14, color: '#555', marginBottom: 8 }}>No results for <span style={{ color: '#fff' }}>"{query}"</span></p>
-                <p style={{ fontSize: 12, color: '#333' }}>Try a different keyword or browse all products</p>
+                <p style={{ fontSize: 14, color: 'var(--muted-dark)', marginBottom: 8 }}>No results for <span style={{ color: 'var(--text)' }}>"{query}"</span></p>
+                <p style={{ fontSize: 12, color: 'var(--muted-dark)' }}>Try a different keyword or browse all products</p>
               </div>
             )}
 
             {/* Empty state — quick links */}
             {!query && (
               <div style={{ padding: '12px 20px 16px' }}>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: '#444', textTransform: 'uppercase', marginBottom: 10 }}>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--muted-dark)', textTransform: 'uppercase', marginBottom: 10 }}>
                   Browse
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -260,7 +260,7 @@ export default function CommandPalette() {
             {/* Footer hints */}
             <div style={{
               padding: '8px 20px',
-              borderTop: '1px solid rgba(255,255,255,0.04)',
+              borderTop: '1px solid var(--glass-bg)',
               display: 'flex', gap: 16, alignItems: 'center',
             }}>
               <Hint keys={['↑', '↓']} label="navigate" />
@@ -282,13 +282,13 @@ function QuickLink({ label, to, navigate, close }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 5,
         padding: '5px 12px', borderRadius: 100,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        color: '#888', fontSize: 13, cursor: 'pointer',
+        background: 'var(--glass-bg)',
+        border: '1px solid var(--glass-border)',
+        color: 'var(--muted)', fontSize: 13, cursor: 'pointer',
         transition: 'all 0.15s',
       }}
-      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(124,92,240,0.12)'; e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.borderColor = 'rgba(124,92,240,0.25)' }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-dim)'; e.currentTarget.style.color = 'var(--accent-light)'; e.currentTarget.style.borderColor = 'var(--accent-glow)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'var(--glass-bg)'; e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.borderColor = 'var(--glass-border)' }}
     >
       <TrendingUp size={11} /> {label}
     </button>
@@ -299,9 +299,9 @@ function Hint({ keys, label }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
       {keys.map(k => (
-        <kbd key={k} style={{ fontSize: 10, color: '#444', border: '1px solid #2a2a2a', borderRadius: 4, padding: '2px 5px', fontFamily: 'inherit' }}>{k}</kbd>
+        <kbd key={k} style={{ fontSize: 10, color: 'var(--muted-dark)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 5px', fontFamily: 'inherit' }}>{k}</kbd>
       ))}
-      <span style={{ fontSize: 10, color: '#333', marginLeft: 2 }}>{label}</span>
+      <span style={{ fontSize: 10, color: 'var(--muted-dark)', marginLeft: 2 }}>{label}</span>
     </div>
   )
 }
