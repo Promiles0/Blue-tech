@@ -20,7 +20,7 @@ export default function CartDrawer() {
             onClick={() => setCartOpen(false)}
             style={{
               position: 'fixed', inset: 0,
-              background: 'rgba(0,0,0,0.6)',
+              background: 'var(--bg-overlay)',
               backdropFilter: 'blur(4px)',
               zIndex: 200,
             }}
@@ -35,7 +35,7 @@ export default function CartDrawer() {
             style={{
               position: 'fixed', top: 0, right: 0, bottom: 0,
               width: 'min(420px, 100vw)',
-              background: 'var(--bg)', borderLeft: '1px solid var(--border)',
+              background: 'var(--bg-surface)', borderLeft: '1px solid var(--border)',
               display: 'flex', flexDirection: 'column',
               zIndex: 201,
             }}
@@ -177,9 +177,9 @@ export default function CartDrawer() {
                 <Link
                   to="/cart"
                   onClick={() => setCartOpen(false)}
-                  style={{ width: '100%', marginTop: 8, display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'none', border: '1px solid #2a2a2a', borderRadius: 10, color: '#888', fontSize: 13, cursor: 'pointer', padding: '10px', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#444' }}
-                  onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#2a2a2a' }}
+                  style={{ width: '100%', marginTop: 8, display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'none', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', padding: '10px', textDecoration: 'none', transition: 'color 0.2s, border-color 0.2s' }}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border)' }}
                 >
                   View full cart
                 </Link>

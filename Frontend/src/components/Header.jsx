@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X } from 'lucide-react'
+import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X, Moon, Sun } from 'lucide-react'
 import NotificationBell from './site/NotificationBell'
 import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
@@ -14,7 +14,7 @@ export default function Header() {
   const { user, logout, isAdmin }                           = useAuth()
   const { count }                                           = useCart()
   const { setCartOpen, setMobileNavOpen }                   = useUI()
-  const { theme }                                           = useTheme()
+  const { theme, toggleTheme }                              = useTheme()
   const navigate                                            = useNavigate()
   const [userMenuOpen, setUserMenuOpen]                     = useState(false)
   const [browseOpen, setBrowseOpen]                         = useState(false)
@@ -91,13 +91,13 @@ export default function Header() {
         aria-hidden
         style={{
           position: 'absolute', inset: 0,
-          backgroundColor: theme === 'light' ? 'rgba(255,255,255,0.85)' : bgStyle,
+          backgroundColor: theme === 'light' ? 'var(--glass-bg)' : bgStyle,
           backdropFilter: filterStyle,
           WebkitBackdropFilter: filterStyle,
           borderBottom: '1px solid',
-          borderBottomColor: theme === 'light' ? 'rgba(0,0,0,0.08)' : borderStyle,
+          borderBottomColor: theme === 'light' ? 'var(--border)' : borderStyle,
           boxShadow:
-            'inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(255,255,255,0.02)',
+            'inset 0 1px 0 var(--overlay-strong), inset 0 -1px 0 var(--glass-bg)',
         }}
       />
       {/* Soft top gradient sheen */}
@@ -296,6 +296,10 @@ export default function Header() {
             </IconBtn>
           </div>
 
+          <IconBtn onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+          </IconBtn>
+
           {/* Only show customer icons if not admin */}
           {!isAdmin && (
             <Link to="/wishlist">
@@ -319,7 +323,7 @@ export default function Header() {
                   transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                   style={{
                     position: 'absolute', top: 2, right: 2,
-                    background: 'var(--accent)', color: '#fff',
+                    background: 'var(--accent)', color: 'var(--brand-text)',
                     borderRadius: '50%', width: 15, height: 15,
                     fontSize: 9, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -340,7 +344,7 @@ export default function Header() {
                 style={{
                   width: 32, height: 32, borderRadius: '50%',
                   background: userMenuOpen ? 'var(--accent-hover)' : 'var(--accent)',
-                  color: '#fff', fontSize: 13, fontWeight: 700,
+                  color: 'var(--brand-text)', fontSize: 13, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   border: `2px solid ${userMenuOpen ? 'var(--accent-border)' : 'transparent'}`,
                   cursor: 'pointer', transition: 'background 0.2s, border-color 0.2s',
@@ -364,7 +368,7 @@ export default function Header() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
                         width: 30, height: 30, borderRadius: '50%',
-                        background: 'var(--accent)', color: '#fff',
+                        background: 'var(--accent)', color: 'var(--brand-text)',
                         fontSize: 12, fontWeight: 700,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                       }}>
@@ -458,7 +462,7 @@ function DropdownItem({ to, icon, onClick, danger, children }) {
     <button
       onClick={onClick}
       style={base}
-      onMouseEnter={e => Object.assign(e.currentTarget.style, { background: danger ? 'rgba(239,68,68,0.08)' : 'var(--overlay-hover)', color: danger ? '#f87171' : 'var(--text)' })}
+      onMouseEnter={e => Object.assign(e.currentTarget.style, { background: danger ? 'var(--danger-soft)' : 'var(--overlay-hover)', color: danger ? 'var(--error)' : 'var(--text)' })}
       onMouseLeave={e => Object.assign(e.currentTarget.style, { background: 'none', color: base.color })}
     >
       {icon}{children}

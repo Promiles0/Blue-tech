@@ -87,7 +87,7 @@ export default function ProductQuickView() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={close}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(8px)', zIndex: 400 }}
+            style={{ position: 'fixed', inset: 0, background: 'var(--overlay-shade-soft)', backdropFilter: 'blur(8px)', zIndex: 400 }}
           />
 
           <motion.div
@@ -103,7 +103,7 @@ export default function ProductQuickView() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.24, ease: [0.25, 0.1, 0.25, 1] }}
-              style={{ position: 'relative', width: 'min(920px, 100%)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 20, boxShadow: '0 30px 80px rgba(0,0,0,0.6)', pointerEvents: 'auto' }}
+              style={{ position: 'relative', width: 'min(920px, 100%)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 20, boxShadow: 'var(--card-shadow)', pointerEvents: 'auto' }}
             >
               <button
                 onClick={close}
@@ -181,7 +181,7 @@ export default function ProductQuickView() {
                               <button
                                 key={variantId}
                                 onClick={() => { setSelectedVariant(variant); setQty(1) }}
-                                style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: selectedVariantId === variantId ? 'var(--accent)' : 'transparent', color: selectedVariantId === variantId ? '#fff' : 'var(--muted)', border: `1px solid ${selectedVariantId === variantId ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.18s' }}
+                                style={{ padding: '7px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: selectedVariantId === variantId ? 'var(--accent)' : 'transparent', color: selectedVariantId === variantId ? 'var(--brand-text)' : 'var(--muted)', border: `1px solid ${selectedVariantId === variantId ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.18s' }}
                               >
                                 {variant.sizeOrColor ?? variant.skuCode}
                               </button>
@@ -219,7 +219,7 @@ export default function ProductQuickView() {
                         <button
                           onClick={() => { close(); navigate('/cart') }}
                           className="noir-btn-outline"
-                          style={{ flex: 1, padding: '13px', fontSize: 14, color: '#22c55e', borderColor: 'rgba(34,197,94,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                          style={{ flex: 1, padding: '13px', fontSize: 14, color: 'var(--success)', borderColor: 'var(--success-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                         >
                           <Check size={15} />
                           View in cart
@@ -239,7 +239,7 @@ export default function ProductQuickView() {
                         type="button"
                         onClick={e => { e.preventDefault(); e.stopPropagation(); if (user) toggle(pid, product?.name) }}
                         className="noir-btn-outline"
-                        style={{ padding: '13px 14px', color: wishlisted ? '#f87171' : undefined, borderColor: wishlisted ? 'rgba(239,68,68,0.4)' : undefined }}
+                        style={{ padding: '13px 14px', color: wishlisted ? 'var(--brand)' : undefined, borderColor: wishlisted ? 'var(--brand-border)' : undefined }}
                         title={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
                       >
                         <Heart size={17} fill={wishlisted ? 'currentColor' : 'none'} />

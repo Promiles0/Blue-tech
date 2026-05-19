@@ -40,7 +40,7 @@ export default function CategoryPage() {
       <div className="container-noir">
         <Link to="/products"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', marginBottom: 36, transition: 'color 0.2s' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
           onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
         >
           <ArrowLeft size={14} /> All products
@@ -84,7 +84,7 @@ export default function CategoryPage() {
           <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 48 }}>
             {[...Array(Math.min(totalPages, 10))].map((_, i) => (
               <button key={i} onClick={() => setPage(i)}
-                style={{ width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 500, background: i === page ? 'var(--accent)' : 'var(--surface)', color: i === page ? '#fff' : 'var(--muted)', border: `1px solid ${i === page ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
+                style={{ width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 500, background: i === page ? 'var(--accent)' : 'var(--surface)', color: i === page ? 'var(--brand-text)' : 'var(--muted)', border: `1px solid ${i === page ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
                 {i + 1}
               </button>
             ))}

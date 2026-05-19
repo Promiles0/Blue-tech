@@ -125,7 +125,7 @@ export default function MobileNav() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       background: 'none', border: 'none',
-                      color: '#ef4444', fontSize: 14, cursor: 'pointer', padding: 0,
+                      color: 'var(--error)', fontSize: 14, cursor: 'pointer', padding: 0,
                     }}
                   >
                     <LogOut size={15} /> Sign out

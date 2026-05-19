@@ -14,7 +14,7 @@ function getStatus(product) {
 
 const STATUS = {
   new:  { label: 'New',       bg: 'var(--accent-dim2)',  ring: 'var(--accent-focus)',  color: 'var(--accent-light)' },
-  low:  { label: 'Low stock', bg: 'rgba(251,146,60,0.16)',  ring: 'rgba(251,146,60,0.4)',  color: '#fb923c' },
+  low:  { label: 'Low stock', bg: 'var(--warning-soft)', ring: 'var(--warning-border)', color: 'var(--warning)' },
 }
 
 export default function ProductCard({ product }) {
@@ -119,19 +119,19 @@ export default function ProductCard({ product }) {
             }}
             style={{
               position: 'absolute', top: 10, right: 10,
-              background: wishlisted ? 'rgba(239,68,68,0.18)' : 'var(--glass-bg2)',
+              background: wishlisted ? 'var(--danger-soft)' : 'var(--glass-bg2)',
               backdropFilter: 'blur(8px)',
-              border: `1px solid ${wishlisted ? 'rgba(239,68,68,0.4)' : 'var(--glass-border)'}`,
+              border: `1px solid ${wishlisted ? 'var(--danger-border)' : 'var(--glass-border)'}`,
               borderRadius: '50%', width: 34, height: 34,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: wishlisted ? '#f87171' : 'var(--text)', cursor: 'pointer',
+              color: wishlisted ? 'var(--brand)' : 'var(--icon-color)', cursor: 'pointer',
               opacity: 1,
               transition: 'opacity 0.25s, background 0.2s, color 0.2s',
               zIndex: 100,
             }}
             title={user ? (wishlisted ? 'Remove from wishlist' : 'Add to wishlist') : 'Sign in to save'}
-            onMouseEnter={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--accent-border)' }}
-            onMouseLeave={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--glass-border)' }}
+            onMouseEnter={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--overlay-hover)' }}
+            onMouseLeave={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--glass-bg2)' }}
           >
             <Heart size={14} fill={wishlisted ? 'currentColor' : 'none'} />
           </div>

@@ -24,7 +24,7 @@ export default function Footer() {
   const hasMore = categories.length > CAT_LIMIT
 
   return (
-    <footer style={{ borderTop: '1px solid var(--border)', marginTop: 0 }}>
+    <footer style={{ borderTop: '1px solid var(--border)', marginTop: 0, background: 'var(--bg-surface-2)' }}>
       <div className="container-noir" style={{ padding: '60px 24px 0' }}>
         <div style={{
           display: 'grid',

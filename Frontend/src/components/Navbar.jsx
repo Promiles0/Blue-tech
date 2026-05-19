@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Heart, ShoppingBag, User, X, Package, LogOut, LayoutDashboard } from 'lucide-react'
+import { Search, Heart, ShoppingBag, User, X, Package, LogOut, LayoutDashboard, Moon, Sun } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { useTheme } from '../context/ThemeContext'
 import apiService from '../api/service'
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth()
   const { count }            = useCart()
+  const { theme, toggleTheme } = useTheme()
   const navigate             = useNavigate()
   const [searchOpen, setSearchOpen]   = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -149,6 +151,10 @@ export default function Navbar() {
             <IconBtn onClick={() => setSearchOpen(true)}><Search size={18} /></IconBtn>
           )}
 
+          <IconBtn onClick={toggleTheme}>
+            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+          </IconBtn>
+
           {!isAdmin && (
             <>
               <Link to="/wishlist"><IconBtn><Heart size={18} /></IconBtn></Link>
@@ -157,7 +163,7 @@ export default function Navbar() {
                 {count > 0 && (
                   <span style={{
                     position: 'absolute', top: 0, right: 0,
-                    background: 'var(--accent)', color: '#fff', borderRadius: '50%',
+                    background: 'var(--accent)', color: 'var(--brand-text)', borderRadius: '50%',
                     width: 16, height: 16, fontSize: 9, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     pointerEvents: 'none',
@@ -175,7 +181,7 @@ export default function Navbar() {
                 onClick={() => setUserMenuOpen(o => !o)}
                 style={{
                   width: 32, height: 32, borderRadius: '50%', background: 'var(--accent)',
-                  color: '#fff', fontSize: 13, fontWeight: 700, display: 'flex',
+                  color: 'var(--brand-text)', fontSize: 13, fontWeight: 700, display: 'flex',
                   alignItems: 'center', justifyContent: 'center', border: 'none',
                   cursor: 'pointer', marginLeft: 8, transition: 'transform 0.2s'
                 }}
@@ -274,11 +280,11 @@ function DropdownItem({ to, icon, onClick, danger, children }) {
     display: 'flex', alignItems: 'center', gap: 9,
     width: '100%', padding: '9px 10px', borderRadius: 8,
     fontSize: 13, fontWeight: 500, border: 'none', background: 'none',
-    color: danger ? '#f87171' : 'var(--text)',
+    color: danger ? 'var(--error)' : 'var(--text)',
     cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
     textDecoration: 'none',
   }
-  const hover = { background: danger ? 'rgba(239,68,68,0.08)' : 'var(--overlay-hover)', color: danger ? '#f87171' : 'var(--text)' }
+  const hover = { background: danger ? 'var(--danger-soft)' : 'var(--overlay-hover)', color: danger ? 'var(--error)' : 'var(--text)' }
 
   if (to) {
     return (

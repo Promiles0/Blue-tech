@@ -27,74 +27,183 @@
 
 /* ── Theme transition (applied before any selector so it fires on toggle) ── */
 *, *::before, *::after {
-  transition: background-color 0.3s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.25s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, fill 0.2s ease, stroke 0.2s ease;
 }
 
 /* ── Legacy CSS vars — dark mode (default) ──────────────────── */
 :root {
-  --bg:               #0a0a0a;
-  --bg-deep:          #0f0f10;
-  --surface:          #141414;
-  --card:             #1c1c1c;
-  --card-alt:         #111116;
-  --border:           #262626;
-  --border-hover:     #3a3a3a;
-  --text:             #ffffff;
-  --text-secondary:   #cccccc;
-  --muted:            #888888;
-  --muted-dark:       #555555;
-  --input-bg:         #1c1c1c;
-  --input-border:     #2a2a2a;
-  --glass-bg:         rgba(255,255,255,0.03);
-  --glass-bg2:        rgba(255,255,255,0.05);
-  --glass-border:     rgba(255,255,255,0.08);
-  --overlay-hover:    rgba(255,255,255,0.05);
+  --bg-page:          #0a0a0a;
+  --bg-navbar:        #0f0f0f;
+  --bg-surface:       #141414;
+  --bg-surface-2:     #1a1a1a;
+  --bg-input:         #1e1e1e;
+  --bg-overlay:       rgba(0, 0, 0, 0.6);
 
-  --accent:           #354380;
-  --accent-hover:     #2a3568;
-  --accent-active:    #1e2a55;
-  --accent-light:     #5a73b0;
-  --accent-dim:       rgba(53, 67, 128, 0.10);
-  --accent-dim2:      rgba(53, 67, 128, 0.20);
-  --accent-glow:      rgba(53, 67, 128, 0.25);
-  --accent-focus:     rgba(53, 67, 128, 0.40);
-  --accent-border:    rgba(53, 67, 128, 0.30);
+  --text-primary:     #ffffff;
+  --text-secondary:   #aaaaaa;
+  --text-muted:       #666666;
+  --text-inverse:     #0f0f0f;
 
-  --price:            #f59e0b;
-  --error:            #ef4444;
-  --error-dim:        rgba(239, 68, 68, 0.1);
+  --brand:            #354380;
+  --brand-hover:      #2a3568;
+  --brand-active:     #1e2a55;
+  --brand-tint:       rgba(53, 67, 128, 0.12);
+  --brand-text:       #ffffff;
+  --brand-glow:       rgba(53, 67, 128, 0.25);
+  --brand-focus:      rgba(53, 67, 128, 0.40);
+  --brand-border:     rgba(53, 67, 128, 0.30);
+  --brand-soft:       rgba(53, 67, 128, 0.20);
+  --brand-strong:     #5a73b0;
+
+  --border:           rgba(255, 255, 255, 0.08);
+  --border-strong:    rgba(255, 255, 255, 0.16);
+  --border-hover:     rgba(255, 255, 255, 0.18);
+
+  --icon-color:       #ffffff;
+  --icon-muted:       #888888;
+
+  --card-bg:          #141414;
+  --card-border:      rgba(255, 255, 255, 0.06);
+  --card-shadow:      0 4px 24px rgba(0, 0, 0, 0.4);
+
+  --input-bg:         #1e1e1e;
+  --input-border:     rgba(255, 255, 255, 0.10);
+  --input-text:       #ffffff;
+  --input-placeholder:#666666;
+
   --success:          #22c55e;
+  --warning:          #f59e0b;
+  --error:            #ef4444;
+  --info:             #3b82f6;
+  --price-color:      #f59e0b;
+
+  --scrollbar-thumb:  #333333;
+  --scrollbar-track:  #1a1a1a;
+
+  --danger-soft:      rgba(239, 68, 68, 0.12);
+  --danger-border:    rgba(239, 68, 68, 0.28);
+  --warning-soft:     rgba(245, 158, 11, 0.12);
+  --warning-border:   rgba(245, 158, 11, 0.28);
+  --success-soft:     rgba(34, 197, 94, 0.12);
+  --success-border:   rgba(34, 197, 94, 0.28);
+  --info-soft:        rgba(59, 130, 246, 0.12);
+  --info-border:      rgba(59, 130, 246, 0.28);
+
+  --glass-bg:         rgba(255, 255, 255, 0.03);
+  --glass-bg2:        rgba(255, 255, 255, 0.05);
+  --glass-border:     rgba(255, 255, 255, 0.08);
+  --overlay-hover:    rgba(255, 255, 255, 0.05);
+  --overlay-strong:   rgba(255, 255, 255, 0.08);
+  --overlay-shade:    rgba(0, 0, 0, 0.55);
+  --overlay-shade-soft: rgba(0, 0, 0, 0.78);
+
+  --bg:               var(--bg-page);
+  --bg-deep:          var(--bg-navbar);
+  --surface:          var(--bg-surface);
+  --card:             var(--bg-surface-2);
+  --card-alt:         var(--bg-surface-2);
+  --text:             var(--text-primary);
+  --muted:            var(--text-secondary);
+  --muted-dark:       var(--text-muted);
+  --accent:           var(--brand);
+  --accent-hover:     var(--brand-hover);
+  --accent-active:    var(--brand-active);
+  --accent-light:     var(--brand-strong);
+  --accent-dim:       var(--brand-tint);
+  --accent-dim2:      var(--brand-soft);
+  --accent-glow:      var(--brand-glow);
+  --accent-focus:     var(--brand-focus);
+  --accent-border:    var(--brand-border);
+  --price:            var(--price-color);
+  --error-dim:        var(--danger-soft);
 }
 
 /* ── Light mode overrides ───────────────────────────────────── */
 [data-theme="light"] {
-  --bg:               #f8f8fa;
-  --bg-deep:          #f0f0f3;
-  --surface:          #ffffff;
-  --card:             #ffffff;
-  --card-alt:         #f5f5f8;
-  --border:           #e5e5e5;
-  --border-hover:     #d0d0d8;
-  --text:             #0f0f0f;
-  --text-secondary:   #333333;
-  --muted:            #555555;
-  --muted-dark:       #888888;
-  --input-bg:         #f2f2f5;
-  --input-border:     #d0d0d8;
-  --glass-bg:         rgba(0,0,0,0.02);
-  --glass-bg2:        rgba(0,0,0,0.04);
-  --glass-border:     #e5e5e5;
-  --overlay-hover:    rgba(0,0,0,0.04);
+  --bg-page:          #f4f4f8;
+  --bg-navbar:        #ffffff;
+  --bg-surface:       #ffffff;
+  --bg-surface-2:     #f0f0f5;
+  --bg-input:         #f0f0f5;
+  --bg-overlay:       rgba(0, 0, 0, 0.4);
 
-  --accent:           #354380;
-  --accent-hover:     #2a3568;
-  --accent-active:    #1e2a55;
-  --accent-light:     #4a5fa0;
-  --accent-dim:       rgba(53, 67, 128, 0.10);
-  --accent-dim2:      rgba(53, 67, 128, 0.15);
-  --accent-glow:      rgba(53, 67, 128, 0.20);
-  --accent-focus:     rgba(53, 67, 128, 0.35);
-  --accent-border:    rgba(53, 67, 128, 0.25);
+  --text-primary:     #0f0f0f;
+  --text-secondary:   #444444;
+  --text-muted:       #888888;
+  --text-inverse:     #ffffff;
+
+  --brand:            #354380;
+  --brand-hover:      #2a3568;
+  --brand-active:     #1e2a55;
+  --brand-tint:       rgba(53, 67, 128, 0.08);
+  --brand-text:       #ffffff;
+  --brand-glow:       rgba(53, 67, 128, 0.18);
+  --brand-focus:      rgba(53, 67, 128, 0.35);
+  --brand-border:     rgba(53, 67, 128, 0.24);
+  --brand-soft:       rgba(53, 67, 128, 0.14);
+  --brand-strong:     #354380;
+
+  --border:           #e2e2ea;
+  --border-strong:    #c8c8d8;
+  --border-hover:     #d0d0dc;
+
+  --icon-color:       #0f0f0f;
+  --icon-muted:       #666666;
+
+  --card-bg:          #ffffff;
+  --card-border:      #e8e8f0;
+  --card-shadow:      0 4px 24px rgba(0, 0, 0, 0.08);
+
+  --input-bg:         #f0f0f5;
+  --input-border:     #d0d0dc;
+  --input-text:       #0f0f0f;
+  --input-placeholder:#999999;
+
+  --success:          #16a34a;
+  --warning:          #d97706;
+  --error:            #dc2626;
+  --info:             #2563eb;
+  --price-color:      #b45309;
+
+  --scrollbar-thumb:  #cccccc;
+  --scrollbar-track:  #f0f0f0;
+
+  --danger-soft:      rgba(220, 38, 38, 0.10);
+  --danger-border:    rgba(220, 38, 38, 0.22);
+  --warning-soft:     rgba(217, 119, 6, 0.12);
+  --warning-border:   rgba(217, 119, 6, 0.24);
+  --success-soft:     rgba(22, 163, 74, 0.12);
+  --success-border:   rgba(22, 163, 74, 0.24);
+  --info-soft:        rgba(37, 99, 235, 0.12);
+  --info-border:      rgba(37, 99, 235, 0.24);
+
+  --glass-bg:         rgba(255, 255, 255, 0.72);
+  --glass-bg2:        rgba(240, 240, 245, 0.9);
+  --glass-border:     #e5e5ee;
+  --overlay-hover:    rgba(53, 67, 128, 0.06);
+  --overlay-strong:   rgba(53, 67, 128, 0.10);
+  --overlay-shade:    rgba(0, 0, 0, 0.22);
+  --overlay-shade-soft: rgba(0, 0, 0, 0.40);
+
+  --bg:               var(--bg-page);
+  --bg-deep:          var(--bg-navbar);
+  --surface:          var(--bg-surface);
+  --card:             var(--bg-surface-2);
+  --card-alt:         var(--bg-surface-2);
+  --text:             var(--text-primary);
+  --muted:            var(--text-secondary);
+  --muted-dark:       var(--text-muted);
+  --accent:           var(--brand);
+  --accent-hover:     var(--brand-hover);
+  --accent-active:    var(--brand-active);
+  --accent-light:     var(--brand-strong);
+  --accent-dim:       var(--brand-tint);
+  --accent-dim2:      var(--brand-soft);
+  --accent-glow:      var(--brand-glow);
+  --accent-focus:     var(--brand-focus);
+  --accent-border:    var(--brand-border);
+  --price:            var(--price-color);
+  --error-dim:        var(--danger-soft);
 }
 
 /* ── Reset ─────────────────────────────────────────────────── */
@@ -117,9 +226,9 @@ input, textarea, select { font-family: inherit; }
 
 /* ── Scrollbar ─────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: var(--muted-dark); }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
 /* ── Layout utilities ──────────────────────────────────────── */
 .container-noir {

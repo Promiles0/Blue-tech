@@ -153,7 +153,7 @@ export default function Products() {
                       position: 'relative',
                       padding: '7px 14px', borderRadius: 100, fontSize: 13, fontWeight: 500,
                       background: 'transparent',
-                      color: active ? '#fff' : 'var(--muted)',
+                      color: active ? 'var(--brand-text)' : 'var(--muted)',
                       border: `1px solid ${active ? 'transparent' : 'var(--border)'}`,
                       cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
                     }}
@@ -178,16 +178,16 @@ export default function Products() {
           {/* Sort dropdown */}
           <div style={{ position: 'relative', marginLeft: 'auto' }}>
             <button onClick={() => setSortOpen(p => !p)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid #2a2a2a', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: 'var(--text)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: 'var(--text)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               <SlidersHorizontal size={14} style={{ color: 'var(--muted)' }} />
               {currentSort.label}
               <ChevronDown size={14} style={{ color: 'var(--muted)' }} />
             </button>
             {sortOpen && (
-              <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: 'var(--card)', border: '1px solid #2a2a2a', borderRadius: 10, overflow: 'hidden', minWidth: 180, zIndex: 20 }}>
+              <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', minWidth: 180, zIndex: 20 }}>
                 {SORT_OPTIONS.map(opt => (
                   <button key={opt.value} onClick={() => { setParam('sort', opt.value); setSortOpen(false) }}
-                    style={{ width: '100%', padding: '10px 16px', fontSize: 13, background: opt.value === sort ? 'var(--accent-dim)' : 'none', color: opt.value === sort ? 'var(--accent)' : '#ccc', border: 'none', textAlign: 'left', cursor: 'pointer', display: 'block' }}>
+                    style={{ width: '100%', padding: '10px 16px', fontSize: 13, background: opt.value === sort ? 'var(--accent-dim)' : 'none', color: opt.value === sort ? 'var(--accent)' : 'var(--text-secondary)', border: 'none', textAlign: 'left', cursor: 'pointer', display: 'block' }}>
                     {opt.label}
                   </button>
                 ))}
@@ -221,7 +221,7 @@ export default function Products() {
             {[...Array(Math.min(totalPages, 10))].map((_, i) => (
               <button key={i}
                 onClick={() => { const n = new URLSearchParams(searchParams); n.set('page', i); setSearchParams(n) }}
-                style={{ width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 500, background: i === page ? 'var(--accent)' : 'var(--surface)', color: i === page ? '#fff' : 'var(--muted)', border: `1px solid ${i === page ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
+                style={{ width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 500, background: i === page ? 'var(--accent)' : 'var(--surface)', color: i === page ? 'var(--brand-text)' : 'var(--muted)', border: `1px solid ${i === page ? 'var(--accent)' : 'var(--border)'}`, cursor: 'pointer', transition: 'all 0.2s' }}>
                 {i + 1}
               </button>
             ))}

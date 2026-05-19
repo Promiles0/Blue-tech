@@ -61,13 +61,13 @@ export default function Register() {
       {/* Frosted glass card */}
       <div className="auth-card fade-in" style={{
         width: '100%', maxWidth: 480,
-        background: 'rgba(255, 255, 255, 0.04)',
+        background: 'var(--glass-bg)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        border: '1px solid var(--glass-border)',
         borderRadius: 20,
         padding: 40,
-        boxShadow: '0 24px 64px rgba(0, 0, 0, 0.4)',
+        boxShadow: 'var(--card-shadow)',
         position: 'relative', zIndex: 1,
       }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }}>
@@ -79,7 +79,7 @@ export default function Register() {
         <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>Create account</h1>
 
         {error && (
-          <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '11px 14px', fontSize: 13, color: '#f87171', marginBottom: 20 }}>
+          <div style={{ background: 'var(--error-dim)', border: '1px solid var(--danger-border)', borderRadius: 8, padding: '11px 14px', fontSize: 13, color: 'var(--error)', marginBottom: 20 }}>
             {error}
           </div>
         )}

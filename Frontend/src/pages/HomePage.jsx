@@ -299,7 +299,7 @@ export default function Home() {
                     display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
                     padding: 28,
                   }}>
-                    <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6, color: '#fff' }}>
+                    <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6, color: 'var(--brand-text)' }}>
                       Craft before convenience
                     </p>
                     <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.65 }}>
@@ -316,7 +316,7 @@ export default function Home() {
                   <div key={label} style={{ flex: 1, borderRadius: 16, overflow: 'hidden', background: 'var(--surface)', position: 'relative', minHeight: 180 }}>
                     <img src={img} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 55%)', display: 'flex', alignItems: 'flex-end', padding: 18 }}>
-                      <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, color: '#fff' }}>{label}</span>
+                      <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--brand-text)' }}>{label}</span>
                     </div>
                   </div>
                 ))}
