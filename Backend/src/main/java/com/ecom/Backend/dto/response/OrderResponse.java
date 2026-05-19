@@ -37,6 +37,7 @@ public class OrderResponse {
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class OrderItemResponse {
+        private Long productId;
         private String productName;
         private String variantInfo;
         private Integer quantity;

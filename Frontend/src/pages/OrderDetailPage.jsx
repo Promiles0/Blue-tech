@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Package, Truck, CheckCircle2, Clock, XCircle, Wallet } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { ArrowLeft, Package, Truck, CheckCircle2, Clock, XCircle, Wallet, Star } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import apiService from '../api/service'
+import api from '../api/axios'
+import { toast } from 'sonner'
+import { StarInput } from '../components/site/StarRating'
 
 const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
 
@@ -68,6 +71,10 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [activeReviewProduct, setActiveReviewProduct] = useState(null)
+  const [rating, setRating] = useState(0)
+  const [comment, setComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
 
   useEffect(() => {
     apiService.orders.getOrderDetails(id)
@@ -254,6 +261,26 @@ export default function OrderDetailPage() {
                   <div>
                     <p style={{ fontSize: 14, fontWeight: 500, color: '#fff', marginBottom: 2 }}>{item.productName}</p>
                     {item.variantInfo && <p style={{ fontSize: 12, color: '#999' }}>{item.variantInfo}</p>}
+                    {order.status === 'DELIVERED' && (
+                      <button
+                        onClick={() => setActiveReviewProduct({ id: item.productId, name: item.productName })}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--accent, #7c5cf0)',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: 0,
+                          marginTop: 6,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4
+                        }}
+                      >
+                        <Star size={12} fill="currentColor" /> Write a review
+                      </button>
+                    )}
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: 13, color: '#999' }}>{item.quantity} × ${parseFloat(item.priceAtPurchase ?? 0).toFixed(2)}</p>
@@ -270,6 +297,96 @@ export default function OrderDetailPage() {
 
         </motion.div>
       </div>
+
+      {/* Review Modal */}
+      <AnimatePresence>
+        {activeReviewProduct && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="surface"
+              style={{
+                width: '100%', maxWidth: 460, borderRadius: 16, padding: 28,
+                position: 'relative', margin: 16
+              }}
+            >
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text, #fff)', marginBottom: 6 }}>
+                Review Product
+              </h3>
+              <p style={{ fontSize: 13, color: 'var(--muted, #999)', marginBottom: 20 }}>
+                {activeReviewProduct.name}
+              </p>
+
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted, #999)', marginBottom: 8 }}>Rating</label>
+                <StarInput value={rating} onChange={setRating} />
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--muted, #999)', marginBottom: 8 }}>Your Thoughts</label>
+                <textarea
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                  placeholder="Share your experience with this product..."
+                  rows={4}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14,
+                    background: 'var(--input-bg, #1a1a1a)', border: '1px solid var(--border, #2a2a2a)',
+                    color: 'var(--text, #fff)', resize: 'none', outline: 'none', lineHeight: 1.6,
+                    fontFamily: 'inherit', boxSizing: 'border-box'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setActiveReviewProduct(null)
+                    setRating(0)
+                    setComment('')
+                  }}
+                  className="noir-btn-outline"
+                  style={{ padding: '8px 16px', fontSize: 13 }}
+                  disabled={submittingReview}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!rating) {
+                      toast.error('Please select a star rating.')
+                      return
+                    }
+                    setSubmittingReview(true)
+                    try {
+                      await api.post(`/products/${activeReviewProduct.id}/reviews`, { rating, comment })
+                      toast.success('Review posted successfully!')
+                      setActiveReviewProduct(null)
+                      setRating(0)
+                      setComment('')
+                    } catch (err) {
+                      toast.error(err.response?.data?.message ?? 'Could not post review.')
+                    } finally {
+                      setSubmittingReview(false)
+                    }
+                  }}
+                  className="noir-btn-primary"
+                  style={{ padding: '8px 16px', fontSize: 13 }}
+                  disabled={submittingReview}
+                >
+                  {submittingReview ? 'Submitting…' : 'Submit Review'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

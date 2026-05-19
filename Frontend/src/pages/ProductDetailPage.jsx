@@ -8,7 +8,7 @@ import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { useWishlist } from '../context/WishlistContext'
 import { trackRecentlyViewed } from '../lib/recentlyViewed'
-import { StarDisplay, StarInput } from '../components/site/StarRating'
+import { StarDisplay } from '../components/site/StarRating'
 import LensZoom from '../components/site/LensZoom'
 import StickyCartBar from '../components/site/StickyCartBar'
 
@@ -27,10 +27,7 @@ export default function ProductDetail() {
   const [added, setAdded] = useState(false)
   const [stickyVisible, setStickyVisible] = useState(false)
   const [reviews, setReviews] = useState([])
-  const [reviewRating, setReviewRating] = useState(0)
-  const [reviewComment, setReviewComment] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+
   const ctaRef = useRef(null)
 
   useEffect(() => {
@@ -252,57 +249,7 @@ export default function ProductDetail() {
             </h2>
           </div>
 
-          {user ? (
-            submitted ? (
-              <div style={{ background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 12, padding: '16px 20px', marginBottom: 24, fontSize: 14, color: '#34d399' }}>
-                Thanks for your review!
-              </div>
-            ) : (
-              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 14 }}>Leave a review</p>
-                <div style={{ marginBottom: 14 }}>
-                  <StarInput value={reviewRating} onChange={setReviewRating} />
-                </div>
-                <textarea
-                  value={reviewComment}
-                  onChange={e => setReviewComment(e.target.value)}
-                  placeholder="Share your thoughts…"
-                  rows={3}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14, background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text)', resize: 'vertical', outline: 'none', lineHeight: 1.6, fontFamily: 'inherit', marginBottom: 12 }}
-                />
-                <button
-                  onClick={async () => {
-                    if (!reviewRating) {
-                      toast.error('Please select a star rating.')
-                      return
-                    }
-                    setSubmitting(true)
-                    try {
-                      const { data } = await api.post(`/products/${id}/reviews`, { rating: reviewRating, comment: reviewComment })
-                      setReviews(prev => [data, ...prev])
-                      setSubmitted(true)
-                      setReviewComment('')
-                      setReviewRating(0)
-                      toast.success('Review posted!')
-                    } catch (err) {
-                      toast.error(err.response?.data?.message ?? 'Could not post review.')
-                    } finally {
-                      setSubmitting(false)
-                    }
-                  }}
-                  disabled={submitting}
-                  className="noir-btn-primary"
-                  style={{ padding: '10px 22px', fontSize: 14 }}
-                >
-                  {submitting ? 'Posting…' : 'Post review'}
-                </button>
-              </div>
-            )
-          ) : (
-            <div style={{ marginBottom: 24, fontSize: 13, color: 'var(--muted-dark)' }}>
-              <Link to="/login" style={{ color: 'var(--accent)' }}>Sign in</Link> to leave a review.
-            </div>
-          )}
+
 
           {reviews.length === 0 ? (
             <p style={{ fontSize: 14, color: 'var(--muted-dark)' }}>No reviews yet. Be the first!</p>

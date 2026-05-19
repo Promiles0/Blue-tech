@@ -316,6 +316,7 @@ public class OrderService {
         List<OrderItem> rawItems = order.getOrderItems() != null ? order.getOrderItems() : List.of();
         List<OrderResponse.OrderItemResponse> items = rawItems.stream().map(oi ->
             OrderResponse.OrderItemResponse.builder()
+                    .productId(oi.getVariant().getProduct().getProductId())
                     .productName(oi.getVariant().getProduct().getName())
                     .variantInfo(oi.getVariant().getSizeOrColor())
                     .quantity(oi.getQuantity())

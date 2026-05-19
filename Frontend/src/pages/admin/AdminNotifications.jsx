@@ -12,9 +12,9 @@ import { useNotifications } from '../../context/NotificationContext'
 
 const SEV_COLOR = {
   success: '#22c55e',
-  error:   '#ef4444',
+  error: '#ef4444',
   warning: '#f59e0b',
-  info:    'var(--accent)',
+  info: 'var(--accent)',
 }
 
 const CATEGORIES = ['all', 'shopping', 'account', 'community', 'order', 'system', 'security', 'business']
@@ -46,16 +46,16 @@ function timeAgo(dateStr) {
 
 export default function AdminNotifications() {
   const { fetchAdminUnreadCount } = useNotifications()
-  const [items, setItems]         = useState([])
-  const [loading, setLoading]     = useState(false)
-  const [paused, setPaused]       = useState(false)
-  const [search, setSearch]       = useState('')
-  const [catFilter, setCat]       = useState('all')
-  const [sevFilter, setSev]       = useState('all')
-  const [lastRefresh, setLast]    = useState(null)
-  const [hoverId, setHoverId]     = useState(null)
-  const intervalRef               = useRef(null)
-  const navigate                  = useNavigate()
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [paused, setPaused] = useState(false)
+  const [search, setSearch] = useState('')
+  const [catFilter, setCat] = useState('all')
+  const [sevFilter, setSev] = useState('all')
+  const [lastRefresh, setLast] = useState(null)
+  const [hoverId, setHoverId] = useState(null)
+  const intervalRef = useRef(null)
+  const navigate = useNavigate()
 
   const fetchItems = useCallback(async () => {
     setLoading(true)
@@ -155,65 +155,11 @@ export default function AdminNotifications() {
             <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
             Refresh
           </button>
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllRead}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 12, padding: '7px 13px', borderRadius: 8, cursor: 'pointer',
-                background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
-                color: '#22c55e', transition: 'opacity 0.15s',
-              }}
-            >
-              <Check size={12} /> Mark all read ({unreadCount})
-            </button>
-          )}
+
         </div>
       </div>
 
-      {/* Analytics strip */}
-      {items.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr) 260px', gap: 14, marginBottom: 24 }}>
-          {/* Severity counts */}
-          {['info', 'success', 'warning', 'error'].map(sev => {
-            const count = items.filter(n => n.severity === sev).length
-            return (
-              <div
-                key={sev}
-                className="surface"
-                style={{ borderRadius: 10, padding: '14px 16px', cursor: 'pointer', transition: 'opacity 0.15s', opacity: sevFilter === sev ? 1 : 0.75 }}
-                onClick={() => setSev(s => s === sev ? 'all' : sev)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: SEV_COLOR[sev] }} />
-                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--admin-muted)' }}>
-                    {sev}
-                  </span>
-                </div>
-                <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 24, fontWeight: 700, color: SEV_COLOR[sev] }}>
-                  {count}
-                </span>
-              </div>
-            )
-          })}
-          {/* Category pie */}
-          <div className="surface" style={{ borderRadius: 10, padding: '10px 14px' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--admin-muted)', marginBottom: 4 }}>
-              By Category
-            </div>
-            <ResponsiveContainer width="100%" height={80}>
-              <PieChart>
-                <Pie data={byCat} dataKey="value" cx="50%" cy="50%" outerRadius={34} innerRadius={18}>
-                  {byCat.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip {...tooltipStyle} formatter={v => [v, 'events']} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
+
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
