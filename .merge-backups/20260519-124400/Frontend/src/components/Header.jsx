@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X } from 'lucide-react'
+import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X, Sun, Moon } from 'lucide-react'
 import NotificationBell from './site/NotificationBell'
 import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
@@ -14,7 +14,7 @@ export default function Header() {
   const { user, logout, isAdmin }                           = useAuth()
   const { count }                                           = useCart()
   const { setCartOpen, setMobileNavOpen }                   = useUI()
-  const { theme }                                           = useTheme()
+  const { theme, toggleTheme }                              = useTheme()
   const navigate                                            = useNavigate()
   const [userMenuOpen, setUserMenuOpen]                     = useState(false)
   const [browseOpen, setBrowseOpen]                         = useState(false)
@@ -307,30 +307,29 @@ export default function Header() {
 
           {/* Cart → drawer — hidden for admin */}
           {!isAdmin && (
-            <div style={{ position: 'relative' }}>
-              <IconBtn onClick={() => setCartOpen(true)}>
-                <ShoppingBag size={18} />
-              </IconBtn>
-              {count > 0 && (
-                <motion.span
-                  key={badgeKey}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                  style={{
-                    position: 'absolute', top: 2, right: 2,
-                    background: 'var(--accent)', color: '#fff',
-                    borderRadius: '50%', width: 15, height: 15,
-                    fontSize: 9, fontWeight: 700,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  {count > 9 ? '9+' : count}
-                </motion.span>
-              )}
-            </div>
-          )}
+          <div style={{ position: 'relative' }}>
+            <IconBtn onClick={() => setCartOpen(true)}>
+              <ShoppingBag size={18} />
+            </IconBtn>
+            {count > 0 && (
+              <motion.span
+                key={badgeKey}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                style={{
+                  position: 'absolute', top: 2, right: 2,
+                  background: 'var(--accent)', color: '#fff',
+                  borderRadius: '50%', width: 15, height: 15,
+                  fontSize: 9, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  pointerEvents: 'none',
+                }}
+              >
+                {count > 9 ? '9+' : count}
+              </motion.span>
+            )}
+          </div>
 
           {/* Account — avatar circle when logged in */}
           {user ? (

@@ -43,8 +43,8 @@ export default function NotificationsPage() {
   useEffect(() => { fetchNotifications(60) }, []) // eslint-disable-line
 
   const displayed = notifications.filter(n => {
-    if (readFilter === 'unread' && n.isRead) return false
-    if (filter !== 'all' && n.category !== filter) return false
+    if (onlyUnread && n.isRead) return false
+    if (cat !== 'all' && n.category !== cat) return false
     return true
   })
 

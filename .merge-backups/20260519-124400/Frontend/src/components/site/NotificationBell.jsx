@@ -34,10 +34,11 @@ function timeAgo(dateStr) {
 export default function NotificationBell() {
   const { unreadCount, notifications, loading, fetchNotifications, markRead, markAllRead } = useNotifications()
   const [open, setOpen]         = useState(false)
-  const [filter, setFilter]     = useState('all')
+  const [onlyUnread, setUnread] = useState(false)
   const [badgeKey, setBadgeKey] = useState(0)
   const [prevCount, setPrev]    = useState(unreadCount)
-  const popoverRef              = useRef(null)
+  const [hoverId, setHoverId]   = useState(null)
+  const ref    = useRef(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -52,14 +53,14 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (!open) return
-    const handler = (e) => { if (popoverRef.current && !popoverRef.current.contains(e.target)) setOpen(false) }
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  const displayed = filter === 'unread' ? notifications.filter(n => !n.isRead) : notifications
+  const displayed = onlyUnread ? notifications.filter(n => !n.isRead) : notifications
 
-  const handleItemClick = async (n) => {
+  const handleItem = async (n) => {
     if (!n.isRead) await markRead([n.notificationId])
     if (n.href) { setOpen(false); navigate(n.href) }
   }
@@ -236,7 +237,7 @@ export default function NotificationBell() {
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}
               >
-                <ArrowRight size={11} /> View all notifications
+                <ExternalLink size={11} /> View all notifications
               </Link>
             </div>
           </motion.div>

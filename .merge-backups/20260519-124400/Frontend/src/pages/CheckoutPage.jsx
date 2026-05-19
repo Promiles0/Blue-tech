@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CheckCircle, ArrowLeft, MapPin, Truck } from "lucide-react";
+import { CheckCircle, ArrowLeft, MapPin, Truck, ShieldCheck } from "lucide-react";
 import apiService from "../api/service";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -59,8 +59,6 @@ export default function CheckoutPage() {
     : 0;
   const safeDiscount = Math.min(discount, subtotal);
   const total = Math.max(0, subtotal - safeDiscount);
-  const shippingMethod = "STANDARD";
-  const paymentMethod = "COD";
 
   const handlePlaceOrder = async () => {
     let payload;
@@ -77,22 +75,17 @@ export default function CheckoutPage() {
         zipCode: newAddress.zipCode,
         country: newAddress.country,
         phone: newAddress.phone,
-        shippingMethod,
-        paymentMethod,
+        paymentMethod: "COD",
         couponCode: coupon?.code ?? null,
       };
     } else {
-      const addr = addresses.find((address) => address.addressId === selectedAddressId)
-      if (!addr) {
-        toast.error("Select a shipping address");
-        return;
-      }
+      const addr = addresses.find(a => a.addressId === selectedAddressId)
+      if (!addr) { toast.error('Select a shipping address'); return }
       payload = {
         street: addr.streetAddress, city: addr.city,
         state: addr.state ?? '', zipCode: addr.zipCode ?? '',
         country: addr.country, phone: addr.phoneNumber,
-        shippingMethod,
-        paymentMethod,
+        shippingMethod: shipping, paymentMethod: payment,
         couponCode: coupon?.code ?? null,
       }
     }
@@ -100,7 +93,7 @@ export default function CheckoutPage() {
     try {
       await apiService.orders.checkout(payload)
       await clearCart()
-      setStep("success")
+      setDone(true)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to place order')
     } finally {
@@ -123,6 +116,11 @@ export default function CheckoutPage() {
             Track my order
           </Link>
         </div>
+        <h1 style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginBottom: 10 }}>Order Confirmed</h1>
+        <p style={{ color: '#666', fontSize: 14, lineHeight: 1.7, marginBottom: 28 }}>
+          Thank you! Your order is being prepared. We'll notify you once it's on the way.
+        </p>
+        <Link to="/orders" className="noir-btn-primary" style={{ padding: '13px 32px' }}>Track my order</Link>
       </div>
     );
   }
@@ -262,7 +260,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <button onClick={handlePlaceOrder} disabled={loading || !cart?.items?.length}
+              <button onClick={handlePlace} disabled={loading || !cart?.items?.length}
                 className="noir-btn-primary shine"
                 style={{ width: '100%', padding: '14px', fontSize: 15, opacity: loading ? 0.7 : 1 }}>
                 {loading ? 'Placing order…' : 'Confirm & Place Order'}
