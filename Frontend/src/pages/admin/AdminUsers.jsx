@@ -163,7 +163,7 @@ const dangerBadge = {
 }
 const inputStyle = {
   background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
-  borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, outline: 'none',
+  borderRadius: 8, color: 'var(--text)', padding: '7px 12px', fontSize: 13, outline: 'none',
 }
 const primaryBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -173,7 +173,7 @@ const primaryBtn = {
 const outlineBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5,
   background: 'transparent', border: '1px solid var(--admin-border)',
-  borderRadius: 7, color: '#fff', padding: '5px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
+  borderRadius: 7, color: 'var(--text)', padding: '5px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 const ghostBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5,

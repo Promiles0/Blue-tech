@@ -201,7 +201,7 @@ export default function AdminProducts() {
       )}
 
       {/* Table */}
-      <div style={{ background: '#111', border: '1px solid #1a1a1a', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="surface" style={{ borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
@@ -224,8 +224,8 @@ export default function AdminProducts() {
             ) : products.length === 0 ? (
               <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: 'var(--muted-dark)' }}>No products yet. Add your first one!</td></tr>
             ) : products.map(p => (
-              <tr key={p.productId ?? p.id} style={{ borderBottom: '1px solid #141414', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#161616'}
+              <tr key={p.productId ?? p.id} style={{ borderBottom: '1px solid var(--admin-border)', transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--overlay-hover)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <td style={{ padding: '14px 16px' }}>
@@ -236,7 +236,7 @@ export default function AdminProducts() {
                         onError={e => { e.target.style.display = 'none' }}
                       />
                     )}
-                    <span style={{ fontWeight: 500, color: '#ddd' }}>{p.name}</span>
+                    <span style={{ fontWeight: 500, color: 'var(--text)' }}>{p.name}</span>
                   </div>
                 </td>
                 <td style={{ padding: '14px 16px', color: 'var(--muted-dark)' }}>{p.categoryName ?? p.category?.name ?? '—'}</td>
@@ -255,7 +255,7 @@ export default function AdminProducts() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '12px 16px', borderTop: '1px solid #1a1a1a' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '12px 16px', borderTop: '1px solid var(--admin-border)' }}>
             <IconBtn icon={ChevronLeft}  onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} />
             <span style={{ fontSize: 12, color: 'var(--muted-dark)' }}>Page {page + 1} of {totalPages}</span>
             <IconBtn icon={ChevronRight} onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} />
@@ -270,9 +270,8 @@ export default function AdminProducts() {
           display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
           padding: '40px 20px', zIndex: 100, overflowY: 'auto',
         }}>
-          <div style={{
-            background: '#111', border: '1px solid #1e1e1e', borderRadius: 16,
-            width: '100%', maxWidth: 680, padding: '32px',
+          <div className="surface" style={{
+            width: '100%', maxWidth: 680, padding: '32px', borderRadius: 16,
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700 }}>{modal === 'create' ? 'Add Product' : 'Edit Product'}</h2>
@@ -304,7 +303,7 @@ export default function AdminProducts() {
               <label style={labelStyle}>
                 <span>Category *</span>
                 <select className="noir-input" value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
-                  style={{ background: 'var(--surface)', color: '#fff' }}>
+                  style={{ background: 'var(--surface)', color: 'var(--text)' }}>
                   <option value="">— select —</option>
                   {categories.map(c => (
                     <option key={c.categoryId} value={c.categoryId}>{c.name ?? c.categoryName}</option>

@@ -288,12 +288,12 @@ function Row({ label, value }) {
 
 const selectStyle = {
   background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
-  borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, cursor: 'pointer',
+  borderRadius: 8, color: 'var(--text)', padding: '7px 12px', fontSize: 13, cursor: 'pointer',
 }
 const outlineBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 6,
   background: 'transparent', border: '1px solid var(--admin-border)',
-  borderRadius: 8, color: '#fff', padding: '7px 14px', fontSize: 13,
+  borderRadius: 8, color: 'var(--text)', padding: '7px 14px', fontSize: 13,
   cursor: 'pointer', transition: 'border-color 0.15s',
 }
 const primaryBtn = {
@@ -309,5 +309,5 @@ const ghostIconBtn = {
 }
 const inputStyle = {
   background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
-  borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, outline: 'none',
+  borderRadius: 8, color: 'var(--text)', padding: '7px 12px', fontSize: 13, outline: 'none',
 }

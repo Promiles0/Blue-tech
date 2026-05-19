@@ -84,12 +84,12 @@ export default function AdminDashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
+                  tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
                   tickFormatter={v => v.slice(5)}
                   axisLine={false} tickLine={false}
                 />
                 <YAxis
-                  tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
+                  tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
                   tickFormatter={v => `$${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
                   axisLine={false} tickLine={false} width={50}
                 />
@@ -158,8 +158,8 @@ export default function AdminDashboard() {
                   data={pipelineData}
                   margin={{ top: 0, right: 16, bottom: 0, left: 0 }}
                 >
-                  <XAxis type="number" allowDecimals={false} tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="status" width={90} tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fill: 'var(--admin-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="status" width={90} tick={{ fill: 'var(--admin-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip {...tooltipStyle} formatter={v => [v, 'orders']} />
                   <Bar dataKey="count" radius={[0, 4, 4, 0]}>
                     {pipelineData.map((d, i) => (
@@ -174,7 +174,7 @@ export default function AdminDashboard() {
                   <div key={d.status} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: STATUS_COLOR[d.status] ?? 'var(--accent)', flexShrink: 0 }} />
                     <span style={{ color: 'var(--admin-muted)' }}>{d.status}</span>
-                    <span style={{ fontWeight: 700, color: '#fff' }}>{d.count}</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text)' }}>{d.count}</span>
                   </div>
                 ))}
               </div>
@@ -218,7 +218,7 @@ export default function AdminDashboard() {
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--glass-bg)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
-                    <td style={{ padding: '10px 0', color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', fontSize: 11 }}>#{o.orderId}</td>
+                    <td style={{ padding: '10px 0', color: 'var(--admin-muted)', fontFamily: 'monospace', fontSize: 11 }}>#{o.orderId}</td>
                     <td style={{ padding: '10px 0', fontWeight: 500 }}>{o.customerName}</td>
                     <td style={{ padding: '10px 0', fontWeight: 600 }}>{money(o.totalAmount)}</td>
                     <td style={{ padding: '10px 0' }}>
@@ -250,7 +250,7 @@ function KPI({ icon: Icon, label, value, accent, large }) {
         <Icon size={12} style={{ color }} />
         {label}
       </div>
-      <div style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: large ? 28 : 22, fontWeight: 700, letterSpacing: '-0.01em', color: accent ?? '#fff' }}>
+      <div style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: large ? 28 : 22, fontWeight: 700, letterSpacing: '-0.01em', color: accent ?? 'var(--text)' }}>
         {value}
       </div>
     </div>

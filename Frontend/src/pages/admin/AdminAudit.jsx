@@ -18,7 +18,7 @@ const ACTION_COLORS = {
 
 function actionColor(action = '') {
   const key = Object.keys(ACTION_COLORS).find(k => action.toLowerCase().includes(k))
-  return key ? ACTION_COLORS[key] : 'rgba(255,255,255,0.45)'
+  return key ? ACTION_COLORS[key] : 'var(--admin-muted)'
 }
 
 export default function AdminAudit() {
@@ -71,9 +71,9 @@ export default function AdminAudit() {
                       {log.action}
                     </span>
                   </td>
-                  <td style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontFamily: 'monospace' }}>{log.targetTable}</td>
+                  <td style={{ fontSize: 12, color: 'var(--admin-muted)', fontFamily: 'monospace' }}>{log.targetTable}</td>
                   <td style={{ fontSize: 12, color: 'var(--admin-muted)', fontFamily: 'monospace' }}>{log.targetId ?? '—'}</td>
-                  <td style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', maxWidth: 320 }}>{log.description}</td>
+                  <td style={{ fontSize: 12, color: 'var(--text)', opacity: 0.8, maxWidth: 320 }}>{log.description}</td>
                 </tr>
               ))}
             </tbody>

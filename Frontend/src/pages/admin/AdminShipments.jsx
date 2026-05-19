@@ -114,11 +114,11 @@ function ShipmentRow({ shipment }) {
 
 const inputStyle = {
   background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
-  borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, outline: 'none',
+  borderRadius: 8, color: 'var(--text)', padding: '7px 12px', fontSize: 13, outline: 'none',
 }
 const selectStyle = {
   background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
-  borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, cursor: 'pointer',
+  borderRadius: 8, color: 'var(--text)', padding: '7px 12px', fontSize: 13, cursor: 'pointer',
 }
 const saveBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5,

@@ -17,7 +17,7 @@ function Modal({ title, form, setForm, onSave, onClose, saving }) {
         style={{
           width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13,
           background: 'var(--admin-bg)', border: '1px solid var(--admin-border)',
-          color: '#fff', outline: 'none',
+          color: 'var(--text)', outline: 'none',
         }}
       />
     </div>
@@ -26,7 +26,7 @@ function Modal({ title, form, setForm, onSave, onClose, saving }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div className="surface" style={{ width: '100%', maxWidth: 440, borderRadius: 16, padding: 28 }}>
-        <h2 style={{ fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 22 }}>{title}</h2>
+        <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 22 }}>{title}</h2>
 
         {field('Code', 'code', 'text', 'SUMMER20')}
 
@@ -35,7 +35,7 @@ function Modal({ title, form, setForm, onSave, onClose, saving }) {
           <select
             value={form.kind}
             onChange={e => setForm(f => ({ ...f, kind: e.target.value }))}
-            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--admin-bg)', border: '1px solid var(--admin-border)', color: '#fff', outline: 'none' }}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--admin-bg)', border: '1px solid var(--admin-border)', color: 'var(--text)', outline: 'none' }}
           >
             <option value="PERCENT">Percent (%)</option>
             <option value="FIXED">Fixed ($)</option>
@@ -50,11 +50,11 @@ function Modal({ title, form, setForm, onSave, onClose, saving }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
           <input type="checkbox" id="active" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} />
-          <label htmlFor="active" style={{ fontSize: 13, color: '#ccc', cursor: 'pointer' }}>Active</label>
+          <label htmlFor="active" style={{ fontSize: 13, color: 'var(--text)', opacity: 0.85, cursor: 'pointer' }}>Active</label>
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 8, background: 'var(--admin-border)', border: 'none', color: '#ccc', fontSize: 13, cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 8, background: 'var(--admin-border)', border: 'none', color: 'var(--text)', opacity: 0.85, fontSize: 13, cursor: 'pointer' }}>
             Cancel
           </button>
           <button onClick={onSave} disabled={saving} style={{ flex: 1, padding: '10px', borderRadius: 8, background: 'var(--admin-primary)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
@@ -144,7 +144,7 @@ export default function AdminCoupons() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--admin-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Admin</p>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>Coupons</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>Coupons</h1>
         </div>
         <button
           onClick={openCreate}
@@ -178,7 +178,7 @@ export default function AdminCoupons() {
                 <tr key={c.couponId} style={{ borderBottom: '1px solid var(--admin-border)' }}>
                   <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, color: 'var(--accent-light)', fontFamily: 'monospace', letterSpacing: '0.06em' }}>{c.code}</td>
                   <td style={{ padding: '12px 14px', fontSize: 12, color: 'var(--admin-muted)' }}>{c.kind}</td>
-                  <td style={{ padding: '12px 14px', fontSize: 13, color: '#fff', fontWeight: 600 }}>
+                  <td style={{ padding: '12px 14px', fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>
                     {c.kind === 'PERCENT' ? `${c.value}%` : `$${parseFloat(c.value).toFixed(2)}`}
                   </td>
                   <td style={{ padding: '12px 14px', fontSize: 12, color: 'var(--admin-muted)' }}>

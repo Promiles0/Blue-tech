@@ -83,7 +83,7 @@ export default function AdminCategories() {
       )}
 
       {/* Table */}
-      <div style={{ background: '#111', border: '1px solid #1a1a1a', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="surface" style={{ borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
@@ -106,11 +106,11 @@ export default function AdminCategories() {
             ) : categories.length === 0 ? (
               <tr><td colSpan={3} style={{ padding: '40px', textAlign: 'center', color: 'var(--muted-dark)' }}>No categories yet. Add your first one!</td></tr>
             ) : categories.map(cat => (
-              <tr key={cat.categoryId} style={{ borderBottom: '1px solid #141414', transition: 'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#161616'}
+              <tr key={cat.categoryId} style={{ borderBottom: '1px solid var(--admin-border)', transition: 'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--overlay-hover)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <td style={{ padding: '14px 16px', fontWeight: 500, color: '#ddd' }}>
+                <td style={{ padding: '14px 16px', fontWeight: 500, color: 'var(--text)' }}>
                   {cat.name ?? cat.categoryName}
                 </td>
                 <td style={{ padding: '14px 16px', color: 'var(--muted-dark)', maxWidth: 400 }}>
@@ -134,7 +134,7 @@ export default function AdminCategories() {
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
         }}>
-          <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 16, width: '100%', maxWidth: 440, padding: '32px' }}>
+          <div className="surface" style={{ width: '100%', maxWidth: 440, padding: '32px', borderRadius: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <h2 style={{ fontSize: 17, fontWeight: 700 }}>{modal === 'create' ? 'New Category' : 'Edit Category'}</h2>
               <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'var(--muted-dark)', cursor: 'pointer' }}

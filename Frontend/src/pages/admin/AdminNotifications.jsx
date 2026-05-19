@@ -31,7 +31,7 @@ const tooltipStyle = {
     background: 'var(--admin-card)', border: '1px solid var(--admin-border)',
     borderRadius: 8, fontSize: 12,
   },
-  labelStyle: { color: 'rgba(255,255,255,0.55)', marginBottom: 4 },
+  labelStyle: { color: 'var(--admin-muted)', marginBottom: 4 },
 }
 
 function timeAgo(dateStr) {
@@ -112,7 +112,7 @@ export default function AdminNotifications() {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6)
 
-  const PIE_COLORS = ['var(--accent)', '#f59e0b', '#22c55e', '#3b82f6', '#ef4444', '#ec4899']
+  const PIE_COLORS = ['#354380', '#10b981', '#6366f1', '#0d9488', '#f59e0b', '#ec4899']
 
   return (
     <div style={{ padding: 40 }}>
@@ -226,7 +226,7 @@ export default function AdminNotifications() {
             placeholder="Search notifications…"
             style={{
               width: '100%', background: 'var(--admin-card)', border: '1px solid var(--admin-border)',
-              borderRadius: 8, padding: '7px 10px 7px 30px', fontSize: 12, color: '#fff',
+              borderRadius: 8, padding: '7px 10px 7px 30px', fontSize: 12, color: 'var(--text)',
               outline: 'none', boxSizing: 'border-box',
             }}
           />
@@ -276,8 +276,8 @@ export default function AdminNotifications() {
                 display: 'flex', gap: 12, alignItems: 'flex-start',
                 transition: 'background 0.2s',
                 background: hoverId === n.notificationId
-                  ? 'rgba(255,255,255,0.03)'
-                  : n.isRead ? 'transparent' : 'rgba(124,92,240,0.03)',
+                  ? 'var(--overlay-hover)'
+                  : n.isRead ? 'transparent' : 'var(--brand-soft)',
               }}
             >
               {/* Severity dot */}
@@ -289,7 +289,7 @@ export default function AdminNotifications() {
 
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: n.isRead ? 400 : 600, color: n.isRead ? 'var(--admin-muted)' : '#fff' }}>
+                  <span style={{ fontSize: 13, fontWeight: n.isRead ? 400 : 600, color: n.isRead ? 'var(--admin-muted)' : 'var(--text)' }}>
                     {n.title}
                   </span>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
@@ -301,7 +301,7 @@ export default function AdminNotifications() {
                         Mark read
                       </button>
                     )}
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>{timeAgo(n.createdAt)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--admin-muted)' }}>{timeAgo(n.createdAt)}</span>
                   </div>
                 </div>
                 {n.body && (
@@ -319,7 +319,7 @@ export default function AdminNotifications() {
                   {n.category && (
                     <span style={{
                       fontSize: 9, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-                      color: 'rgba(255,255,255,0.3)', background: 'var(--glass-bg2)',
+                      color: 'var(--admin-muted)', background: 'var(--glass-bg2)',
                       padding: '1px 5px', borderRadius: 3,
                     }}>
                       {CAT_LABEL[n.category] ?? n.category}

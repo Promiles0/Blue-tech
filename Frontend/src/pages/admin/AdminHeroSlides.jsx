@@ -103,7 +103,7 @@ export default function AdminHeroSlides() {
           <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--admin-primary)', marginBottom: 4 }}>
             HOMEPAGE
           </p>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: '#fff' }}>Hero Slides</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)' }}>Hero Slides</h1>
           <p style={{ fontSize: 13, color: 'var(--admin-muted)', marginTop: 4 }}>
             Manage the auto-sliding carousel on the homepage.
           </p>
@@ -124,7 +124,7 @@ export default function AdminHeroSlides() {
       {/* Create / Edit Form */}
       {showForm && (
         <div className="surface" style={{ marginBottom: 28, padding: 28, borderRadius: 14 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 24 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 24 }}>
             {editingId ? 'Edit Slide' : 'New Slide'}
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -133,7 +133,7 @@ export default function AdminHeroSlides() {
                 Image URL *
               </label>
               <input
-                className="admin-input"
+                className="noir-input"
                 value={form.imageUrl}
                 onChange={e => setForm({ ...form, imageUrl: e.target.value })}
                 placeholder="https://images.unsplash.com/..."
@@ -144,7 +144,7 @@ export default function AdminHeroSlides() {
                 Label *
               </label>
               <input
-                className="admin-input"
+                className="noir-input"
                 value={form.label}
                 onChange={e => setForm({ ...form, label: e.target.value })}
                 placeholder="Precision Audio"
@@ -155,7 +155,7 @@ export default function AdminHeroSlides() {
                 Alt Text
               </label>
               <input
-                className="admin-input"
+                className="noir-input"
                 value={form.altText}
                 onChange={e => setForm({ ...form, altText: e.target.value })}
                 placeholder="Describe the image"
@@ -166,7 +166,7 @@ export default function AdminHeroSlides() {
                 Sort Order
               </label>
               <input
-                className="admin-input"
+                className="noir-input"
                 type="number"
                 min={0}
                 value={form.sortOrder}
@@ -181,7 +181,7 @@ export default function AdminHeroSlides() {
                 onChange={e => setForm({ ...form, isActive: e.target.checked })}
                 style={{ width: 16, height: 16, accentColor: 'var(--admin-primary)', cursor: 'pointer' }}
               />
-              <label htmlFor="isActive" style={{ fontSize: 13, color: '#ccc', cursor: 'pointer' }}>Active (visible on homepage)</label>
+              <label htmlFor="isActive" style={{ fontSize: 13, color: 'var(--text)', opacity: 0.85, cursor: 'pointer' }}>Active (visible on homepage)</label>
             </div>
           </div>
 
@@ -260,7 +260,7 @@ export default function AdminHeroSlides() {
               />
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#fff', marginBottom: 2 }}>{slide.label}</p>
+                <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{slide.label}</p>
                 <p style={{ fontSize: 12, color: 'var(--admin-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {slide.imageUrl}
                 </p>

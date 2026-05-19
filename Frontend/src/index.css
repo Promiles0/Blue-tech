@@ -632,11 +632,18 @@ input, textarea, select { font-family: inherit; }
   --admin-card:         #15151a;
   --admin-border:       rgba(255,255,255,0.07);
   --admin-primary:      #354380;
+  --admin-primary-hover:#2a3568;
   --admin-amber:        #f59e0b;
   --admin-success:      #22c55e;
   --admin-warning:      #f59e0b;
   --admin-danger:       #ef4444;
   --admin-muted:        rgba(255,255,255,0.45);
+
+  --admin-sidebar-text: #ffffff;
+  --admin-sidebar-muted:rgba(255,255,255,0.45);
+  --admin-sidebar-active:#1a1a20;
+  --admin-sidebar-border:rgba(255,255,255,0.07);
+  --admin-box-shadow:   inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.4);
 }
 
 [data-theme="light"] {
@@ -646,19 +653,31 @@ input, textarea, select { font-family: inherit; }
   --success:            #16a34a;
 
   --admin-bg:           #f0f0f5;
-  --admin-sidebar:      #ffffff;
-  --admin-sidebar-acc:  #f0f0f5;
-  --admin-card:         #ffffff;
+  --admin-sidebar:      #354380; /* Blue sidebar in light mode */
+  --admin-sidebar-acc:  #2a3568;
+  --admin-card:         #ffffff; /* Clean white card background */
   --admin-border:       rgba(0,0,0,0.08);
-  --admin-primary:      #354380;
+  --admin-primary:      #f59e0b; /* Orange CTA buttons */
+  --admin-primary-hover:#d97706;
   --admin-muted:        rgba(0,0,0,0.50);
+
+  --admin-sidebar-text: #ffffff;
+  --admin-sidebar-muted:rgba(255,255,255,0.65);
+  --admin-sidebar-active:#2a3568;
+  --admin-sidebar-border:rgba(255,255,255,0.12);
+  --admin-box-shadow:   0 4px 20px rgba(0,0,0,0.04);
+}
+
+.admin-container {
+  --accent: var(--admin-primary);
+  --accent-hover: var(--admin-primary-hover);
 }
 
 /* .surface — premium card used by every admin container */
 .surface {
-  background: linear-gradient(135deg, var(--admin-card) 0%, var(--admin-bg) 100%);
+  background: var(--admin-card);
   border: 1px solid var(--admin-border);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.4);
+  box-shadow: var(--admin-box-shadow);
 }
 
 /* admin table standard pattern */

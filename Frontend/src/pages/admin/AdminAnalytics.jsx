@@ -7,14 +7,14 @@ import { DollarSign, ShoppingBag, Package, TrendingUp } from 'lucide-react'
 import apiService from '../../api/service'
 import { money } from '../../lib/format'
 
-const CHART_COLORS = ['var(--accent)', '#f59e0b', '#22c55e', '#3b82f6', '#ef4444']
+const CHART_COLORS = ['#354380', '#10b981', '#6366f1', '#0d9488', '#f59e0b']
 
 const tooltipStyle = {
   contentStyle: {
     background: 'var(--admin-card)', border: '1px solid var(--admin-border)',
     borderRadius: 8, fontSize: 12,
   },
-  labelStyle: { color: 'rgba(255,255,255,0.55)', marginBottom: 4 },
+  labelStyle: { color: 'var(--admin-muted)', marginBottom: 4 },
 }
 
 function fetchAnalytics() {
@@ -85,14 +85,14 @@ export default function AdminAnalytics() {
                   >
                     <XAxis
                       type="number"
-                      tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
+                      tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
                       tickFormatter={v => `$${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
                       axisLine={false} tickLine={false}
                     />
                     <YAxis
                       type="category" dataKey="name"
                       width={100}
-                      tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 11 }}
+                      tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
                       axisLine={false} tickLine={false}
                     />
                     <Tooltip
@@ -134,7 +134,7 @@ export default function AdminAnalytics() {
                     />
                     <Legend
                       iconType="circle" iconSize={8}
-                      formatter={v => <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{v}</span>}
+                      formatter={v => <span style={{ fontSize: 11, color: 'var(--admin-muted)' }}>{v}</span>}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -154,12 +154,12 @@ export default function AdminAnalytics() {
                 <BarChart data={data.growth} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
                   <XAxis
                     dataKey="month"
-                    tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
+                    tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
                     axisLine={false} tickLine={false}
                   />
                   <YAxis
                     allowDecimals={false}
-                    tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }}
+                    tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
                     axisLine={false} tickLine={false} width={36}
                   />
                   <Tooltip

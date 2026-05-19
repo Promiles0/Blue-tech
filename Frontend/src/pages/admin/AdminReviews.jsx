@@ -97,7 +97,7 @@ export default function AdminReviews() {
                   {r.authorName ?? r.authorEmail ?? 'Unknown'} · {dateShort(r.createdAt)}
                 </div>
                 {r.comment && (
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5, margin: 0 }}>{r.comment}</p>
+                  <p style={{ fontSize: 13, color: 'var(--text)', opacity: 0.85, lineHeight: 1.5, margin: 0 }}>{r.comment}</p>
                 )}
               </div>
 
@@ -135,7 +135,7 @@ function StarRow({ rating }) {
         <Star
           key={i} size={12}
           fill={i < rating ? 'var(--admin-amber)' : 'none'}
-          color={i < rating ? 'var(--admin-amber)' : 'rgba(255,255,255,0.2)'}
+          color={i < rating ? 'var(--admin-amber)' : 'var(--admin-border)'}
         />
       ))}
     </div>
@@ -144,11 +144,11 @@ function StarRow({ rating }) {
 
 const inputStyle = {
   background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
-  borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, outline: 'none',
+  borderRadius: 8, color: 'var(--text)', padding: '7px 12px', fontSize: 13, outline: 'none',
 }
 const selectStyle = {
   background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
-  borderRadius: 8, color: '#fff', padding: '7px 12px', fontSize: 13, cursor: 'pointer',
+  borderRadius: 8, color: 'var(--text)', padding: '7px 12px', fontSize: 13, cursor: 'pointer',
 }
 const ghostIconBtn = {
   background: 'none', border: 'none', cursor: 'pointer',
