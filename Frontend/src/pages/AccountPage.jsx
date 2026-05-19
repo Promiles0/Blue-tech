@@ -122,7 +122,7 @@ export default function Account() {
   if (!user) return null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', padding: '72px 0 120px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '72px 0 120px', position: 'relative', overflow: 'hidden' }}>
       {/* Ambient orbs */}
       <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, var(--accent-dim) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: '10%', right: '-5%', width: '30vw', height: '30vw', background: 'radial-gradient(circle, rgba(245,158,11,0.04) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
@@ -400,7 +400,7 @@ function SelectRow({ icon, label, value, options, onChange, last }) {
         onChange={e => onChange(e.target.value)}
         style={{
           background: 'var(--glass-bg2)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--border)',
           borderRadius: 8,
           color: 'var(--text)',
           fontSize: 13,
@@ -417,7 +417,7 @@ function SelectRow({ icon, label, value, options, onChange, last }) {
           transition: 'border-color 0.15s',
         }}
         onFocus={e => e.target.style.borderColor = 'var(--accent-focus)'}
-        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+        onBlur={e => e.target.style.borderColor = 'var(--border)'}
       >
         {options.map(opt => (
           <option key={opt.value} value={opt.value} style={{ background: 'var(--card)', color: 'var(--text)' }}>

@@ -53,6 +53,7 @@ export default function AdminNotifications() {
   const [catFilter, setCat]       = useState('all')
   const [sevFilter, setSev]       = useState('all')
   const [lastRefresh, setLast]    = useState(null)
+  const [hoverId, setHoverId]     = useState(null)
   const intervalRef               = useRef(null)
   const navigate                  = useNavigate()
 
@@ -267,12 +268,16 @@ export default function AdminNotifications() {
           displayed.map((n, i) => (
             <div
               key={n.notificationId}
+              onMouseEnter={() => setHoverId(n.notificationId)}
+              onMouseLeave={() => setHoverId(null)}
               style={{
                 padding: '12px 18px',
                 borderBottom: i < displayed.length - 1 ? '1px solid var(--admin-border)' : 'none',
-                background: n.isRead ? 'transparent' : 'var(--accent-dim)',
                 display: 'flex', gap: 12, alignItems: 'flex-start',
-                transition: 'background 0.12s',
+                transition: 'background 0.2s',
+                background: hoverId === n.notificationId
+                  ? 'rgba(255,255,255,0.03)'
+                  : n.isRead ? 'transparent' : 'rgba(124,92,240,0.03)',
               }}
             >
               {/* Severity dot */}

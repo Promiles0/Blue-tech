@@ -37,6 +37,7 @@ export default function AdminNotificationBell() {
   const [open, setOpen]       = useState(false)
   const [items, setItems]     = useState([])
   const [loading, setLoading] = useState(false)
+  const [hoverId, setHoverId] = useState(null)
   const popoverRef = useRef(null)
   const navigate   = useNavigate()
   // adminUnread used directly as motion key — bumps the spring animation on each new notification
@@ -45,37 +46,55 @@ export default function AdminNotificationBell() {
     setLoading(true)
     try {
       const { data } = await api.get('/notifications/admin?limit=50')
-      setItems(data ?? [])
+      setItems(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error('fetch admin notifications error', err)
+      setItems([])
     } finally {
       setLoading(false)
     }
   }, [])
 
-  const markAllRead = async () => {
+  const markAllRead = useCallback(async () => {
     try {
-      await api.post('/notifications/admin/mark-all-read')
-      setItems(prev => prev.map(n => ({ ...n, isRead: true })))
+      await api.post('/notifications/admin/markAllRead')
+      setItems(prev => prev.map(i => ({ ...i, isRead: true })))
       fetchAdminUnreadCount()
-    } catch { /* mark-all-read is best-effort */ }
-  }
+    } catch (err) { console.error('markAllRead failed', err) }
+  }, [fetchAdminUnreadCount])
 
-  const handleOpen = async () => {
-    setOpen(true)
-    await fetchItems()
-  }
+  const handleItemClick = useCallback(async (n) => {
+    try {
+      if (!n.isRead) {
+        await api.post(`/notifications/${n.notificationId}/markRead`)
+        setItems(prev => prev.map(i => i.notificationId === n.notificationId ? { ...i, isRead: true } : i))
+        fetchAdminUnreadCount()
+      }
+    } catch (err) { console.error('markRead failed', err) }
+
+    if (n.href) {
+      navigate(n.href)
+      setOpen(false)
+    }
+  }, [navigate, fetchAdminUnreadCount])
+
+  const handleOpen = useCallback(() => {
+    if (!open) {
+      fetchItems()
+      fetchAdminUnreadCount()
+      setOpen(true)
+    } else setOpen(false)
+  }, [open, fetchItems, fetchAdminUnreadCount])
 
   useEffect(() => {
-    if (!open) return
-    const onDown = (e) => {
+    const onDocClick = (e) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target)) setOpen(false)
     }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
 
-  const handleItemClick = (n) => {
-    if (n.href) { setOpen(false); navigate(n.href) }
-  }
+  useEffect(() => { fetchAdminUnreadCount() }, [fetchAdminUnreadCount])
 
   return (
     <div ref={popoverRef} style={{ position: 'relative' }}>
@@ -160,16 +179,18 @@ export default function AdminNotificationBell() {
                   <div
                     key={n.notificationId}
                     onClick={() => handleItemClick(n)}
+                    onMouseEnter={() => setHoverId(n.notificationId)}
+                    onMouseLeave={() => setHoverId(null)}
                     style={{
                       padding: '10px 14px',
                       borderBottom: '1px solid var(--admin-border)',
                       cursor: n.href ? 'pointer' : 'default',
-                      background: n.isRead ? 'transparent' : 'var(--accent-dim)',
-                      transition: 'background 0.12s',
+                      transition: 'background 0.16s',
                       display: 'flex', gap: 9, alignItems: 'flex-start',
+                      background: hoverId === n.notificationId && n.href
+                        ? 'rgba(255,255,255,0.04)'
+                        : n.isRead ? 'transparent' : 'rgba(124,92,240,0.04)',
                     }}
-                    onMouseEnter={e => { if (n.href) e.currentTarget.style.background = 'var(--glass-bg)' }}
-                    onMouseLeave={e => e.currentTarget.style.background = n.isRead ? 'transparent' : 'var(--accent-dim)'}
                   >
                     <div style={{
                       width: 6, height: 6, borderRadius: '50%', flexShrink: 0, marginTop: 5,

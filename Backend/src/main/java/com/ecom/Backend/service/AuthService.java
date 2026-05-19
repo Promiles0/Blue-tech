@@ -1,11 +1,13 @@
 package com.ecom.Backend.service;
 
+import com.ecom.Backend.service.NotificationService;
+import com.ecom.Backend.enums.NotificationCategory;
+import com.ecom.Backend.enums.NotificationSeverity;
 import com.ecom.Backend.dto.request.GoogleLoginRequest;
 import com.ecom.Backend.dto.request.PasswordChangeRequest;
 import com.ecom.Backend.dto.request.ProfileUpdateRequest;
 import com.ecom.Backend.dto.request.ResetPasswordRequest;
 import com.ecom.Backend.dto.request.UserLoginRequest;
-import com.ecom.Backend.dto.request.UserPreferencesRequest;
 import com.ecom.Backend.dto.request.UserRegisterRequest;
 import com.ecom.Backend.dto.response.AuthResponse;
 import com.ecom.Backend.dto.response.UserResponse;
@@ -50,6 +52,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final CustomUserDetailsService userDetailsService;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Value("${app.google.web-client-id}")
     private String googleWebClientId;
@@ -83,7 +86,6 @@ public class AuthService {
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(RoleType.CUSTOMER)
-                .referralCode(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .build();
 
         // 3. Save to Database
@@ -103,15 +105,27 @@ public class AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
         String jwtToken = jwtService.generateToken(userDetails);
         
-        // 6. Send Welcome Email (wrapped in try-catch so registration doesn't fail if email fails)
+        // 6. Send Welcome Email
         try {
             emailService.sendEmail(
-                savedUser.getEmail(), 
-                "Welcome to Our Platform!", 
+                savedUser.getEmail(),
+                "Welcome to Our Platform!",
                 "<h1>Welcome " + savedUser.getName() + "!</h1><p>Thank you for joining us. Start shopping now!</p>"
             );
         } catch (Exception e) {
             System.err.println("Failed to send welcome email: " + e.getMessage());
+        }
+
+        // 7. Notify admin of new customer
+        try {
+            notificationService.emitAdminNotification(
+                NotificationCategory.ACCOUNT, NotificationSeverity.INFO,
+                "New Customer: " + savedUser.getName(),
+                savedUser.getEmail() + " just created an account.",
+                "/admin/users"
+            );
+        } catch (Exception e) {
+            System.err.println("Failed to emit admin notification: " + e.getMessage());
         }
         
         return AuthResponse.builder()
@@ -228,12 +242,6 @@ public class AuthService {
         }
     }
 
-    public UserResponse updatePreferences(User user, UserPreferencesRequest request) {
-        if (request.getDefaultShippingSpeed() != null) user.setDefaultShippingSpeed(request.getDefaultShippingSpeed());
-        if (request.getPackagingPreference() != null) user.setPackagingPreference(request.getPackagingPreference());
-        return mapToUserResponse(userRepository.save(user));
-    }
-
     public UserResponse updateProfile(User user, ProfileUpdateRequest request) {
         user.setName(request.getName());
         user.setPhone(request.getPhone());
@@ -300,11 +308,6 @@ public class AuthService {
                 .phone(user.getPhone())
                 .picture(user.getPicture())
                 .role(user.getRole())
-                .defaultShippingSpeed(user.getDefaultShippingSpeed())
-                .packagingPreference(user.getPackagingPreference())
-                .loyaltyPoints(user.getLoyaltyPoints())
-                .membershipTier(user.getMembershipTier())
-                .referralCode(user.getReferralCode())
                 .build();
     }
 }

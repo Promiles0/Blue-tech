@@ -17,8 +17,8 @@ import java.util.List;
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUser_UserId(Long userId);
     List<Order> findByStatus(OrderStatus status);
-    List<Order> findAllByOrderByOrderedAtDesc();
-    List<Order> findByStatusOrderByOrderedAtDesc(OrderStatus status);
+    List<Order> findAllByOrderByCreatedAtDesc();
+    List<Order> findByStatusOrderByCreatedAtDesc(OrderStatus status);
 
     @Query("SELECT COUNT(o) > 0 FROM Order o JOIN o.orderItems oi " +
            "WHERE o.user = :user AND oi.variant.product = :product AND o.status = :status")
@@ -29,21 +29,21 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.status != 'CANCELLED'")
     BigDecimal calculateTotalRevenue();
 
-    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.status != 'CANCELLED' AND o.orderedAt >= :from")
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.status != 'CANCELLED' AND o.createdAt >= :from")
     BigDecimal calculateRevenueAfter(@Param("from") LocalDateTime from);
 
-    @Query("SELECT COUNT(o) FROM Order o WHERE o.orderedAt >= :from AND o.status != 'CANCELLED'")
-    Long countByOrderedAtAfterAndNotCancelled(@Param("from") LocalDateTime from);
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.createdAt >= :from AND o.status != 'CANCELLED'")
+    Long countByCreatedAtAfterAndNotCancelled(@Param("from") LocalDateTime from);
 
-    Long countByOrderedAtAfter(LocalDateTime dateTime);
+    Long countByCreatedAtAfter(LocalDateTime dateTime);
 
     Long countByStatusNot(OrderStatus status);
 
-    @Query("SELECT CAST(o.orderedAt AS date), SUM(o.totalAmount) " +
+    @Query("SELECT CAST(o.createdAt AS date), SUM(o.totalAmount) " +
            "FROM Order o " +
-           "WHERE o.status != 'CANCELLED' AND o.orderedAt > :dateTime " +
-           "GROUP BY CAST(o.orderedAt AS date) " +
-           "ORDER BY CAST(o.orderedAt AS date) ASC")
+           "WHERE o.status != 'CANCELLED' AND o.createdAt > :dateTime " +
+           "GROUP BY CAST(o.createdAt AS date) " +
+           "ORDER BY CAST(o.createdAt AS date) ASC")
     List<Object[]> findRevenueByDayAfter(@Param("dateTime") LocalDateTime dateTime);
 
     @Query("SELECT oi.variant.product.name, SUM(oi.quantity) as totalQty " +
@@ -65,7 +65,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT o.status, COUNT(o) FROM Order o GROUP BY o.status")
     List<Object[]> countGroupedByStatus();
 
-    List<Order> findTop5ByOrderByOrderedAtDesc();
+    List<Order> findTop5ByOrderByCreatedAtDesc();
 
     Long countByStatus(OrderStatus status);
 }

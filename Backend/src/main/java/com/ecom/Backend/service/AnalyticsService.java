@@ -40,11 +40,11 @@ public class AnalyticsService {
         BigDecimal rev30d  = orderRepository.calculateRevenueAfter(minus30d);
         BigDecimal totalRev = orderRepository.calculateTotalRevenue();
 
-        Long orders30d = orderRepository.countByOrderedAtAfterAndNotCancelled(minus30d);
+        Long orders30d = orderRepository.countByCreatedAtAfterAndNotCancelled(minus30d);
         Long totalOrders = orderRepository.count();
         Long totalCustomers = userRepository.count();
         Long totalVariants = variantRepository.count();
-        Long ordersToday = orderRepository.countByOrderedAtAfterAndNotCancelled(now.toLocalDate().atStartOfDay());
+        Long ordersToday = orderRepository.countByCreatedAtAfterAndNotCancelled(now.toLocalDate().atStartOfDay());
         Long lowStockCount = variantRepository.countByStockQuantityLessThan(5);
 
         BigDecimal safeRev30d = rev30d != null ? rev30d : BigDecimal.ZERO;
@@ -75,7 +75,7 @@ public class AnalyticsService {
 
         Long newCustomers24h = userRepository.countByCreatedAtAfter(minus24h);
 
-        List<DashboardStatsResponse.RecentOrder> recentOrders = orderRepository.findTop5ByOrderByOrderedAtDesc()
+        List<DashboardStatsResponse.RecentOrder> recentOrders = orderRepository.findTop5ByOrderByCreatedAtDesc()
                 .stream()
                 .map(o -> DashboardStatsResponse.RecentOrder.builder()
                         .orderId(o.getOrderId())
@@ -151,8 +151,8 @@ public class AnalyticsService {
 
     private List<DashboardStatsResponse.RevenuePoint> build14DaySeries() {
         LocalDateTime from = LocalDateTime.now().minusDays(13).toLocalDate().atStartOfDay();
-        List<Order> recentOrders = orderRepository.findAllByOrderByOrderedAtDesc().stream()
-                .filter(o -> o.getOrderedAt() != null && o.getOrderedAt().isAfter(from))
+        List<Order> recentOrders = orderRepository.findAllByOrderByCreatedAtDesc().stream()
+                .filter(o -> o.getCreatedAt() != null && o.getCreatedAt().isAfter(from))
                 .collect(Collectors.toList());
 
         Map<String, BigDecimal> buckets = new LinkedHashMap<>();
@@ -163,7 +163,7 @@ public class AnalyticsService {
 
         for (Order o : recentOrders) {
             if (o.getTotalAmount() == null) continue;
-            String key = o.getOrderedAt().toLocalDate().format(fmt);
+            String key = o.getCreatedAt().toLocalDate().format(fmt);
             buckets.merge(key, o.getTotalAmount(), BigDecimal::add);
         }
 

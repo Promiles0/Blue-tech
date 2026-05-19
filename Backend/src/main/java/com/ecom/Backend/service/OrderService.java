@@ -4,7 +4,12 @@ import com.ecom.Backend.dto.response.OrderResponse;
 import com.ecom.Backend.entity.*;
 import com.ecom.Backend.enums.CouponKind;
 import com.ecom.Backend.enums.OrderStatus;
+import com.ecom.Backend.enums.ShippingMethod;
+import com.ecom.Backend.enums.PaymentMethod;
 import com.ecom.Backend.repository.*;
+import com.ecom.Backend.service.NotificationService;
+import com.ecom.Backend.enums.NotificationCategory;
+import com.ecom.Backend.enums.NotificationSeverity;
 import com.ecom.Backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,6 +38,7 @@ public class OrderService {
     private final AuthService authService;
     private final EmailService emailService;
     private final ShipmentRepository shipmentRepository;
+    private final NotificationService notificationService;
 
     public List<OrderResponse> getAllOrders() {
         return orderRepository.findAll().stream()
@@ -86,7 +92,34 @@ public class OrderService {
                     return addressRepository.save(newAddr);
                 });
 
-        // 3. Pre-calculate total so we can set it before the first save (NOT NULL constraint)
+        // 3. Resolve shipping method and fee
+        ShippingMethod shippingMethod = ShippingMethod.STANDARD;
+        BigDecimal shippingFee = BigDecimal.ZERO;
+        try {
+            shippingMethod = ShippingMethod.valueOf(
+                request.getShippingMethod() != null ? request.getShippingMethod().toUpperCase() : "STANDARD"
+            );
+        } catch (IllegalArgumentException ignored) {}
+
+        if (shippingMethod == ShippingMethod.EXPRESS) {
+            shippingFee = new BigDecimal("5000.00"); // RWF 5,000 for express
+        }
+        // STANDARD and PICKUP are free
+
+        // Validate: CASH and CHEQUE only allowed for PICKUP
+        PaymentMethod paymentMethod = PaymentMethod.CASH;
+        try {
+            paymentMethod = PaymentMethod.valueOf(
+                request.getPaymentMethod() != null ? request.getPaymentMethod().toUpperCase() : "CASH"
+            );
+        } catch (IllegalArgumentException ignored) {}
+
+        if ((paymentMethod == PaymentMethod.CASH || paymentMethod == PaymentMethod.CHEQUE)
+                && shippingMethod != ShippingMethod.PICKUP) {
+            throw new RuntimeException("Cash and Cheque payments are only available for Pickup orders.");
+        }
+
+        // 4. Pre-calculate total
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         // 4. Create the Order (Snapshotting Address)
@@ -94,12 +127,15 @@ public class OrderService {
                 .user(user)
                 .address(address)
                 .status(OrderStatus.PENDING)
+                .shippingMethod(shippingMethod)
+                .paymentMethod(paymentMethod)
+                .shippingFee(shippingFee)
                 .orderAddressStreet(request.getStreet())
                 .orderAddressCity(request.getCity())
                 .orderAddressCountry(request.getCountry())
                 .orderAddressPhoneNumber(request.getPhone())
                 .orderAddressRecipient(user.getName())
-                .totalAmount(BigDecimal.ZERO) // Set initial value to avoid null constraint
+                .totalAmount(BigDecimal.ZERO)
                 .build();
 
         Order savedOrder = orderRepository.save(order);
@@ -156,14 +192,17 @@ public class OrderService {
             couponRepository.save(coupon);
         }
 
-        // 7. Update Final Total and Save Order again
+        // 7. Add shipping fee to total
+        totalAmount = totalAmount.add(shippingFee);
+
+        // 8. Update Final Total and Save Order again
         savedOrder.setTotalAmount(totalAmount);
         orderRepository.save(savedOrder);
 
-        // 8. Clear the User's Cart
+        // 9. Clear the User's Cart
         cartItemRepository.deleteAll(cartItems);
 
-        // 9. LOG MUTATION
+        // 10. LOG MUTATION
         auditLogService.log(
                 user.getUserId(),
                 "PLACE_ORDER",
@@ -172,8 +211,20 @@ public class OrderService {
                 null
         );
 
-        // 10. Send Email Confirmation
+        // 11. Send Email Confirmation
         emailService.sendOrderConfirmation(user.getEmail(), savedOrder.getOrderId().toString(), totalAmount.toString());
+
+        // 12. Notify customer
+        notificationService.emitUserNotification(user, NotificationCategory.ORDER, NotificationSeverity.SUCCESS,
+                "Order Confirmed",
+                "Your order #" + savedOrder.getOrderId() + " has been placed for " + totalAmount,
+                "/orders/" + savedOrder.getOrderId());
+
+        // 13. Notify admin
+        notificationService.emitAdminNotification(NotificationCategory.ORDER, NotificationSeverity.INFO,
+                "New Order #" + savedOrder.getOrderId(),
+                user.getName() + " placed an order for $" + totalAmount,
+                "/admin/orders");
 
         // Reload so orderItems collection is populated from DB
         Order fullOrder = orderRepository.findById(savedOrder.getOrderId())
@@ -212,6 +263,18 @@ public class OrderService {
         // 2. Update Order Status
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
+
+        // Notify customer
+        notificationService.emitUserNotification(currentUser, NotificationCategory.ORDER, NotificationSeverity.WARNING,
+                "Order Cancelled",
+                "Your order #" + orderId + " has been cancelled and stock has been restored.",
+                "/orders/" + orderId);
+
+        // Notify admin
+        notificationService.emitAdminNotification(NotificationCategory.ORDER, NotificationSeverity.WARNING,
+                "Order #" + orderId + " Cancelled",
+                currentUser.getName() + " cancelled order #" + orderId,
+                "/admin/orders");
 
         // 3. Log Audit
         auditLogService.log(
@@ -264,6 +327,9 @@ public class OrderService {
         return OrderResponse.builder()
                 .orderId(order.getOrderId())
                 .totalAmount(order.getTotalAmount())
+                .shippingFee(order.getShippingFee())
+                .shippingMethod(order.getShippingMethod() != null ? order.getShippingMethod().name() : null)
+                .paymentMethod(order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null)
                 .status(order.getStatus())
                 .createdAt(order.getCreatedAt())
                 .shippingStreet(order.getOrderAddressStreet())

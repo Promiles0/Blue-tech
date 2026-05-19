@@ -30,9 +30,9 @@ public class AdminOrderService {
     public List<AdminOrderListResponse> listOrders(String status) {
         List<Order> orders;
         if (status != null && !status.equalsIgnoreCase("all")) {
-            orders = orderRepository.findByStatusOrderByOrderedAtDesc(OrderStatus.valueOf(status.toUpperCase()));
+            orders = orderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.valueOf(status.toUpperCase()));
         } else {
-            orders = orderRepository.findAllByOrderByOrderedAtDesc();
+            orders = orderRepository.findAllByOrderByCreatedAtDesc();
         }
         return orders.stream().map(this::toListResponse).collect(Collectors.toList());
     }
@@ -157,7 +157,10 @@ public class AdminOrderService {
                 .orderedAt(o.getOrderedAt())
                 .customerName(o.getUser() != null ? o.getUser().getName() : null)
                 .customerEmail(o.getUser() != null ? o.getUser().getEmail() : null)
-                .customerPhone(o.getUser() != null ? o.getUser().getPhone() : null)
+                .customerPhone(
+                    o.getOrderAddressPhoneNumber() != null ? o.getOrderAddressPhoneNumber() :
+                    o.getUser() != null ? o.getUser().getPhone() : null
+                )
                 .addressStreet(o.getOrderAddressStreet())
                 .addressCity(o.getOrderAddressCity())
                 .addressCountry(o.getOrderAddressCountry())

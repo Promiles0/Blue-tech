@@ -1,6 +1,8 @@
 package com.ecom.Backend.entity;
 
 import com.ecom.Backend.enums.OrderStatus;
+import com.ecom.Backend.enums.ShippingMethod;
+import com.ecom.Backend.enums.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -36,6 +38,17 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "varchar(255)")
     private OrderStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(50)")
+    private ShippingMethod shippingMethod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(50)")
+    private PaymentMethod paymentMethod;
+
+    @Column(precision = 10, scale = 2)
+    private BigDecimal shippingFee;
 
     private LocalDateTime orderedAt; // kept for DB compatibility, use createdAt for logic
 

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Tag, X, Loader2 } from 'lucide-react'
 import api from '../../api/axios'
 
-export default function CouponInput({ onApply, onRemove, applied }) {
+export default function CouponInput({ onApply, onRemove, applied, compact }) {
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -27,8 +27,9 @@ export default function CouponInput({ onApply, onRemove, applied }) {
     return (
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 14px', borderRadius: 10,
-        background: 'var(--accent-dim)', border: '1px solid var(--accent-glow)',
+        padding: compact ? '0' : '10px 14px', borderRadius: 10,
+        background: compact ? 'transparent' : 'var(--accent-dim)',
+        border: compact ? 'none' : '1px solid var(--accent-glow)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Tag size={13} color="var(--accent-light)" />
@@ -42,7 +43,7 @@ export default function CouponInput({ onApply, onRemove, applied }) {
         </div>
         <button
           onClick={onRemove}
-          style={{ background: 'none', border: 'none', color: 'var(--muted-dark)', display: 'flex', padding: 2, cursor: 'pointer', transition: 'color 0.2s' }}
+          style={{ background: 'none', border: 'none', color: 'var(--muted-dark)', display: 'flex', padding: 6, cursor: 'pointer', transition: 'color 0.12s' }}
           onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
           onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
         >
@@ -52,37 +53,65 @@ export default function CouponInput({ onApply, onRemove, applied }) {
     )
   }
 
+  const isActive = !!code.trim() && !loading
+
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Tag size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-dark)', pointerEvents: 'none' }} />
+    <div style={{ flex: 1 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        {!compact ? (
+          <div style={{ position: 'relative', flex: 1 }}>
+            <Tag size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-dark)', pointerEvents: 'none' }} />
+            <input
+              value={code}
+              onChange={e => { setCode(e.target.value.toUpperCase()); setError('') }}
+              onKeyDown={e => e.key === 'Enter' && handleApply()}
+              placeholder="COUPON CODE"
+              className="noir-input"
+              style={{ paddingLeft: 34, letterSpacing: '0.08em', fontSize: 13 }}
+            />
+          </div>
+        ) : (
           <input
             value={code}
             onChange={e => { setCode(e.target.value.toUpperCase()); setError('') }}
             onKeyDown={e => e.key === 'Enter' && handleApply()}
-            placeholder="COUPON CODE"
-            className="noir-input"
-            style={{ paddingLeft: 34, letterSpacing: '0.08em', fontSize: 13 }}
+            placeholder="Coupon code"
+            style={{
+              flex: 1, background: 'none', border: 'none', outline: 'none',
+              color: '#fff', fontSize: 13, letterSpacing: '0.06em',
+              fontFamily: 'inherit', padding: 0,
+            }}
           />
-        </div>
+        )}
+
         <button
           onClick={handleApply}
-          disabled={loading || !code.trim()}
-          style={{
-            padding: '0 18px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-            background: 'var(--accent)', color: '#fff', border: 'none', cursor: 'pointer',
-            opacity: loading || !code.trim() ? 0.5 : 1,
-            transition: 'opacity 0.2s, background 0.2s',
-            display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'var(--accent-hover)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'var(--accent)' }}
+          disabled={!isActive}
+          style={(() => {
+            if (compact) {
+              return {
+                padding: '6px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                background: isActive ? 'var(--accent)' : 'transparent',
+                color: isActive ? '#fff' : 'var(--muted)',
+                border: `1px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
+                cursor: isActive ? 'pointer' : 'default',
+                transition: 'all 0.16s', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
+              }
+            }
+            return {
+              padding: '0 18px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+              background: 'var(--accent)', color: '#fff', border: 'none', cursor: isActive ? 'pointer' : 'default',
+              opacity: isActive ? 1 : 0.5,
+              transition: 'opacity 0.16s, background 0.16s', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+            }
+          })()}
+          onMouseEnter={e => { if (isActive) e.currentTarget.style.background = compact ? '#6b4fd8' : 'var(--accent-hover)' }}
+          onMouseLeave={e => { if (isActive) e.currentTarget.style.background = 'var(--accent)' }}
         >
-          {loading ? <Loader2 size={13} className="animate-spin" /> : 'Apply'}
+          {loading ? <Loader2 size={12} className="animate-spin" /> : 'Apply'}
         </button>
       </div>
-      {error && <p style={{ fontSize: 12, color: '#f87171', marginTop: 6 }}>{error}</p>}
+      {error && <p style={{ fontSize: 11, color: '#f87171', marginTop: 6 }}>{error}</p>}
     </div>
   )
 }

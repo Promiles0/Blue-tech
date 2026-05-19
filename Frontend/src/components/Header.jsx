@@ -296,13 +296,17 @@ export default function Header() {
             </IconBtn>
           </div>
 
-          <Link to="/wishlist">
-            <IconBtn><Heart size={18} /></IconBtn>
-          </Link>
+          {/* Only show customer icons if not admin */}
+          {!isAdmin && (
+            <Link to="/wishlist">
+              <IconBtn><Heart size={18} /></IconBtn>
+            </Link>
+          )}
 
-          {user && <NotificationBell />}
+          {user && !isAdmin && <NotificationBell />}
 
-          {/* Cart → drawer */}
+          {/* Cart → drawer — hidden for admin */}
+          {!isAdmin && (
           <div style={{ position: 'relative' }}>
             <IconBtn onClick={() => setCartOpen(true)}>
               <ShoppingBag size={18} />
@@ -326,6 +330,7 @@ export default function Header() {
               </motion.span>
             )}
           </div>
+          )}
 
           {/* Theme toggle */}
           <IconBtn onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
@@ -376,9 +381,9 @@ export default function Header() {
                       </div>
                     </div>
                   </div>
-                  <DropdownItem to="/account"       icon={<User size={14} />}     onClick={() => setUserMenuOpen(false)}>My profile</DropdownItem>
-                  <DropdownItem to="/orders"        icon={<Package size={14} />}  onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>
-                  <DropdownItem to="/notifications" icon={<Bell size={14} />}     onClick={() => setUserMenuOpen(false)}>Notifications</DropdownItem>
+                  {!isAdmin && <DropdownItem to="/account"       icon={<User size={14} />}     onClick={() => setUserMenuOpen(false)}>My profile</DropdownItem>}
+                  {!isAdmin && <DropdownItem to="/orders"        icon={<Package size={14} />}  onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>}
+                  {!isAdmin && <DropdownItem to="/notifications" icon={<Bell size={14} />}     onClick={() => setUserMenuOpen(false)}>Notifications</DropdownItem>}
                   {isAdmin && (
                     <DropdownItem to="/admin" icon={<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--accent)' }}>ADM</span>} onClick={() => setUserMenuOpen(false)}>
                       Admin panel

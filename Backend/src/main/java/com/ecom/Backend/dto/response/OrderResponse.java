@@ -18,6 +18,9 @@ public class OrderResponse {
     
     private Long orderId;
     private BigDecimal totalAmount;
+    private BigDecimal shippingFee;
+    private String shippingMethod;
+    private String paymentMethod;
     private OrderStatus status;
     private LocalDateTime createdAt;
     

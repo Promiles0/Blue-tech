@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useEffect } from 'react'
+import { LayoutDashboard } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider }         from './context/ThemeContext'
 import { AuthProvider }    from './context/AuthContext'
@@ -111,8 +112,11 @@ function AdminSection() {
 }
 
 function CustomerSite() {
+  const { isAdmin, loading } = useAuth()
+  if (loading) return null
   return (
     <SiteLayout>
+      {isAdmin && <AdminBar />}
       <Routes>
         <Route path="/"             element={<HomePage />} />
         <Route path="/login"        element={<LoginPage />} />
@@ -134,5 +138,41 @@ function CustomerSite() {
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </SiteLayout>
+  )
+}
+
+function AdminBar() {
+  const { pathname } = useLocation()
+  return (
+    <div style={{
+      position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+      zIndex: 9999, display: 'flex', alignItems: 'center', gap: 12,
+      background: 'rgba(10,10,12,0.92)', backdropFilter: 'blur(16px)',
+      border: '1px solid var(--accent-border)',
+      borderRadius: 999, padding: '8px 16px 8px 12px',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px var(--accent-dim)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 6px var(--accent-glow)' }} />
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--accent-light)', textTransform: 'uppercase' }}>Admin Preview</span>
+      </div>
+      <div style={{ width: 1, height: 14, background: 'var(--border)' }} />
+      <span style={{ fontSize: 11, color: 'var(--muted)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {pathname}
+      </span>
+      <div style={{ width: 1, height: 14, background: 'var(--border)' }} />
+      <Link to="/admin" style={{
+        display: 'flex', alignItems: 'center', gap: 5,
+        fontSize: 11, fontWeight: 700, color: '#fff',
+        background: 'var(--accent-dim2)', border: '1px solid var(--accent-border)',
+        borderRadius: 999, padding: '4px 12px', textDecoration: 'none',
+        transition: 'background 0.15s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-focus)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-dim2)'}
+      >
+        <LayoutDashboard size={11} /> Dashboard
+      </Link>
+    </div>
   )
 }

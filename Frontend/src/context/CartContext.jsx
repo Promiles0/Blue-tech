@@ -80,15 +80,9 @@ export function CartProvider({ children }) {
   }
 
   const isInCart = (variantId) => items.some(i => i.variantId === variantId)
-  const clearCart = async () => {
-    try {
-      await Promise.all(items.map(item => apiService.cart.removeItem(item.cartItemId)))
-      setItems([])
-      setServerTotal(0)
-    } catch {
-      toast.error('Failed to clear cart')
-      await fetchCart()
-    }
+  const clearCart = () => {
+    setItems([])
+    setServerTotal(0)
   }
 
   return (

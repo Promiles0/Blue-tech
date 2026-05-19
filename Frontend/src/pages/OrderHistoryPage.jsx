@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Package, Search, ChevronRight, ShoppingBag, Wallet, Loader2, SendHorizonal, BadgeCheck, Undo2, X } from 'lucide-react'
+import { Package, Search, ChevronRight, ShoppingBag, Clock, Loader2, SendHorizonal, BadgeCheck, Undo2, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import apiService from '../api/service'
 
 const TABS = [
   { id: 'all',        label: 'All Orders',  icon: ShoppingBag   },
-  { id: 'PENDING',    label: 'To Pay',      icon: Wallet        },
+  { id: 'PENDING',    label: 'Pending',     icon: Clock         },
   { id: 'PROCESSING', label: 'In Progress', icon: Loader2       },
   { id: 'SHIPPED',    label: 'Shipped',     icon: SendHorizonal },
   { id: 'DELIVERED',  label: 'Delivered',   icon: BadgeCheck    },
@@ -32,7 +32,6 @@ export default function OrderHistoryPage() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
     apiService.orders.getUserOrders()
       .then(({ data }) => { if (!cancelled) setOrders(Array.isArray(data) ? data : []) })
       .catch(() => { if (!cancelled) setOrders([]) })
@@ -62,7 +61,7 @@ export default function OrderHistoryPage() {
   const deliveredCount = orders.filter(o => o.status === 'DELIVERED').length
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505', padding: '64px 0 120px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '64px 0 120px', position: 'relative', overflow: 'hidden' }}>
       {/* Orbs */}
       <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '40vw', height: '40vw', background: 'radial-gradient(circle, var(--accent-dim) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
       <div style={{ position: 'absolute', bottom: '5%', right: '-5%', width: '30vw', height: '30vw', background: 'radial-gradient(circle, rgba(245,158,11,0.04) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
@@ -72,7 +71,7 @@ export default function OrderHistoryPage() {
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 40 }}>
           <p className="label-muted" style={{ marginBottom: 10 }}>Account</p>
-          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 6 }}>My Orders</h1>
+          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff', marginBottom: 6 }}>My Orders</h1>
           <p style={{ color: 'var(--muted)', fontSize: 15 }}>Track and manage all your purchases.</p>
         </motion.div>
 
