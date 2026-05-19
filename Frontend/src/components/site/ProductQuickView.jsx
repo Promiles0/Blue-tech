@@ -228,7 +228,7 @@ export default function ProductQuickView() {
                         <button
                           onClick={handleAddToCart}
                           disabled={adding || !selectedVariant || stockQty < 1}
-                          className="noir-btn-primary shine"
+                          className="noir-btn-cta shine"
                           style={{ flex: 1, padding: '13px', fontSize: 14 }}
                         >
                           <ShoppingBag size={15} />

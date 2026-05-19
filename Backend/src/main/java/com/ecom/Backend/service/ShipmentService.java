@@ -79,7 +79,7 @@ public class ShipmentService {
             message = "Your order #" + order.getOrderId() + " has been shipped!";
         } else if (shipmentStatus == ShipmentStatus.DELIVERED) {
             order.setStatus(OrderStatus.DELIVERED);
-            message = "Your order #" + order.getOrderId() + " has been delivered!";
+            message = "Your order #" + order.getOrderId() + " has been delivered! Please click here to review your items.";
         }
 
         if (!message.isEmpty()) {
@@ -90,7 +90,7 @@ public class ShipmentService {
                     NotificationSeverity.INFO,
                     title,
                     message,
-                    null
+                    "/orders/" + order.getOrderId()
             );
             emailService.sendEmail(order.getUser().getEmail(), title, message);
         }

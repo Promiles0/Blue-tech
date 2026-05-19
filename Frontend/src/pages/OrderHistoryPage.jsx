@@ -70,7 +70,7 @@ export default function OrderHistoryPage() {
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 40 }}>
-          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff', marginBottom: 6 }}>My Orders</h1>
+          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: 6 }}>My Orders</h1>
           <p style={{ color: 'var(--muted)', fontSize: 15 }}>Track and manage all your purchases.</p>
         </motion.div>
 
@@ -84,7 +84,7 @@ export default function OrderHistoryPage() {
           ].map(s => (
             <div key={s.label} style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: '20px 24px' }}>
               <p className="label-muted" style={{ fontSize: 10, marginBottom: 10 }}>{s.label}</p>
-              <p style={{ fontSize: 26, fontWeight: 800, color: s.highlight ? 'var(--price)' : '#fff' }}>{s.value}</p>
+              <p style={{ fontSize: 26, fontWeight: 800, color: s.highlight ? 'var(--price)' : 'var(--text-primary)' }}>{s.value}</p>
             </div>
           ))}
         </motion.div>
@@ -125,12 +125,12 @@ export default function OrderHistoryPage() {
                     fontSize: 14, fontWeight: active ? 700 : 400,
                     border: 'none', borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
                     background: 'none',
-                    color: active ? '#fff' : 'var(--muted-dark)',
+                    color: active ? 'var(--text-primary)' : 'var(--text-muted)',
                     cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
                     marginBottom: -1,
                   }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--muted)' }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--muted-dark)' }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--text-secondary)' }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--text-muted)' }}
                 >
                   <t.icon size={16} style={{ flexShrink: 0 }} />
                   <span>{t.label}</span>
@@ -138,7 +138,7 @@ export default function OrderHistoryPage() {
                     <span style={{
                       fontSize: 10, fontWeight: 700, lineHeight: 1,
                       background: active ? 'var(--accent)' : 'var(--glass-border)',
-                      color: active ? '#fff' : 'var(--muted-dark)',
+                      color: active ? '#fff' : 'var(--text-muted)',
                       borderRadius: 999, padding: '3px 7px',
                     }}>
                       {count}

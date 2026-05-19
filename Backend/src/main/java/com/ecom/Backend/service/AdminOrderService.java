@@ -5,6 +5,8 @@ import com.ecom.Backend.dto.response.AdminOrderListResponse;
 import com.ecom.Backend.entity.*;
 import com.ecom.Backend.enums.OrderStatus;
 import com.ecom.Backend.enums.ShipmentStatus;
+import com.ecom.Backend.enums.NotificationCategory;
+import com.ecom.Backend.enums.NotificationSeverity;
 import com.ecom.Backend.exception.ResourceNotFoundException;
 import com.ecom.Backend.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class AdminOrderService {
     private final ShipmentRepository shipmentRepository;
     private final AuditLogService auditLogService;
     private final AuthService authService;
+    private final NotificationService notificationService;
 
     public List<AdminOrderListResponse> listOrders(String status) {
         List<Order> orders;
@@ -52,6 +55,20 @@ public class AdminOrderService {
         Long adminId = authService.getCurrentAuthenticatedUser().getUserId();
         auditLogService.log(adminId, "order.status_update", "orders", String.valueOf(orderId),
                 "Status updated to " + status + " for order #" + orderId, null);
+
+        // Notify customer of status update
+        if (OrderStatus.valueOf(status.toUpperCase()) == OrderStatus.DELIVERED) {
+            notificationService.emitUserNotification(order.getUser(), NotificationCategory.ORDER, NotificationSeverity.SUCCESS,
+                    "Order Delivered",
+                    "Your order #" + orderId + " has been marked as delivered! Click here to review your items.",
+                    "/orders/" + orderId);
+        } else {
+            notificationService.emitUserNotification(order.getUser(), NotificationCategory.ORDER, NotificationSeverity.INFO,
+                    "Order Update",
+                    "Your order #" + orderId + " status is now " + status,
+                    "/orders/" + orderId);
+        }
+
         return toDetailResponse(order);
     }
 

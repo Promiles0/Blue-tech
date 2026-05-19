@@ -342,4 +342,50 @@ public class OrderService {
                 .items(items)
                 .build();
     }
+
+    @Transactional
+    public void confirmDelivery(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        User currentUser = authService.getCurrentAuthenticatedUser();
+        boolean isOwner = order.getUser().getUserId().equals(currentUser.getUserId());
+        boolean isAdmin = currentUser.getRole().name().equals("ADMIN");
+
+        if (!isOwner && !isAdmin) {
+            throw new RuntimeException("Unauthorized to update this order.");
+        }
+
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            throw new RuntimeException("Order is already marked as delivered");
+        }
+
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new RuntimeException("Cannot deliver a cancelled order");
+        }
+
+        order.setStatus(OrderStatus.DELIVERED);
+        orderRepository.save(order);
+
+        // Notify customer
+        notificationService.emitUserNotification(order.getUser(), NotificationCategory.ORDER, NotificationSeverity.SUCCESS,
+                "Order Delivered",
+                "Your order #" + orderId + " has been marked as delivered! Click here to review your items.",
+                "/orders/" + orderId);
+
+        // Notify admin
+        notificationService.emitAdminNotification(NotificationCategory.ORDER, NotificationSeverity.INFO,
+                "Order #" + orderId + " Delivered",
+                currentUser.getName() + " confirmed delivery of order #" + orderId,
+                "/admin/orders");
+
+        // Log Audit
+        auditLogService.log(
+                currentUser.getUserId(),
+                "DELIVER_ORDER",
+                "orders",
+                "Confirmed delivery of order ID: " + orderId,
+                null
+        );
+    }
 }

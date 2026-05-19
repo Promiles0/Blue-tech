@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CheckCircle, ArrowLeft, MapPin, Truck } from "lucide-react";
+import { CheckCircle, ArrowLeft, MapPin, Truck, Wallet } from "lucide-react";
 import apiService from "../api/service";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -18,6 +18,13 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [coupon, setCoupon] = useState(null);
+  const [momoPhone, setMomoPhone] = useState("");
+  const [cardDetails, setCardDetails] = useState({
+    name: "",
+    number: "",
+    expiry: "",
+    cvv: ""
+  });
 
   const [newAddress, setNewAddress] = useState({
     street: "",
@@ -58,11 +65,22 @@ export default function CheckoutPage() {
       : Number(coupon.value)
     : 0;
   const safeDiscount = Math.min(discount, subtotal);
-  const total = Math.max(0, subtotal - safeDiscount);
-  const shippingMethod = "STANDARD";
-  const paymentMethod = "COD";
+  const [shippingMethod, setShippingMethod] = useState("STANDARD");
+  const [paymentMethod, setPaymentMethod] = useState("CARD");
+  const shippingFee = shippingMethod === "EXPRESS" ? 5 : 0;
+  const total = Math.max(0, subtotal - safeDiscount + shippingFee);
 
   const handlePlaceOrder = async () => {
+    if (paymentMethod === "CARD") {
+      if (!cardDetails.name || !cardDetails.number || !cardDetails.expiry || !cardDetails.cvv) {
+        toast.error("Please fill in all credit card details");
+        return;
+      }
+    }
+    if ((paymentMethod === "MOMO" || paymentMethod === "AIRTEL_MONEY") && !momoPhone) {
+      toast.error("Please provide your mobile money number");
+      return;
+    }
     let payload;
 
     if (showNewAddressForm) {
@@ -134,7 +152,7 @@ export default function CheckoutPage() {
           <ArrowLeft size={14} /> Back to cart
         </Link>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 64, alignItems: "start" }}>
+        <div className="checkout-layout-grid">
           <div>
             <h1 style={{ fontSize: 32, fontWeight: 900, color: "var(--text-primary)", marginBottom: 40, letterSpacing: "-0.02em" }}>Checkout</h1>
 
@@ -185,41 +203,224 @@ export default function CheckoutPage() {
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  {addresses.map((address) => (
-                    <div
-                      key={address.addressId}
-                      onClick={() => setSelectedAddressId(address.addressId)}
-                      style={{ background: selectedAddressId === address.addressId ? "var(--brand-tint)" : "var(--bg-surface)", border: `1px solid ${selectedAddressId === address.addressId ? "var(--brand)" : "var(--card-border)"}`, borderRadius: 16, padding: "20px 24px", cursor: "pointer", transition: "all 0.2s", position: "relative" }}
-                    >
-                      <p style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>{address.streetAddress}</p>
-                      <p style={{ fontSize: 13, color: "var(--text-muted)" }}>{address.city}, {address.country}</p>
-                      {selectedAddressId === address.addressId && (
-                        <div style={{ position: "absolute", right: 24, top: "50%", transform: "translateY(-50%)", color: "var(--brand)" }}>
-                          <CheckCircle size={20} />
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  <select
+                    value={selectedAddressId || ""}
+                    onChange={(e) => setSelectedAddressId(Number(e.target.value))}
+                    className="noir-input"
+                    style={{
+                      background: "var(--bg-surface)",
+                      border: "1px solid var(--card-border)",
+                      color: "var(--text-primary)",
+                      borderRadius: 12,
+                      padding: "12px 16px",
+                      fontSize: 14,
+                      outline: "none",
+                      width: "100%",
+                      cursor: "pointer",
+                      appearance: "none",
+                      WebkitAppearance: "none",
+                      MozAppearance: "none",
+                    }}
+                  >
+                    {addresses.map((address) => (
+                      <option 
+                        key={address.addressId} 
+                        value={address.addressId}
+                        style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}
+                      >
+                        {address.streetAddress}, {address.city}, {address.country}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
             </section>
 
             {/* Shipping Method */}
-            <section>
+            <section style={{ marginBottom: 32 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
                 <Truck size={18} style={{ color: "var(--brand)" }} /> Shipping Method
               </h2>
-              <div style={{ background: "var(--brand-tint)", border: "1px solid var(--brand-border)", borderRadius: 16, padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>Standard Delivery</p>
-                  <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>Arrival in 2-4 business days</p>
-                </div>
-                <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>FREE</p>
+              <div>
+                <select
+                  value={shippingMethod}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setShippingMethod(val);
+                    if (val !== "PICKUP" && paymentMethod === "CASH") {
+                      setPaymentMethod("CARD");
+                    }
+                  }}
+                  className="noir-input"
+                  style={{
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--card-border)",
+                    color: "var(--text-primary)",
+                    borderRadius: 12,
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    outline: "none",
+                    width: "100%",
+                    cursor: "pointer",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
+                  }}
+                >
+                  <option value="STANDARD" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>Standard Delivery (FREE, 2-4 days)</option>
+                  <option value="EXPRESS" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>Express Delivery (+$5.00, next day)</option>
+                  <option value="PICKUP" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>Store Pickup (FREE, collect in Kigali)</option>
+                </select>
               </div>
+            </section>
+
+            {/* Payment Method */}
+            <section style={{ marginBottom: 32 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                <Wallet size={18} style={{ color: "var(--brand)" }} /> Payment Method
+              </h2>
+              <div>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="noir-input"
+                  style={{
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--card-border)",
+                    color: "var(--text-primary)",
+                    borderRadius: 12,
+                    padding: "12px 16px",
+                    fontSize: 14,
+                    outline: "none",
+                    width: "100%",
+                    cursor: "pointer",
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                    MozAppearance: "none",
+                  }}
+                >
+                  <option value="CARD" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>Credit / Debit Card</option>
+                  <option value="MOMO" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>MTN Mobile Money</option>
+                  <option value="AIRTEL_MONEY" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>Airtel Money</option>
+                  {shippingMethod === "PICKUP" && (
+                    <option value="CASH" style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>Cash / Cheque on Pickup</option>
+                  )}
+                </select>
+              </div>
+
+              {/* Payment Details Sub-forms */}
+              {paymentMethod === "CARD" && (
+                <div style={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--card-border)",
+                  borderRadius: 16,
+                  padding: "24px",
+                  marginTop: 20,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 16
+                }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>Card Details</h3>
+                  
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600, letterSpacing: "0.05em" }}>CARDHOLDER NAME</label>
+                    <input 
+                      className="noir-input" 
+                      value={cardDetails.name} 
+                      onChange={(e) => setCardDetails({ ...cardDetails, name: e.target.value })} 
+                      placeholder="John Doe" 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600, letterSpacing: "0.05em" }}>CARD NUMBER</label>
+                    <input 
+                      className="noir-input" 
+                      value={cardDetails.number} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+                        const matches = val.match(/\d{4,16}/g);
+                        const match = matches && matches[0] || '';
+                        const parts = [];
+                        for (let i=0, len=match.length; i<len; i+=4) {
+                          parts.push(match.substring(i, i+4));
+                        }
+                        if (parts.length > 0) {
+                          setCardDetails({ ...cardDetails, number: parts.join(' ') });
+                        } else {
+                          setCardDetails({ ...cardDetails, number: val });
+                        }
+                      }} 
+                      placeholder="4000 1234 5678 9010" 
+                      maxLength={19}
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600, letterSpacing: "0.05em" }}>EXPIRY DATE</label>
+                      <input 
+                        className="noir-input" 
+                        value={cardDetails.expiry} 
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, '');
+                          if (val.length > 2) {
+                            val = val.substring(0,2) + '/' + val.substring(2,4);
+                          }
+                          setCardDetails({ ...cardDetails, expiry: val });
+                        }} 
+                        placeholder="MM/YY" 
+                        maxLength={5}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600, letterSpacing: "0.05em" }}>CVV</label>
+                      <input 
+                        className="noir-input" 
+                        type="password"
+                        value={cardDetails.cvv} 
+                        onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value.replace(/\D/g, '') })} 
+                        placeholder="•••" 
+                        maxLength={3}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(paymentMethod === "MOMO" || paymentMethod === "AIRTEL_MONEY") && (
+                <div style={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--card-border)",
+                  borderRadius: 16,
+                  padding: "24px",
+                  marginTop: 20,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 16
+                }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+                    {paymentMethod === "MOMO" ? "MTN MoMo Number" : "Airtel Money Number"}
+                  </h3>
+                  
+                  <div>
+                    <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600, letterSpacing: "0.05em" }}>MOBILE NUMBER</label>
+                    <input 
+                      className="noir-input" 
+                      value={momoPhone} 
+                      onChange={(e) => setMomoPhone(e.target.value)} 
+                      placeholder="078 XXX XXXX" 
+                    />
+                    <p style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 8 }}>
+                      A payment prompt will be sent to this number to authorize the transaction.
+                    </p>
+                  </div>
+                </div>
+              )}
             </section>
           </div>
 
-          <aside style={{ position: "sticky", top: 100 }}>
+          <aside>
             <div style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", borderRadius: 20, padding: 32 }}>
               <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 24 }}>Order Summary</h3>
 
@@ -232,7 +433,7 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              <div className="mt-8 pt-6 border-t border-white/6 flex flex-col gap-4" style={{ marginBottom: 24 }}>
+              <div className="mt-8 pt-6 flex flex-col gap-4" style={{ borderTop: "1px solid var(--border)", marginBottom: 24 }}>
                 <div>
                   <label className="block text-[12px] mb-2 tracking-wide" style={{ color: 'var(--text-muted)' }}>Coupon code</label>
                   <CouponInput applied={coupon} onApply={setCoupon} onRemove={() => setCoupon(null)} />
@@ -256,14 +457,18 @@ export default function CheckoutPage() {
                     <span style={{ color: "var(--brand)" }}>-${safeDiscount.toFixed(2)}</span>
                   </div>
                 )}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 12 }}>
+                  <span style={{ color: "var(--text-secondary)" }}>Shipping</span>
+                  <span style={{ color: "var(--text-primary)" }}>{shippingFee > 0 ? `$${shippingFee.toFixed(2)}` : "FREE"}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, borderTop: "1px dashed var(--card-border)", paddingTop: 12 }}>
                   <span style={{ color: "var(--text-primary)" }}>Total</span>
                   <span style={{ color: "var(--price-color)" }}>${total.toFixed(2)}</span>
                 </div>
               </div>
 
               <button onClick={handlePlaceOrder} disabled={loading || !cart?.items?.length}
-                className="noir-btn-primary shine"
+                className="noir-btn-cta shine"
                 style={{ width: '100%', padding: '14px', fontSize: 15, opacity: loading ? 0.7 : 1 }}>
                 {loading ? 'Placing order…' : 'Confirm & Place Order'}
               </button>

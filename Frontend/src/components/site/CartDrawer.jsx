@@ -169,7 +169,7 @@ export default function CartDrawer() {
                 <Link
                   to="/checkout"
                   onClick={() => setCartOpen(false)}
-                  className="noir-btn-primary shine"
+                  className="noir-btn-cta shine"
                   style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '14px', fontSize: 15 }}
                 >
                   Checkout →

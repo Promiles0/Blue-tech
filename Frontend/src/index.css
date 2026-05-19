@@ -108,6 +108,8 @@
   --accent:           var(--brand);
   --accent-hover:     var(--brand-hover);
   --accent-active:    var(--brand-active);
+  --cta-bg:           var(--accent);
+  --cta-hover:        var(--accent-hover);
   --accent-light:     var(--brand-strong);
   --accent-dim:       var(--brand-tint);
   --accent-dim2:      var(--brand-soft);
@@ -198,6 +200,8 @@
   --accent-active:    var(--brand-active);
   --accent-light:     var(--brand-strong);
   --accent-dim:       var(--brand-tint);
+  --cta-bg:           #f59e0b; /* Orange CTA button background in light mode */
+  --cta-hover:        #d97706;
   --accent-dim2:      var(--brand-soft);
   --accent-glow:      var(--brand-glow);
   --accent-focus:     var(--brand-focus);
@@ -253,6 +257,20 @@ input, textarea, select { font-family: inherit; }
   gap: 32px;
 }
 @media (max-width: 980px) { .account-grid { grid-template-columns: 1fr; } }
+
+.checkout-layout-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+@media (max-width: 980px) {
+  .checkout-layout-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
 
 .dashboard-panel {
   background: var(--glass-bg);
@@ -526,6 +544,24 @@ input, textarea, select { font-family: inherit; }
 }
 .noir-btn-primary:hover   { background: var(--accent-hover); }
 .noir-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.noir-btn-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--cta-bg);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+.noir-btn-cta:hover   { background: var(--cta-hover); }
+.noir-btn-cta:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .noir-btn-outline {
   display: inline-flex;

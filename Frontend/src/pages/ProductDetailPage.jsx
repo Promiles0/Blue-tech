@@ -226,7 +226,7 @@ export default function ProductDetail() {
               <button
                 onClick={handleAddToCart}
                 disabled={adding || !selectedVariant || stockQty === 0}
-                className="noir-btn-primary"
+                className="noir-btn-cta"
                 style={{ flex: 1, padding: '14px', fontSize: 15 }}
               >
                 {added ? <><Check size={16} /> Added!</> : adding ? 'Adding…' : <><ShoppingBag size={16} /> Add to cart</>}

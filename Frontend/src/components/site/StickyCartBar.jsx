@@ -37,7 +37,7 @@ export default function StickyCartBar({ product, selectedVariant, onAdd, adding,
               <button
                 onClick={onAdd}
                 disabled={adding || outOfStock || !selectedVariant}
-                className="noir-btn-primary"
+                className="noir-btn-cta"
                 style={{ padding: '11px 24px', fontSize: 14, display: 'flex', alignItems: 'center', gap: 7 }}
               >
                 {added       ? <><Check size={15} /> Added!</> :

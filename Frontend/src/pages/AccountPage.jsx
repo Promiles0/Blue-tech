@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 import apiService from '../api/service'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 
 const LANGUAGES = ['English', 'French', 'Spanish', 'Arabic', 'Kinyarwanda', 'Swahili', 'Portuguese', 'German']
 const CURRENCIES = [
@@ -17,7 +18,7 @@ const CURRENCIES = [
   { code: 'ZAR', label: 'ZAR — South African Rand' },
   { code: 'JPY', label: 'JPY — Japanese Yen' },
 ]
-const THEMES = ['Dark', 'Light', 'System']
+const THEMES = ['Dark', 'Light']
 
 const formatDate = (v) => v ? new Date(v).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'
 
@@ -117,7 +118,9 @@ export default function Account() {
   // ── App Settings ─────────────────────────────────────────────
   const [language, setLanguage] = useState('English')
   const [currency, setCurrency] = useState('USD')
-  const [theme, setTheme] = useState('Dark')
+  const { theme: currentTheme, setTheme: setGlobalTheme } = useTheme()
+  const theme = currentTheme === 'light' ? 'Light' : 'Dark'
+  const setTheme = (val) => setGlobalTheme(val.toLowerCase())
 
   if (!user) return null
 

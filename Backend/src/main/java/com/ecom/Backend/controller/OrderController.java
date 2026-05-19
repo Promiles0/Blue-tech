@@ -49,4 +49,11 @@ public class OrderController {
         orderService.cancelOrder(orderId);
         return ResponseEntity.ok(ApiResponse.success("Order cancelled successfully", null));
     }
+
+    // PUT /api/orders/{orderId}/deliver
+    @PutMapping("/{orderId}/deliver")
+    public ResponseEntity<ApiResponse<String>> confirmDelivery(@PathVariable Long orderId) {
+        orderService.confirmDelivery(orderId);
+        return ResponseEntity.ok(ApiResponse.success("Order marked as delivered successfully", null));
+    }
 }
