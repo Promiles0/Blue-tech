@@ -70,7 +70,6 @@ export default function OrderHistoryPage() {
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 40 }}>
-          <p className="label-muted" style={{ marginBottom: 10 }}>Account</p>
           <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: '#fff', marginBottom: 6 }}>My Orders</h1>
           <p style={{ color: 'var(--muted)', fontSize: 15 }}>Track and manage all your purchases.</p>
         </motion.div>

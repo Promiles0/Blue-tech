@@ -185,7 +185,8 @@ export default function AdminNotificationBell() {
                       padding: '10px 14px',
                       borderBottom: '1px solid var(--admin-border)',
                       cursor: n.href ? 'pointer' : 'default',
-                      transition: 'background 0.16s',
+                      background: n.isRead ? 'transparent' : 'rgba(124,92,240,0.04)',
+                      transition: 'background 0.12s',
                       display: 'flex', gap: 9, alignItems: 'flex-start',
                       background: hoverId === n.notificationId && n.href
                         ? 'rgba(255,255,255,0.04)'

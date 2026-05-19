@@ -307,35 +307,30 @@ export default function Header() {
 
           {/* Cart → drawer — hidden for admin */}
           {!isAdmin && (
-          <div style={{ position: 'relative' }}>
-            <IconBtn onClick={() => setCartOpen(true)}>
-              <ShoppingBag size={18} />
-            </IconBtn>
-            {count > 0 && (
-              <motion.span
-                key={badgeKey}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-                style={{
-                  position: 'absolute', top: 2, right: 2,
-                  background: 'var(--accent)', color: '#fff',
-                  borderRadius: '50%', width: 15, height: 15,
-                  fontSize: 9, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  pointerEvents: 'none',
-                }}
-              >
-                {count > 9 ? '9+' : count}
-              </motion.span>
-            )}
-          </div>
+            <div style={{ position: 'relative' }}>
+              <IconBtn onClick={() => setCartOpen(true)}>
+                <ShoppingBag size={18} />
+              </IconBtn>
+              {count > 0 && (
+                <motion.span
+                  key={badgeKey}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                  style={{
+                    position: 'absolute', top: 2, right: 2,
+                    background: 'var(--accent)', color: '#fff',
+                    borderRadius: '50%', width: 15, height: 15,
+                    fontSize: 9, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {count > 9 ? '9+' : count}
+                </motion.span>
+              )}
+            </div>
           )}
-
-          {/* Theme toggle */}
-          <IconBtn onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </IconBtn>
 
           {/* Account — avatar circle when logged in */}
           {user ? (

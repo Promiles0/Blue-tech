@@ -60,18 +60,8 @@ export default function Wishlist() {
   return (
     <div style={{ padding: '48px 0 80px' }}>
       <div className="container-noir">
-        {/* Page header */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-            <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>Wishlist</h1>
-            <span style={{ fontSize: 13, color: 'var(--muted)' }}>{items.length} saved item{items.length !== 1 ? 's' : ''}</span>
-          </div>
-          <p style={{ fontSize: 13, color: '#888', margin: 0 }}>
-            <Link to="/" style={{ color: '#888', textDecoration: 'none' }}>Home</Link>
-            <span style={{ margin: '0 8px' }}>/</span>
-            <span style={{ color: '#aaa' }}>Wishlist</span>
-          </p>
-        </div>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: '#fff', marginBottom: 8, letterSpacing: '-0.02em' }}>Wishlist</h1>
+        <p style={{ fontSize: 14, color: '#888', marginBottom: 40 }}>{items.length} saved item{items.length !== 1 ? 's' : ''}</p>
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -86,125 +76,46 @@ export default function Wishlist() {
             <Link to="/products" className="noir-btn-primary" style={{ display: 'inline-flex', padding: '12px 24px' }}>Explore products</Link>
           </div>
         ) : (
-          <>
-            {/* Unified table */}
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 0 }}>
+          <div className="grid-4">
+            {items.map(item => {
+              const pid     = Number(item.productId)
+              const img     = item.primaryImageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80'
+              const price   = parseFloat(item.price ?? 0)
 
-              {/* Table header */}
-              <div style={{
-                display: 'grid', gridTemplateColumns: '2.5fr 1fr 1fr 1fr 40px',
-                padding: '11px 20px',
-                background: 'var(--accent-dim)',
-                borderBottom: '1px solid var(--border)',
-              }}>
-                {['Product', 'Price', 'Stock Status', 'Action', ''].map((h, i) => (
-                  <span key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)', textAlign: i >= 2 ? 'center' : 'left' }}>{h}</span>
-                ))}
-              </div>
-
-              {/* Rows */}
-              {items.map((item, idx) => {
-                const pid = Number(item.productId)
-                const img = item.primaryImageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80'
-                const price = parseFloat(item.price ?? 0) || 0
-                const inStock = item.variants?.some(v => v.stockQuantity > 0) ?? true
-
-                return (
-                  <div key={pid} style={{
-                    display: 'grid', gridTemplateColumns: '2.5fr 1fr 1fr 1fr 40px',
-                    alignItems: 'center', padding: '16px 20px',
-                    borderBottom: idx < items.length - 1 ? '1px solid var(--border)' : 'none',
-                    transition: 'background 0.15s',
-                  }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--overlay-hover)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    {/* Product */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <div style={{ width: 60, height: 60, borderRadius: 8, overflow: 'hidden', background: 'var(--card)', flexShrink: 0 }}>
-                        <img src={img} alt={item.productName}
-                          onError={e => { e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80' }}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.25s' }}
-                          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'}
-                          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                        />
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>{item.productName}</p>
-                        {item.categoryName && <p style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>{item.categoryName}</p>}
-                      </div>
-                    </div>
-
-                    {/* Price */}
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--price)' }}>${price.toFixed(2)}</span>
-
-                    {/* Stock */}
-                    <div style={{ textAlign: 'center' }}>
-                      <span style={{
-                        fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-                        background: inStock ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.06)',
-                        color: inStock ? '#22c55e' : '#ef4444',
-                        border: `1px solid ${inStock ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)'}`,
-                      }}>
-                        {inStock ? 'In Stock' : 'Out of Stock'}
-                      </span>
-                    </div>
-
-                    {/* Add to cart */}
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+              return (
+                <div key={pid} style={{ background: '#141414', border: '1px solid #1e1e1e', borderRadius: 12, overflow: 'hidden' }}>
+                  <Link to={`/products/${pid}`} style={{ display: 'block', height: 200, overflow: 'hidden', background: '#1a1a1a' }}>
+                    <img src={img} alt={item.productName ?? product.name}
+                      onError={e => { e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80' }}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.3s' }}
+                      onMouseEnter={e => e.target.style.transform = 'scale(1.05)'}
+                      onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+                    />
+                  </Link>
+                  <div style={{ padding: '14px 16px 16px' }}>
+                    {item.categoryName && <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: '#888', marginBottom: 5, textTransform: 'uppercase' }}>{item.categoryName}</p>}
+                    <p style={{ fontSize: 15, fontWeight: 500, color: '#fff', marginBottom: 8 }}>{item.productName}</p>
+                    <p style={{ fontSize: 15, fontWeight: 700, color: '#f59e0b', marginBottom: 14 }}>${price.toFixed(2)}</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <Link to={`/products/${pid}`} className="noir-btn-primary" style={{ flex: 1, fontSize: 12, padding: '8px 12px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                        <ShoppingBag size={13} /> View product
+                      </Link>
                       <button
-                        onClick={() => handleAddToCart(item)}
-                        disabled={addingToCart[pid] || !inStock}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          fontSize: 12, fontWeight: 600, padding: '7px 14px',
-                          background: inStock ? 'var(--accent)' : 'var(--card)',
-                          color: inStock ? '#fff' : 'var(--muted)',
-                          border: 'none', borderRadius: 8, cursor: inStock ? 'pointer' : 'not-allowed',
-                          transition: 'background 0.2s', whiteSpace: 'nowrap',
-                        }}
-                        onMouseEnter={e => { if (inStock) e.currentTarget.style.background = '#6b4fd8' }}
-                        onMouseLeave={e => { if (inStock) e.currentTarget.style.background = 'var(--accent)' }}
+                        onClick={() => removeFromWishlist(pid)}
+                        disabled={toggling[pid]}
+                        style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 8, padding: '8px 10px', color: '#888', cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s', display: 'flex' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444' }}
+                        onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#2a2a2a' }}
                       >
                         <ShoppingBag size={13} />
                         {addingToCart[pid] ? 'Adding…' : 'Add to Cart'}
                       </button>
-                      <Link to={`/products/${pid}`}
-                        style={{ display: 'flex', alignItems: 'center', padding: '7px 8px', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--muted)', transition: 'color 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
-                      >
-                        <ExternalLink size={13} />
-                      </Link>
                     </div>
-
-                    {/* Remove */}
-                    <button onClick={() => removeItem(pid)} disabled={toggling[pid]}
-                      style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 6, borderRadius: 6, transition: 'color 0.2s' }}
-                      onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                      onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
-                    >
-                      <Trash2 size={15} />
-                    </button>
                   </div>
-                )
-              })}
-            </div>
-
-            {/* Trust strip — minimal */}
-            <div style={{ display: 'flex', gap: 24, marginTop: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
-              {[
-                { icon: <Truck size={14} />, label: 'Free shipping on all orders' },
-                { icon: <Shield size={14} />, label: 'Secure & encrypted payment' },
-                { icon: <Headphones size={14} />, label: '24/7 customer support' },
-              ].map(({ icon, label }) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ color: 'var(--accent)' }}>{icon}</span>
-                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</span>
                 </div>
-              ))}
-            </div>
-          </>
+              )
+            })}
+          </div>
         )}
       </div>
     </div>
