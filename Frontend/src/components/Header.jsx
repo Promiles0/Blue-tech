@@ -119,8 +119,9 @@ export default function Header() {
         {/* Logo */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-          <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>NOIR</span>
-        </Link>
+          {/* <span style={{ fontFamily: '"league Spartan",', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span> */}
+          <span style={{ fontFamily: '"League Spartan", sans-serif', fontWeight: 800, fontSize: '15px', letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span>
+            </Link>
 
         {/* Center nav — hidden on mobile */}
         <nav className="nav-links" style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
@@ -131,7 +132,7 @@ export default function Header() {
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
           >
-            Shop
+            Store
           </Link>
 
           <div ref={browseRef} style={{ position: 'relative' }}>
@@ -145,7 +146,7 @@ export default function Header() {
               onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)' }}
               onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
             >
-              Browse
+              Categories
               <ChevronDown size={14} style={{ transform: browseOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
             </button>
 

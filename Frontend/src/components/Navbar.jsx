@@ -62,13 +62,13 @@ export default function Navbar() {
         {/* Logo */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block', flexShrink: 0 }} />
-          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>NOIR</span>
+          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span>
         </Link>
 
         {/* Center links */}
         <div className="nav-links" style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
           <NavLink to="/products">
-            Shop
+            Store
           </NavLink>
 
           <div
@@ -86,7 +86,7 @@ export default function Navbar() {
                 transition: 'color 0.2s', padding: 0,
               }}
             >
-              Browse
+              Categories
             </button>
 
             {megaOpen && (

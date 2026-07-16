@@ -152,6 +152,8 @@
 					</execution>
 				</executions>
 				<configuration>
+				
+
 					<excludes>
 						<exclude>com/ecom/Backend/dto/**</exclude>
 						<exclude>com/ecom/Backend/entity/**</exclude>

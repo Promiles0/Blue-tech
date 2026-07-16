@@ -9,7 +9,7 @@ const SECTIONS = {
       { q: 'How long does shipping take?', a: 'Standard shipping usually takes 3-5 business days depending on your location.' },
       { q: 'Can I track my order?', a: 'Yes, once your order is shipped, you will receive a tracking number via email.' },
       { q: 'What is your return policy?', a: 'We offer a 30-day return policy for unused products in their original packaging.' },
-      { q: 'How do I contact support?', a: 'You can reach us at support@noir.com or through our contact form.' }
+      { q: 'How do I contact support?', a: 'You can reach us at support@bluetech.com or through our contact form.' }
     ]
   },
   shipping: {
@@ -28,9 +28,9 @@ const SECTIONS = {
   },
   warranty: {
     title: 'Warranty Information',
-    body: `Every NOIR product comes with a 2-year limited warranty against manufacturing defects. 
+    body: `Every Blue-Tech product comes with a 2-year limited warranty against manufacturing defects. 
     
-    This warranty does not cover accidental damage, wear and tear, or unauthorized modifications. For warranty claims, please contact support@noir.com with your order number.`
+    This warranty does not cover accidental damage, wear and tear, or unauthorized modifications. For warranty claims, please contact support@bluetech.com with your order number.`
   }
 }
 
@@ -78,8 +78,8 @@ export default function HelpPage() {
         <div style={{ marginTop: 80, padding: '32px', background: 'var(--surface)', borderRadius: 16, textAlign: 'center' }}>
           <h4 style={{ color: 'var(--text)', marginBottom: 12 }}>Still have questions?</h4>
           <p style={{ color: 'var(--muted-dark)', fontSize: 14, marginBottom: 20 }}>Our team is available Mon–Fri, 9am–5pm EST.</p>
-          <a href="mailto:support@noir.com" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
-            support@noir.com
+          <a href="mailto:support@bluetech.com" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
+            support@bluetech.com
           </a>
         </div>
       </div>

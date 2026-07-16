@@ -68,7 +68,7 @@ export default function Login() {
       }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>NOIR</span>
+          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span>
         </Link>
 
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>Welcome back</p>

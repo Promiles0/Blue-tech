@@ -197,7 +197,7 @@ export default function Home() {
                 className="noir-btn-outline"
                 style={{ fontSize: 15, padding: '13px 24px' }}
               >
-                Explore audio
+                Explore 
               </Link>
             </motion.div>
           </div>

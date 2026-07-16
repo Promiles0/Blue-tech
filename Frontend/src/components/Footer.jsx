@@ -38,8 +38,9 @@ export default function Footer() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-              <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em' }}>NOIR</span>
-            </div>
+              {/* <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em' }}>NOIR</span> */}
+             <span style={{ fontFamily: '"League Spartan", sans-serif', fontWeight: 800, fontSize: '15px', letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span>
+                </div>
             <p style={{ color: 'var(--muted-dark)', fontSize: 14, lineHeight: 1.7, maxWidth: 220, marginBottom: 20 }}>
               Considered objects for a quieter, more deliberate digital life.
             </p>
@@ -115,7 +116,7 @@ export default function Footer() {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           flexWrap: 'wrap', gap: 12,
         }}>
-          <p style={{ color: 'var(--muted-dark)', fontSize: 13 }}>© 2026 NOIR Studio. All rights reserved.</p>
+          <p style={{ color: 'var(--muted-dark)', fontSize: 13 }}>© 2026 Blue-Tech. All rights reserved.</p>
           <div style={{ display: 'flex', gap: 20 }}>
             {[['Privacy', '#'], ['Terms', '#'], ['Cookies', '#']].map(([label, href]) => (
               <a
