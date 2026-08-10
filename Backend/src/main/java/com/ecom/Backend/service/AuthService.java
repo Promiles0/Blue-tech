@@ -176,70 +176,65 @@ public class AuthService {
     }
 
     public AuthResponse googleLogin(GoogleLoginRequest request) {
-        try {
-            if (googleWebClientId == null || googleWebClientId.isBlank()) {
-                throw new RuntimeException("Google web client ID is not configured. Set GOOGLE_WEB_CLIENT_ID in your backend environment.");
-            }
+        if (googleWebClientId == null || googleWebClientId.isBlank()) {
+            throw new RuntimeException("Google web client ID is not configured.");
+        }
 
-            // Create the verifier and lock the token to your exact client ID and issuer
+        GoogleIdToken idToken;
+        try {
             GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
                     .setAudience(Collections.singletonList(googleWebClientId))
                     .setIssuers(Arrays.asList("https://accounts.google.com", "accounts.google.com"))
                     .build();
+            idToken = verifier.verify(request.getToken());
+        } catch (Exception e) {
+            throw new RuntimeException("Google token verification failed: " + e.getMessage());
+        }
 
-            // Verify the token from the frontend
-            GoogleIdToken idToken = verifier.verify(request.getToken());
-            if (idToken == null) {
-                throw new RuntimeException("Invalid Google token");
-            }
+        if (idToken == null) {
+            throw new RuntimeException("Invalid or expired Google token. Ensure http://localhost:5173 is an Authorized JavaScript Origin in Google Cloud Console.");
+        }
 
-            GoogleIdToken.Payload payload = idToken.getPayload();
-            String email = payload.getEmail();
-            String name = (String) payload.get("name");
-            String picture = (String) payload.get("picture");
-            String googleId = payload.getSubject(); // Unique Google user ID
+        GoogleIdToken.Payload payload = idToken.getPayload();
+        String email    = payload.getEmail();
+        String googleId = payload.getSubject();
 
-            if (email == null || googleId == null) {
-                throw new RuntimeException("Google token payload did not contain required user data.");
-            }
+        if (email == null || googleId == null) {
+            throw new RuntimeException("Google token is missing required fields (email/sub).");
+        }
 
-            // Check if user exists, if not create
-            User user = userRepository.findByEmail(email).orElse(null);
-            if (user == null) {
-                user = User.builder()
+        String name    = (String) payload.get("name");
+        String picture = (String) payload.get("picture");
+
+        User user = userRepository.findByEmail(email).orElseGet(() ->
+                userRepository.save(User.builder()
                         .name(name)
                         .email(email)
                         .picture(picture)
-                        .passwordHash("google-oauth") // Dummy password for OAuth users
+                        .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
                         .provider("google")
                         .providerId(googleId)
                         .role(RoleType.CUSTOMER)
                         .createdAt(LocalDateTime.now())
-                        .build();
-                userRepository.save(user);
-            }
+                        .build())
+        );
 
-            // Generate JWT Token
-            UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
-            String jwtToken = jwtService.generateToken(userDetails);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        String jwtToken = jwtService.generateToken(userDetails);
 
-            // Map to response
-            UserResponse userResponse = UserResponse.builder()
-                    .userId(user.getUserId())
-                    .name(user.getName())
-                    .email(user.getEmail())
-                    .phone(user.getPhone())
-                    .picture(user.getPicture())
-                    .role(user.getRole())
-                    .build();
+        UserResponse userResponse = UserResponse.builder()
+                .userId(user.getUserId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .picture(user.getPicture())
+                .role(user.getRole())
+                .build();
 
-            return AuthResponse.builder()
-                    .token(jwtToken)
-                    .user(userResponse)
-                    .build();
-        } catch (Exception e) {
-            throw new RuntimeException("Google login failed: " + e.getMessage());
-        }
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .user(userResponse)
+                .build();
     }
 
     public UserResponse updateProfile(User user, ProfileUpdateRequest request) {

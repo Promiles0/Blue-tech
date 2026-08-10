@@ -17,9 +17,7 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    // Using a hardcoded secret key for this MVP, but in production this MUST be in application.properties!
-    // This is a 256-bit Hex string required by HMAC-SHA256
-    @Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
+    @Value("${jwt.secret}")
     private String secretKey;
 
     @Value("${jwt.expiration:86400000}") // Default 1 day in milliseconds
@@ -74,7 +72,12 @@ public class JwtService {
     }
 
     private SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        String configuredSecret = secretKey == null ? "" : secretKey.trim();
+        if (configuredSecret.isBlank()) {
+            throw new IllegalStateException("JWT secret must be configured via jwt.secret or JWT_SECRET");
+        }
+
+        byte[] keyBytes = Decoders.BASE64URL.decode(configuredSecret);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

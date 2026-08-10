@@ -21,23 +21,24 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    // Expired / invalid JWT → the backend throws RuntimeException → 400
-    // Also handle explicit 401. Either way, clear stale credentials.
     const status = error.response?.status
     const message = error.response?.data?.message?.toLowerCase() || ''
-    const authFailure = status === 401 || status === 403 ||
+
+    // Only logout on 401 from our own API, or explicit token-related 400s
+    const isOwnApi = error.config?.url?.startsWith('/api') || error.config?.baseURL?.includes('localhost')
+    const authFailure = isOwnApi && (
+      status === 401 ||
       (status === 400 && (
         message.includes('not found in database') ||
         message.includes('invalid or expired token') ||
         message.includes('token has expired') ||
-        message.includes('logged in user not found') ||
-        message.includes('unauthorized')
+        message.includes('logged in user not found')
       ))
+    )
 
     if (authFailure) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
-      // Reload so React state resets cleanly
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }

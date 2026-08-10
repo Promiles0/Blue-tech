@@ -21,6 +21,8 @@ export function CartProvider({ children }) {
   const fetchCart = useCallback(async () => {
     const expectedUser = activeUserRef.current
     try {
+      const token = localStorage.getItem('token')
+      console.log('[cart-debug] token before request:', token)
       const { data } = await apiService.cart.get()
       // Discard response if the user changed while the request was in flight
       if (activeUserRef.current !== expectedUser) return

@@ -11,9 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Map;
-
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -32,8 +30,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "app.admin.name=Admin",
         "app.admin.phone=+250780000000",
         "app.google.web-client-id=test-client-id",
-        "app.flutterwave.secret-key=test-secret",
-        "app.flutterwave.webhook-secret=my_secret_hash",
+        "app.stripe.secret-key=sk_test_dummy",
+        "app.stripe.webhook-secret=whsec_dummy",
         "app.frontend.url=http://localhost:5173",
         "app.upload.dir=uploads",
         "jwt.secret=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
@@ -49,42 +47,28 @@ class PaymentControllerTest {
     @MockitoBean PaymentService paymentService;
     @MockitoBean EmailService emailService;
 
-    private final Map<String, Object> validPayload = Map.of(
-            "status", "successful",
-            "data", Map.of("tx_ref", "ECOM-1-abc12345", "payment_type", "card")
-    );
+    private final String validPayload = "{\"type\":\"payment_intent.succeeded\",\"data\":{\"object\":{\"id\":\"pi_test\"}}}";
 
     @Test
-    void webhook_validHash_returns200() throws Exception {
-        doNothing().when(paymentService).processWebhook(any());
+    void webhook_validSignature_returns200() throws Exception {
+        doNothing().when(paymentService).processStripeWebhook(anyString(), anyString());
 
         mockMvc.perform(post("/api/payments/webhook")
-                        .header("verif-hash", "my_secret_hash")
+                        .header("Stripe-Signature", "t=123,v1=abc")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(validPayload)))
+                        .content(validPayload))
                 .andExpect(status().isOk());
 
-        verify(paymentService).processWebhook(any());
+        verify(paymentService).processStripeWebhook(anyString(), anyString());
     }
 
     @Test
-    void webhook_invalidHash_returns401() throws Exception {
-        mockMvc.perform(post("/api/payments/webhook")
-                        .header("verif-hash", "wrong_hash")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(validPayload)))
-                .andExpect(status().isUnauthorized());
-
-        verify(paymentService, never()).processWebhook(any());
-    }
-
-    @Test
-    void webhook_missingHash_returns400() throws Exception {
+    void webhook_missingSignature_returns400() throws Exception {
         mockMvc.perform(post("/api/payments/webhook")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(validPayload)))
+                        .content(validPayload))
                 .andExpect(status().isBadRequest());
 
-        verify(paymentService, never()).processWebhook(any());
+        verify(paymentService, never()).processStripeWebhook(anyString(), anyString());
     }
 }

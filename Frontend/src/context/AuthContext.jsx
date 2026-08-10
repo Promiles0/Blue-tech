@@ -11,11 +11,13 @@ export function AuthProvider({ children }) {
     const token     = localStorage.getItem('token')
     const savedUser = localStorage.getItem('user')
     if (token && savedUser) {
-      try { 
+      try {
+        // Validate token has 3 Base64URL parts (header.payload.signature)
+        const parts = token.split('.')
+        if (parts.length !== 3) throw new Error('Malformed token')
         const parsed = JSON.parse(savedUser)
         setUser(parsed)
       } catch (e) {
-        console.error('Failed to parse saved user', e)
         localStorage.removeItem('token')
         localStorage.removeItem('user')
       }

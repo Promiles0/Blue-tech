@@ -45,7 +45,7 @@ export default function AdminLayout() {
         <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--admin-sidebar-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: theme === 'light' ? '#ffffff' : 'var(--admin-primary)', flexShrink: 0 }} />
-            <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 13, letterSpacing: '0.14em', color: '#ffffff' }}>NOIR</span>
+            <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 13, letterSpacing: '0.14em', color: '#ffffff' }}>Blue-tech</span>
             <span style={{
               fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: theme === 'light' ? '#354380' : 'var(--admin-primary)',
               background: '#ffffff', padding: '2px 6px', borderRadius: 4,

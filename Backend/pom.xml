@@ -122,6 +122,13 @@
 			<version>2.5.0</version>
 		</dependency>
 
+		<!-- Stripe -->
+		<dependency>
+			<groupId>com.stripe</groupId>
+			<artifactId>stripe-java</artifactId>
+			<version>26.3.0</version>
+		</dependency>
+
 		<!-- Google API Client for ID Token Verification -->
 		<dependency>
 			<groupId>com.google.api-client</groupId>

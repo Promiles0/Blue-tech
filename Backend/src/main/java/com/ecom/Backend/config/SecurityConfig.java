@@ -74,22 +74,19 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**", "/login/**", "/oauth2/**", "/swagger-ui/**", "/v3/api-docs/**",
-                                "/api/payments/webhook")
+                                "/api/payments/webhook/stripe", "/api/payments/webhook/paypack")
                         .permitAll() // Allow everyone to access Login/Register, OAuth2, and Webhooks
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**",
                                 "/api/products/**", "/uploads/**", "/api/reviews/**", "/api/hero-slides")
                         .permitAll() // Public catalog, images, reviews, and hero slides
-                        .requestMatchers("/api/categories/**", "/api/products/**").hasRole("ADMIN") // Only Admins can
-                                                                                                    // create/edit
-                                                                                                    // catalog
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // Global admin route protection
-                        .requestMatchers("/api/notifications/admin/**").hasRole("ADMIN") // Admin-only notification
-                                                                                         // endpoints
-                        .requestMatchers("/api/cart/**", "/api/orders/**", "/api/wishlist/**", "/api/addresses/**",
-                                "/api/notifications/**", "/api/users/**")
-                        .authenticated() // Logged in user
                         .requestMatchers(HttpMethod.POST, "/api/products/*/reviews").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/reviews/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/reviews/*").authenticated()
+                        .requestMatchers("/api/categories/**", "/api/products/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/notifications/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/cart/**", "/api/orders/**", "/api/wishlist/**", "/api/addresses/**",
+                                "/api/notifications/**", "/api/users/**").authenticated()
                         .anyRequest().authenticated() // Protect everything else
                 )
                 .exceptionHandling(ex -> ex
