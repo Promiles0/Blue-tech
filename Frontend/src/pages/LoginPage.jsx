@@ -1,0 +1,138 @@
+import { useState } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import GoogleLogin from '../components/GoogleLogin'
+
+export default function Login() {
+  const [email, setEmail]       = useState('')
+  const [password, setPassword] = useState('')
+  const [showPass, setShowPass] = useState(false)
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
+  const { login }               = useAuth()
+  const navigate                = useNavigate()
+  const location                = useLocation()
+  const from                    = location.state?.from ?? '/'
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await login(email, password)
+      navigate(from, { replace: true })
+    } catch (err) {
+      setError(err.response?.data?.message ?? 'Invalid email or password.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{
+      minHeight: 'calc(100vh - 60px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '24px 16px',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Ambient purple glow */}
+      <div style={{
+        position: 'absolute', top: '15%', left: '50%',
+        transform: 'translateX(-50%)',
+        width: 700, height: 700, borderRadius: '50%',
+        background: 'radial-gradient(circle, var(--accent-dim2) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '5%', right: '15%',
+        width: 400, height: 400, borderRadius: '50%',
+        background: 'radial-gradient(circle, var(--accent-dim) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Frosted glass card */}
+      <div className="auth-card fade-in" style={{
+        width: '100%', maxWidth: 480,
+        background: 'var(--glass-bg)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid var(--glass-border)',
+        borderRadius: 20,
+        padding: 40,
+        boxShadow: 'var(--card-shadow)',
+        position: 'relative', zIndex: 1,
+      }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
+          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span>
+        </Link>
+
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>Welcome back</p>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>Sign in</h1>
+
+        {error && (
+          <div style={{ background: 'var(--error-dim)', border: '1px solid var(--danger-border)', borderRadius: 8, padding: '11px 14px', fontSize: 13, color: 'var(--error)', marginBottom: 20 }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <Field label="Email">
+            <input type="email" value={email} required onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com" className="noir-input auth-input" />
+          </Field>
+
+          <Field label="Password" style={{ marginBottom: 28 }}>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPass ? 'text' : 'password'} value={password} required
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••" className="noir-input auth-input" style={{ paddingRight: 44 }}
+              />
+              <button type="button" onClick={() => setShowPass(p => !p)}
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', padding: 4 }}>
+                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </Field>
+
+          <button type="submit" disabled={loading} className="noir-btn-primary auth-submit-btn" style={{ width: '100%', padding: '13px', fontSize: 15 }}>
+            {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
+
+        <div style={{ marginTop: 16, textAlign: 'center' }}>
+          <GoogleLogin />
+        </div>
+
+        <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: 'var(--muted)' }}>
+          Don't have an account?{' '}
+          <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 500 }}>Create one</Link>
+        </p>
+      </div>
+
+      <style>{`
+        .auth-input { min-height: 48px !important; border-radius: 10px !important; }
+        .auth-input:focus { box-shadow: 0 0 0 3px var(--accent-dim2) !important; }
+        .auth-submit-btn { border-radius: 10px !important; transition: background 0.2s, transform 0.15s, box-shadow 0.15s !important; }
+        .auth-submit-btn:hover:not(:disabled) { transform: translateY(-2px) !important; box-shadow: 0 8px 24px var(--accent-border) !important; }
+        @media (max-width: 480px) {
+          .auth-card { padding: 28px 20px !important; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+function Field({ label, children, style }) {
+  return (
+    <div style={{ marginBottom: 16, ...style }}>
+      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--muted)', marginBottom: 6 }}>{label}</label>
+      {children}
+    </div>
+  )
+}
