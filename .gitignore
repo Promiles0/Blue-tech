@@ -1,44 +1,51 @@
-target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/resources/*.jar
-!**/src/test/resources/*.jar
+# Dependencies
+node_modules/
+**/node_modules/
 
-### IntelliJ IDEA ###
-.idea
+# Build outputs
+dist/
+**/dist/
+target/
+**/target/
+
+# Vercel
+.vercel/
+
+# Logs
+*.log
+*.log.*
+
+# Environment files
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Uploads
+uploads/
+
+### IntelliJ IDEA
+.idea/
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
+### NetBeans
 /nbproject/private/
 /nbbuild/
-/dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/resources/archetype-resources/google_cheatsheet.pdf
 
-### VS Code ###
+### VS Code
 .vscode/
 
-### OS ###
+### OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
-### Custom ###
+# Custom
 Backend/target/
 Frontend/dist/
-uploads/
-*.log
-.temp/
-.env
-.env.*
-Backend/.env
-Frontend/.env
-!*.env.example
-!**/.env.example
-.env
-Frontend/.env
-Backend/.env
-

@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  build: {
+    outDir: 'dist'
+  },
   plugins: [react()],
-  server: {
+  server: command === 'serve' ? {
     port: 5173,
     headers: {
       'Cross-Origin-Opener-Policy': 'unsafe-none',
@@ -16,8 +19,8 @@ export default defineConfig({
         configure: (proxy) => {
           proxy.on('error', (err) => {
             console.error('\n[proxy] ❌ Backend unreachable at http://127.0.0.1:8080')
-            console.error('[proxy]    Is the Spring Boot server running? (mvnw spring-boot:run)')
-            console.error('[proxy]    Error:', err.message, '\n')
+            console.error('[proxy] Is the Spring Boot server running? (mvnw spring-boot:run)')
+            console.error('[proxy] Error:', err.message, '\n')
           })
         },
       },
@@ -27,8 +30,8 @@ export default defineConfig({
         secure: false,
       },
     },
-  },
+  } : {},
   optimizeDeps: {
     include: ['recharts'],
   },
-})
+}))
