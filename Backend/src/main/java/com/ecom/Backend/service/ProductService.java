@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -58,13 +59,8 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        // 1. Store the file on disk
-        String fileName = fileStorageService.storeFile(file);
-        
-        // 2. Build the URL (For local dev, we point to our /uploads/ route)
-        String imageUrl = "/uploads/products/" + fileName;
+        String imageUrl = storeProductImage(file);
 
-        // 3. Save to database
         ProductImage image = ProductImage.builder()
                 .product(product)
                 .imageUrl(imageUrl)
@@ -73,6 +69,14 @@ public class ProductService {
         imageRepository.save(image);
 
         return buildProductDetailResponse(product, product.getVariants(), product.getImages());
+    }
+
+    public String storeProductImage(org.springframework.web.multipart.MultipartFile file) {
+        String fileName = fileStorageService.storeFile(file);
+        return ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/uploads/products/")
+                .path(fileName)
+                .toUriString();
     }
 
     @Transactional(readOnly = true)
@@ -217,6 +221,23 @@ public class ProductService {
             savedVariants = savedProduct.getVariants();
         }
 
+        List<ProductImage> savedImages = savedProduct.getImages();
+        if (request.getImages() != null) {
+            List<ProductImage> existingImages = imageRepository.findByProduct_ProductId(productId);
+            imageRepository.deleteAll(existingImages);
+            savedImages = request.getImages().stream()
+                    .filter(iReq -> iReq.getImageUrl() != null && !iReq.getImageUrl().trim().isEmpty())
+                    .map(iReq -> {
+                        ProductImage image = ProductImage.builder()
+                                .product(savedProduct)
+                                .imageUrl(iReq.getImageUrl().trim())
+                                .isPrimary(iReq.getIsPrimary() != null ? iReq.getIsPrimary() : false)
+                                .build();
+                        return imageRepository.save(image);
+                    })
+                    .collect(Collectors.toList());
+        }
+
         // 5. Log Mutation
         auditLogService.log(
                 authService.getCurrentAuthenticatedUser().getUserId(),
@@ -226,7 +247,7 @@ public class ProductService {
                 null
         );
 
-        return buildProductDetailResponse(savedProduct, savedVariants, savedProduct.getImages());
+        return buildProductDetailResponse(savedProduct, savedVariants, savedImages);
     }
 
     @Transactional
@@ -271,6 +292,7 @@ public class ProductService {
                 .name(product.getName())
                 .categoryName(product.getCategory().getCategoryName())
                 .startingPrice(product.getPrice())
+                .imageUrl(primaryImage)
                 .primaryImageUrl(primaryImage)
                 .build();
     }
@@ -296,6 +318,12 @@ public class ProductService {
                         .build())
                 .collect(Collectors.toList()) : null;
 
+        String primaryImage = imageDtos != null ? imageDtos.stream()
+                .filter(i -> Boolean.TRUE.equals(i.getIsPrimary()))
+                .map(ProductDetailResponse.ImageResponse::getImageUrl)
+                .findFirst()
+                .orElse(imageDtos.isEmpty() ? null : imageDtos.get(0).getImageUrl()) : null;
+
         return ProductDetailResponse.builder()
                 .productId(product.getProductId())
                 .name(product.getName())
@@ -303,6 +331,7 @@ public class ProductService {
                 .price(product.getPrice())
                 .categoryId(product.getCategory().getCategoryId())
                 .categoryName(product.getCategory().getCategoryName())
+                .imageUrl(primaryImage)
                 .variants(variantDtos)
                 .images(imageDtos)
                 .build();

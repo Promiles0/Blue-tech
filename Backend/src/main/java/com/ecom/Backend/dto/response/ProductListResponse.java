@@ -16,5 +16,6 @@ public class ProductListResponse {
     private String name;
     private String categoryName;
     private BigDecimal startingPrice; // The base price or the lowest variant price
+    private String imageUrl;
     private String primaryImageUrl;
 }

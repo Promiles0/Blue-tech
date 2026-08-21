@@ -20,6 +20,7 @@ public class ProductDetailResponse {
     private BigDecimal price;
     private Long categoryId;
     private String categoryName;
+    private String imageUrl;
 
     private List<VariantResponse> variants;
     private List<ImageResponse> images;

@@ -93,6 +93,28 @@ export default function AdminProducts() {
 
   const closeModal = () => { setModal(null); setEditing(null); setError(null); setFileUploads([]) }
 
+  const uploadSelectedFiles = async () => {
+    const uploadedImages = []
+
+    for (const fu of fileUploads) {
+      const fd = new FormData()
+      fd.append('file', fu.file)
+      const { data } = await apiService.admin.products.uploadFile(fd)
+      const imageUrl = data?.data ?? data
+
+      if (typeof imageUrl !== 'string' || !imageUrl.trim()) {
+        throw new Error(`Upload failed for ${fu.file.name}. The storage service did not return an image URL.`)
+      }
+
+      uploadedImages.push({
+        imageUrl: imageUrl.trim(),
+        isPrimary: fu.isPrimary,
+      })
+    }
+
+    return uploadedImages
+  }
+
   const handleSave = async () => {
     setError(null)
 
@@ -105,6 +127,17 @@ export default function AdminProducts() {
 
     setSaving(true)
     try {
+      const uploadedImages = await uploadSelectedFiles()
+      const images = [
+        ...form.images.filter(i => i.imageUrl.trim()).map(i => ({
+          imageUrl:  i.imageUrl.trim(),
+          isPrimary: i.isPrimary,
+        })),
+        ...uploadedImages,
+      ]
+
+      setForm(f => ({ ...f, images }))
+
       const payload = {
         name:        form.name.trim(),
         description: form.description.trim() || undefined,
@@ -117,26 +150,15 @@ export default function AdminProducts() {
           priceAdjustment: v.priceAdjustment !== '' ? Number(v.priceAdjustment) : undefined,
           stockQuantity:   Number(v.stockQuantity),
         })),
-        images: form.images.filter(i => i.imageUrl.trim()).map(i => ({
-          imageUrl:  i.imageUrl.trim(),
-          isPrimary: i.isPrimary,
-        })),
+        images,
       }
-      let productId
       if (modal === 'create') {
-        const { data } = await apiService.admin.products.create(payload)
-        productId = (data?.data ?? data).productId
+        await apiService.admin.products.create(payload)
         setSuccess('Product created!')
       } else {
-        productId = editing.productId ?? editing.id
+        const productId = editing.productId ?? editing.id
         await apiService.admin.products.update(productId, payload)
         setSuccess('Product updated!')
-      }
-      for (const fu of fileUploads) {
-        const fd = new FormData()
-        fd.append('file', fu.file)
-        fd.append('isPrimary', fu.isPrimary)
-        await apiService.admin.products.uploadImage(productId, fd)
       }
       closeModal()
       fetchProducts()
@@ -149,7 +171,7 @@ export default function AdminProducts() {
       } else if (fieldErrors && typeof fieldErrors === 'object') {
         setError(Object.values(fieldErrors).join(' • '))
       } else {
-        setError(msg || 'Something went wrong.')
+        setError(msg || err?.message || 'Something went wrong.')
       }
     } finally {
       setSaving(false)
@@ -230,8 +252,8 @@ export default function AdminProducts() {
               >
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {(p.primaryImageUrl ?? p.images?.[0]?.imageUrl) && (
-                      <img src={p.primaryImageUrl ?? p.images[0].imageUrl} alt=""
+                    {p.imageUrl && (
+                      <img src={p.imageUrl} alt=""
                         style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', background: 'var(--card)' }}
                         onError={e => { e.target.style.display = 'none' }}
                       />

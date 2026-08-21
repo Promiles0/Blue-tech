@@ -104,6 +104,9 @@ const apiService = {
       create: (data) => api.post('/products', data),
       update: (id, data) => api.put(`/products/${id}`, data),
       delete: (id) => api.delete(`/products/${id}`),
+      uploadFile: (formData) => api.post('/products/images/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }),
       uploadImage: (productId, formData) => api.post(`/products/${productId}/images`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       }),

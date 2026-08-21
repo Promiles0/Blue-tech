@@ -24,6 +24,14 @@ public class ProductController {
 
     private final ProductService productService;
 
+    // POST /api/products/images/upload
+    @PostMapping("/images/upload")
+    public ResponseEntity<ApiResponse<String>> uploadImageToStorage(
+            @RequestParam("file") MultipartFile file) {
+        String imageUrl = productService.storeProductImage(file);
+        return ResponseEntity.ok(ApiResponse.success("Image uploaded successfully", imageUrl));
+    }
+
     // PUT /api/products/inventory
     @PutMapping("/inventory")
     public ResponseEntity<ApiResponse<Void>> updateInventoryBatch(@Valid @RequestBody InventoryBatchUpdate request) {

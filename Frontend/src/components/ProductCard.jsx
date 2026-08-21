@@ -28,10 +28,10 @@ export default function ProductCard({ product }) {
   const price      = parseFloat(product.startingPrice ?? product.price) || 0
 
   const primaryImage =
-    product.images?.find(i => i.isPrimary)?.imageUrl
+    product.imageUrl
+    ?? product.images?.find(i => i.isPrimary)?.imageUrl
     ?? product.images?.[0]?.imageUrl
     ?? product.primaryImageUrl
-    ?? product.imageUrl
     ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'
 
   const hoverImage   = product.images?.[1]?.imageUrl ?? null
