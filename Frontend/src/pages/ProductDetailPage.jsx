@@ -97,7 +97,7 @@ export default function ProductDetail() {
 
   const images = product.images?.length
     ? product.images
-    : [{ imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80' }]
+    : product.imageUrl ? [{ imageUrl: product.imageUrl }] : []
   const price = (parseFloat(product.price) || 0) + (parseFloat(selectedVariant?.priceAdjustment) || 0)
   const stockQty = selectedVariant?.stockQuantity ?? 0
   const avgRating = reviews.length
@@ -119,10 +119,12 @@ export default function ProductDetail() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'start' }}>
           <div>
             <div style={{ borderRadius: 16, overflow: 'hidden', background: 'var(--surface)', marginBottom: 12, aspectRatio: '4/3' }}>
-              <LensZoom
-                src={images[activeImage]?.imageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&q=80'}
-                alt={product.name}
-              />
+              {images[activeImage]?.imageUrl && (
+                <LensZoom
+                  src={images[activeImage].imageUrl}
+                  alt={product.name}
+                />
+              )}
             </div>
             {images.length > 1 && (
               <div style={{ display: 'flex', gap: 10 }}>

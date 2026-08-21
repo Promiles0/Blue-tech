@@ -68,7 +68,7 @@ export default function ProductQuickView() {
 
   const images = product?.images?.length
     ? product.images
-    : [{ imageUrl: product?.primaryImageUrl ?? quickViewProduct?.primaryImageUrl ?? quickViewProduct?.imageUrl ?? '' }]
+    : [{ imageUrl: product?.imageUrl ?? quickViewProduct?.imageUrl ?? '' }]
 
   const basePrice = parseFloat(product?.price ?? quickViewProduct?.startingPrice ?? quickViewProduct?.price ?? 0)
   const adjustment = parseFloat(selectedVariant?.priceAdjustment ?? 0)
@@ -128,12 +128,14 @@ export default function ProductQuickView() {
                 <div className="qv-grid">
                   <div>
                     <div style={{ aspectRatio: '4/5', background: 'var(--surface)', borderRadius: '20px 0 0 20px', overflow: 'hidden' }}>
-                      <img
-                        src={images[activeImage]?.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80'}
-                        alt={product.name}
-                        onError={e => { e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80' }}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
+                      {images[activeImage]?.imageUrl && (
+                        <img
+                          src={images[activeImage].imageUrl}
+                          alt={product.name}
+                          onError={e => { e.currentTarget.style.display = 'none' }}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      )}
                     </div>
                     {images.length > 1 && (
                       <div style={{ display: 'flex', gap: 8, padding: '12px 16px' }}>

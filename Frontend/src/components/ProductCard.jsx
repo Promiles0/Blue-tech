@@ -32,7 +32,6 @@ export default function ProductCard({ product }) {
     ?? product.images?.find(i => i.isPrimary)?.imageUrl
     ?? product.images?.[0]?.imageUrl
     ?? product.primaryImageUrl
-    ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80'
 
   const hoverImage   = product.images?.[1]?.imageUrl ?? null
   const categoryName = product.category?.name ?? product.categoryName ?? ''
@@ -60,19 +59,21 @@ export default function ProductCard({ product }) {
           onClick={() => setQuickViewProduct(product)}
         >
 
-          <img
-            src={primaryImage}
-            alt={product.name}
-            loading="lazy"
-            onError={e => { e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80' }}
-            style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              position: 'absolute', inset: 0,
-              transform: hover ? 'scale(1.10)' : 'scale(1)',
-              transition: 'transform 0.7s ease, opacity 0.7s ease',
-              opacity: hover && hoverImage ? 0 : 1,
-            }}
-          />
+          {primaryImage && (
+            <img
+              src={primaryImage}
+              alt={product.name}
+              loading="lazy"
+              onError={e => { e.currentTarget.style.display = 'none' }}
+              style={{
+                width: '100%', height: '100%', objectFit: 'cover',
+                position: 'absolute', inset: 0,
+                transform: hover ? 'scale(1.10)' : 'scale(1)',
+                transition: 'transform 0.7s ease, opacity 0.7s ease',
+                opacity: hover && hoverImage ? 0 : 1,
+              }}
+            />
+          )}
 
           {hoverImage && (
             <img

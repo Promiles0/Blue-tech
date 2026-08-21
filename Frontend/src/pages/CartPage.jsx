@@ -28,7 +28,7 @@ export default function Cart() {
           {/* Items */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {items.map(item => {
-              const img   = item.productImageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80'
+              const img   = item.productImageUrl
               const name  = item.productName ?? 'Product'
               const opts  = item.sizeOrColor
               const price = parseFloat(item.unitPrice ?? 0)
@@ -38,12 +38,14 @@ export default function Cart() {
                 <div key={id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--card-border)', borderRadius: 14, padding: 20, display: 'flex', gap: 18, alignItems: 'center' }}>
 
                   <div style={{ width: 88, height: 88, borderRadius: 10, overflow: 'hidden', background: 'var(--bg-surface-2)', flexShrink: 0 }}>
-                    <img
-                      src={img}
-                      alt={name}
-                      onError={e => { e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80' }}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+                    {img && (
+                      <img
+                        src={img}
+                        alt={name}
+                        onError={e => { e.currentTarget.style.display = 'none' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    )}
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>

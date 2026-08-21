@@ -79,7 +79,7 @@ export default function Wishlist() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {items.map(item => {
               const pid     = Number(item.productId)
-              const img     = item.primaryImageUrl ?? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80'
+              const img     = item.primaryImageUrl
               const price   = parseFloat(item.price ?? 0)
 
               return (
@@ -95,10 +95,12 @@ export default function Wishlist() {
                 }}>
                   {/* Product Image */}
                   <div style={{ width: 88, height: 88, borderRadius: 10, overflow: 'hidden', background: 'var(--bg-surface-2)', flexShrink: 0 }}>
-                    <img src={img} alt={item.productName}
-                      onError={e => { e.target.src = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80' }}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
+                    {img && (
+                      <img src={img} alt={item.productName}
+                        onError={e => { e.currentTarget.style.display = 'none' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    )}
                   </div>
 
                   {/* Product Details */}
