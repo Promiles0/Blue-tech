@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
-import apiService from '../api/service'
+import { supabase } from '../services/supabase'
 
 const AuthContext = createContext(null)
 
@@ -8,51 +8,40 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token     = localStorage.getItem('token')
-    const savedUser = localStorage.getItem('user')
-    if (token && savedUser) {
-      try {
-        // Validate token has 3 Base64URL parts (header.payload.signature)
-        const parts = token.split('.')
-        if (parts.length !== 3) throw new Error('Malformed token')
-        const parsed = JSON.parse(savedUser)
-        setUser(parsed)
-      } catch (e) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-      }
+    let mounted = true
+    const loadUser = async (session) => {
+      if (!session) { if (mounted) setUser(null); return }
+      const { data } = await supabase.from('users').select('*').eq('id', session.user.id).maybeSingle()
+      const currentUser = data ?? { id: session.user.id, email: session.user.email }
+      localStorage.setItem('user', JSON.stringify(currentUser))
+      if (mounted) setUser(currentUser)
     }
-    setLoading(false)
+    supabase.auth.getSession().then(({ data: { session } }) => loadUser(session)).finally(() => mounted && setLoading(false))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => loadUser(session))
+    return () => { mounted = false; listener.subscription.unsubscribe() }
   }, [])
 
   const login = useCallback(async (email, password) => {
-    const { data } = await apiService.auth.login({ email, password })
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user))
-    setUser(data.user)
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
     return data
   }, [])
 
   const register = useCallback(async (name, email, password) => {
-    const { data } = await apiService.auth.register({ name, email, password })
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user))
-    setUser(data.user)
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name } } })
+    if (error) throw error
     return data
   }, [])
 
   const googleLogin = useCallback(async (token) => {
-    const { data } = await apiService.auth.googleLogin(token)
-    localStorage.setItem('token', data.token)
-    const userData = data.user ?? data
-    localStorage.setItem('user', JSON.stringify(userData))
-    setUser(userData)
+    const { data, error } = await supabase.auth.signInWithIdToken({ provider: 'google', token })
+    if (error) throw error
     return data
   }, [])
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token')
+  const logout = useCallback(async () => {
     localStorage.removeItem('user')
+    await supabase.auth.signOut()
     setUser(null)
   }, [])
 
@@ -70,7 +59,7 @@ export function AuthProvider({ children }) {
     logout,
     updateUser,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'ADMIN',
+    isAdmin: user?.role?.toLowerCase() === 'admin',
   }), [user, loading, login, register, googleLogin, logout, updateUser])
 
   return (

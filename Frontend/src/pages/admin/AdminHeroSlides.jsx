@@ -136,7 +136,7 @@ export default function AdminHeroSlides() {
                 className="noir-input"
                 value={form.imageUrl}
                 onChange={e => setForm({ ...form, imageUrl: e.target.value })}
-                placeholder="https://images.unsplash.com/..."
+                placeholder="/assets/hero-slide.jpg"
               />
             </div>
             <div>

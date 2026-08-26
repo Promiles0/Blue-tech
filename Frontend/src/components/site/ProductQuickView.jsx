@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useUI } from '../../context/UIContext'
 import { useWishlist } from '../../context/WishlistContext'
 import apiService from '../../api/service'
+import { handleProductImageError, productImageList } from '../../lib/productImage'
 
 export default function ProductQuickView() {
   const { quickViewProduct, setQuickViewProduct } = useUI()
@@ -66,9 +67,7 @@ export default function ProductQuickView() {
 
   const close = () => setQuickViewProduct(null)
 
-  const images = product?.images?.length
-    ? product.images
-    : [{ imageUrl: product?.imageUrl ?? quickViewProduct?.imageUrl ?? '' }]
+  const images = productImageList(product ?? quickViewProduct).map(imageUrl => ({ imageUrl }))
 
   const basePrice = parseFloat(product?.price ?? quickViewProduct?.startingPrice ?? quickViewProduct?.price ?? 0)
   const adjustment = parseFloat(selectedVariant?.priceAdjustment ?? 0)
@@ -132,7 +131,7 @@ export default function ProductQuickView() {
                         <img
                           src={images[activeImage].imageUrl}
                           alt={product.name}
-                          onError={e => { e.currentTarget.style.display = 'none' }}
+                          onError={handleProductImageError}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       )}
@@ -145,7 +144,7 @@ export default function ProductQuickView() {
                             onClick={() => setActiveImage(index)}
                             style={{ width: 52, height: 52, borderRadius: 8, overflow: 'hidden', border: `2px solid ${index === activeImage ? 'var(--accent)' : 'var(--border)'}`, padding: 0, cursor: 'pointer', transition: 'border-color 0.2s' }}
                           >
-                            <img src={img.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={img.imageUrl} alt="" onError={handleProductImageError} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           </button>
                         ))}
                       </div>

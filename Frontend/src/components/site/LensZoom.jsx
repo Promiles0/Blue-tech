@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { handleProductImageError } from '../../lib/productImage'
 
 const ZOOM = 2.5
 const LENS = 120
@@ -21,7 +22,12 @@ export default function LensZoom({ src, alt }) {
       onMouseLeave={() => setLens(null)}
       style={{ position: 'relative', width: '100%', height: '100%', cursor: 'crosshair', overflow: 'hidden', borderRadius: 16 }}
     >
-      <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+      <img
+        src={src}
+        alt={alt}
+        onError={handleProductImageError}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
 
       {lens && (
         <div style={{

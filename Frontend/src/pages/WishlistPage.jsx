@@ -5,6 +5,7 @@ import apiService from '../api/service'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { toast } from 'sonner'
+import { getProductImage, handleProductImageError } from '../lib/productImage'
 
 export default function Wishlist() {
   const { user } = useAuth()
@@ -79,7 +80,7 @@ export default function Wishlist() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {items.map(item => {
               const pid     = Number(item.productId)
-              const img     = item.primaryImageUrl
+              const img     = getProductImage(item.product ?? item)
               const price   = parseFloat(item.price ?? 0)
 
               return (
@@ -97,7 +98,7 @@ export default function Wishlist() {
                   <div style={{ width: 88, height: 88, borderRadius: 10, overflow: 'hidden', background: 'var(--bg-surface-2)', flexShrink: 0 }}>
                     {img && (
                       <img src={img} alt={item.productName}
-                        onError={e => { e.currentTarget.style.display = 'none' }}
+                        onError={handleProductImageError}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     )}

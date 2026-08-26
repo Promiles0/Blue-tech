@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check, UploadCloud } from 'lucide-react'
 import apiService from '../../api/service'
+import { getProductImage, handleProductImageError } from '../../lib/productImage'
 
 const EMPTY_VARIANT = { variantId: null, skuCode: '', sizeOrColor: '', priceAdjustment: '', stockQuantity: 0 }
 const EMPTY_IMAGE   = { imageUrl: '', isPrimary: false }
@@ -44,6 +45,7 @@ export default function AdminProducts() {
   const [error, setError]           = useState(null)
   const [success, setSuccess]       = useState(null)
   const [fileUploads, setFileUploads] = useState([]) // [{file, isPrimary}]
+  const [dragActive, setDragActive] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
 
   const fetchProducts = useCallback(() => {
@@ -92,6 +94,16 @@ export default function AdminProducts() {
   }
 
   const closeModal = () => { setModal(null); setEditing(null); setError(null); setFileUploads([]) }
+
+  const addFiles = (files) => {
+    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'))
+    if (imageFiles.length !== Array.from(files).length) setError('Only image files can be uploaded.')
+    setFileUploads(prev => [...prev, ...imageFiles.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      isPrimary: false,
+    }))])
+  }
 
   const uploadSelectedFiles = async () => {
     const uploadedImages = []
@@ -252,12 +264,12 @@ export default function AdminProducts() {
               >
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {p.imageUrl && (
-                      <img src={p.imageUrl} alt=""
-                        style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', background: 'var(--card)' }}
-                        onError={e => { e.target.style.display = 'none' }}
-                      />
-                    )}
+                    <img
+                      src={getProductImage(p)}
+                      alt={p.name}
+                      style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', background: 'var(--card)' }}
+                      onError={handleProductImageError}
+                    />
                     <span style={{ fontWeight: 500, color: 'var(--text)' }}>{p.name}</span>
                   </div>
                 </td>
@@ -381,7 +393,7 @@ export default function AdminProducts() {
 
             {/* Images */}
             <SectionLabel style={{ marginTop: 20 }}>
-              Images (URLs)
+              Images
               <button onClick={addImage} style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Plus size={12} /> Add URL
               </button>
@@ -401,20 +413,31 @@ export default function AdminProducts() {
             ))}
 
             {/* File uploads */}
-            <div style={{ marginTop: 10, marginBottom: 4 }}>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--accent)', cursor: 'pointer', border: '1px dashed #3a2a6a', borderRadius: 6, padding: '7px 12px' }}>
-                <Plus size={12} /> Upload from computer
+            <div
+              onDragEnter={e => { e.preventDefault(); setDragActive(true) }}
+              onDragOver={e => { e.preventDefault(); setDragActive(true) }}
+              onDragLeave={e => { e.preventDefault(); setDragActive(false) }}
+              onDrop={e => { e.preventDefault(); setDragActive(false); addFiles(e.dataTransfer.files) }}
+              style={{
+                marginTop: 10, marginBottom: 10, padding: '22px 16px', textAlign: 'center',
+                border: `1px dashed ${dragActive ? 'var(--accent)' : '#3a2a6a'}`,
+                borderRadius: 8, background: dragActive ? 'var(--accent-dim2)' : 'transparent',
+                transition: 'border-color 0.2s, background 0.2s',
+              }}
+            >
+              <UploadCloud size={20} color="var(--accent)" />
+              <p style={{ margin: '8px 0 4px', fontSize: 12, color: 'var(--text)' }}>Drop images here</p>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-dark)' }}>or choose files from your computer</p>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12, fontSize: 12, color: 'var(--accent)', cursor: 'pointer', border: '1px solid #3a2a6a', borderRadius: 6, padding: '7px 12px' }}>
+                <Plus size={12} /> Choose images
                 <input type="file" accept="image/*" multiple style={{ display: 'none' }}
-                  onChange={e => {
-                    const files = Array.from(e.target.files)
-                    setFileUploads(prev => [...prev, ...files.map(f => ({ file: f, isPrimary: false }))])
-                    e.target.value = ''
-                  }}
+                  onChange={e => { addFiles(e.target.files); e.target.value = '' }}
                 />
               </label>
             </div>
             {fileUploads.map((fu, i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+              <div key={`${fu.file.name}-${i}`} style={{ display: 'grid', gridTemplateColumns: '48px 1fr auto auto', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                <img src={fu.preview} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 5, border: '1px solid var(--border)' }} />
                 <span style={{ fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{fu.file.name}</span>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--muted-dark)', whiteSpace: 'nowrap', cursor: 'pointer' }}>
                   <input type="checkbox" checked={fu.isPrimary}

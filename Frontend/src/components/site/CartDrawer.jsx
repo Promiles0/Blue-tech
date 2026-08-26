@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { X, ShoppingBag, Plus, Minus, Trash2 } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useUI } from '../../context/UIContext'
+import { getProductImage, handleProductImageError } from '../../lib/productImage'
 
 export default function CartDrawer() {
   const { cartOpen, setCartOpen } = useUI()
@@ -87,6 +88,7 @@ export default function CartDrawer() {
                     const iid       = item.cartItemId ?? item.id
                     const unitPrice = parseFloat(item.unitPrice ?? 0)
                     const lineTotal = unitPrice * (item.quantity ?? 1)
+                    const img       = getProductImage(item.product ?? item)
 
                     return (
                       <motion.div
@@ -102,13 +104,14 @@ export default function CartDrawer() {
                           alignItems: 'flex-start',
                         }}
                       >
-                        {item.productImageUrl && (
-                          <div style={{ width: 58, height: 58, borderRadius: 8, overflow: 'hidden', background: 'var(--card)', flexShrink: 0 }}>
-                            <img src={item.productImageUrl} alt={item.productName}
-                              onError={e => { e.target.style.display = 'none' }}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          </div>
-                        )}
+                        <div style={{ width: 58, height: 58, borderRadius: 8, overflow: 'hidden', background: 'var(--card)', flexShrink: 0 }}>
+                          <img
+                            src={img}
+                            alt={item.productName}
+                            onError={handleProductImageError}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 14, fontWeight: 500, color: 'var(--text)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {item.productName}

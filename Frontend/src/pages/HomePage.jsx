@@ -8,6 +8,7 @@ import RecentlyViewed from '../components/site/RecentlyViewed'
 import HeroCarousel from '../components/site/HeroCarousel'
 import { Reveal, Parallax, Magnetic } from '../lib/motion'
 import apiService from '../api/service'
+import { PRODUCT_IMAGE_FALLBACK, getProductImage, handleProductImageError } from '../lib/productImage'
 
 // ── Word-by-word stagger ────────────────────────────────────────────────────
 const containerVariants = {
@@ -124,6 +125,9 @@ export default function Home() {
     : products
 
   const displayProducts = filtered
+  const storyProducts = displayProducts.length ? displayProducts : products
+  const storyPrimary = storyProducts[0]
+  const storySecondary = storyProducts[1] ?? storyProducts[0]
 
   return (
     <div>
@@ -289,8 +293,9 @@ export default function Home() {
               <Parallax speed={0.06}>
                 <div style={{ borderRadius: 16, overflow: 'hidden', height: '100%', minHeight: 360, background: 'var(--surface)', position: 'relative' }}>
                   <img
-                    src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=800&q=80"
-                    alt="Craft"
+                    src={storyPrimary ? getProductImage(storyPrimary) : PRODUCT_IMAGE_FALLBACK}
+                    alt={storyPrimary?.name ?? ''}
+                    onError={handleProductImageError}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
                   />
                   <div style={{
@@ -311,10 +316,15 @@ export default function Home() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
-                  { img: 'https://images.unsplash.com/photo-1655560378428-7605bda51749?q=80&w=2069&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', label: 'Precision audio' },
-                ].map(({ img, label }) => (
+                  { product: storySecondary, label: storySecondary?.categoryName ?? storySecondary?.category?.name ?? 'Featured product' },
+                ].map(({ product, label }) => (
                   <div key={label} style={{ flex: 1, borderRadius: 16, overflow: 'hidden', background: 'var(--surface)', position: 'relative', minHeight: 180 }}>
-                    <img src={img} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+                    <img
+                      src={product ? getProductImage(product) : PRODUCT_IMAGE_FALLBACK}
+                      alt={product?.name ?? label}
+                      onError={handleProductImageError}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
+                    />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 55%)', display: 'flex', alignItems: 'flex-end', padding: 18 }}>
                       <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--brand-text)' }}>{label}</span>
                     </div>

@@ -1,15 +1,14 @@
 import axios from 'axios'
+import { supabase } from '../services/supabase'
 
-// AFTER
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || '/functions/v1/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT token to every request
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+api.interceptors.request.use(async (config) => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) config.headers.Authorization = `Bearer ${session.access_token}`
   return config
 })
 
@@ -26,7 +25,7 @@ api.interceptors.response.use(
     const message = error.response?.data?.message?.toLowerCase() || ''
 
     // Only logout on 401 from our own API, or explicit token-related 400s
-    const isOwnApi = error.config?.url?.startsWith('/api') || error.config?.baseURL?.includes('localhost')
+    const isOwnApi = error.config?.baseURL?.includes('/functions/v1') || error.config?.baseURL?.includes('functions.supabase.co')
     const authFailure = isOwnApi && (
       status === 401 ||
       (status === 400 && (
@@ -38,7 +37,6 @@ api.interceptors.response.use(
     )
 
     if (authFailure) {
-      localStorage.removeItem('token')
       localStorage.removeItem('user')
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'

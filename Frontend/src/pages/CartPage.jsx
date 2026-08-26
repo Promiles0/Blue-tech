@@ -3,6 +3,7 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag, Shield, Truck, Headp
 import { useCart } from '../context/CartContext'
 import CouponInput from '../components/site/CouponInput'
 import { useState } from 'react'
+import { getProductImage, handleProductImageError } from '../lib/productImage'
 
 export default function Cart() {
   const { items, count, total, updateQuantity, removeFromCart, clearCart } = useCart()
@@ -28,7 +29,7 @@ export default function Cart() {
           {/* Items */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {items.map(item => {
-              const img   = item.productImageUrl
+              const img   = getProductImage(item.product ?? item)
               const name  = item.productName ?? 'Product'
               const opts  = item.sizeOrColor
               const price = parseFloat(item.unitPrice ?? 0)
@@ -42,7 +43,7 @@ export default function Cart() {
                       <img
                         src={img}
                         alt={name}
-                        onError={e => { e.currentTarget.style.display = 'none' }}
+                        onError={handleProductImageError}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     )}

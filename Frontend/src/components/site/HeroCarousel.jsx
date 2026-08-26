@@ -2,34 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import apiService from '../../api/service'
-
-const FALLBACK_SLIDES = [
-  {
-    url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop',
-    name: 'Premium Headphones',
-    price: 299,
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1523275335684-37628165f2bd?q=80&w=1000&auto=format&fit=crop',
-    name: 'Smart Watch',
-    price: 449,
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?q=80&w=1000&auto=format&fit=crop',
-    name: 'Instant Camera',
-    price: 89,
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=1000&auto=format&fit=crop',
-    name: 'Laptop',
-    price: 1299,
-  },
-  {
-    url: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=1000&auto=format&fit=crop',
-    name: 'Wireless Earbuds',
-    price: 199,
-  },
-]
+import { PRODUCT_IMAGE_FALLBACK, getProductImage, handleProductImageError } from '../../lib/productImage'
 
 const slideVariants = {
   enter: (dir) => ({
@@ -75,15 +48,15 @@ export default function HeroCarousel() {
         const products = data?.content ?? (Array.isArray(data) ? data : [])
         if (products.length > 0) {
           setSlides(products.map(p => ({
-            url: p.primaryImageUrl ?? null,
+            url: getProductImage(p),
             name: p.name,
             price: p.startingPrice ?? p.price ?? 0,
           })))
         } else {
-          setSlides(FALLBACK_SLIDES)
+          setSlides([])
         }
       })
-      .catch(() => setSlides(FALLBACK_SLIDES))
+      .catch(() => setSlides([]))
       .finally(() => setLoading(false))
   }, [])
 
@@ -165,6 +138,18 @@ export default function HeroCarousel() {
 
   const slide = slides[current]
 
+  if (!slide) {
+    return (
+      <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '4/5', background: 'var(--surface)' }}>
+        <img
+          src={PRODUCT_IMAGE_FALLBACK}
+          alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      </div>
+    )
+  }
+
   return (
     <div
       style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', aspectRatio: '4/5', background: 'var(--surface)' }}
@@ -184,24 +169,15 @@ export default function HeroCarousel() {
           transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
           style={{ position: 'absolute', inset: 0 }}
         >
-          {slide.url ? (
-            <motion.img
-              src={slide.url}
-              alt={slide.name}
-              initial={{ scale: 1.06 }}
-              animate={{ scale: 1.14 }}
-              transition={{ duration: 9, ease: 'linear' }}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              onError={e => { e.currentTarget.style.display = 'none' }}
-            />
-          ) : (
-            <div style={{
-              width: '100%', height: '100%', background: 'var(--card)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>No image available</span>
-            </div>
-          )}
+          <motion.img
+            src={slide.url}
+            alt={slide.name}
+            initial={{ scale: 1.06 }}
+            animate={{ scale: 1.14 }}
+            transition={{ duration: 9, ease: 'linear' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            onError={handleProductImageError}
+          />
 
           {/* Bottom gradient for text legibility */}
           <div style={{

@@ -5,6 +5,7 @@ import { Search, ArrowRight, TrendingUp } from 'lucide-react'
 import { useUI } from '../../context/UIContext'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
+import { getProductImage, handleProductImageError } from '../../lib/productImage'
 
 export default function CommandPalette() {
   const { paletteOpen, setPaletteOpen } = useUI()
@@ -192,7 +193,7 @@ export default function CommandPalette() {
                 </div>
                 {results.map((p, i) => {
                   const pid = p.productId ?? p.id
-                  const img = p.primaryImageUrl ?? p.images?.find(img => img.isPrimary)?.imageUrl ?? p.images?.[0]?.imageUrl
+                  const img = getProductImage(p)
                   const price = parseFloat(p.startingPrice ?? p.price ?? 0)
                   const isActive = i === activeIdx
                   return (
@@ -209,10 +210,12 @@ export default function CommandPalette() {
                       }}
                     >
                       <div style={{ width: 46, height: 46, borderRadius: 8, overflow: 'hidden', background: 'var(--card)', flexShrink: 0 }}>
-                        {img
-                          ? <img src={img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : <div style={{ width: '100%', height: '100%', background: 'var(--border)' }} />
-                        }
+                        <img
+                          src={img}
+                          alt={p.name}
+                          onError={handleProductImageError}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontSize: 14, fontWeight: 500, color: isActive ? 'var(--text)' : 'var(--text-secondary)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>

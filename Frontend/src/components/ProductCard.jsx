@@ -1,9 +1,10 @@
-                          import { useState } from 'react'
+import { useState } from 'react'
 import { Heart } from 'lucide-react'
 import { Tilt } from '../lib/motion'
 import { useUI } from '../context/UIContext'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
+import { getProductImage, handleProductImageError, productImageList } from '../lib/productImage'
 
 function getStatus(product) {
   if (product.isNew) return 'new'
@@ -27,13 +28,9 @@ export default function ProductCard({ product }) {
   const wishlisted = wishlistIds.has(pid)
   const price      = parseFloat(product.startingPrice ?? product.price) || 0
 
-  const primaryImage =
-    product.imageUrl
-    ?? product.images?.find(i => i.isPrimary)?.imageUrl
-    ?? product.images?.[0]?.imageUrl
-    ?? product.primaryImageUrl
-
-  const hoverImage   = product.images?.[1]?.imageUrl ?? null
+  const productImages = productImageList(product)
+  const primaryImage  = getProductImage(product)
+  const hoverImage    = productImages[1] ?? null
   const categoryName = product.category?.name ?? product.categoryName ?? ''
   const status       = getStatus(product)
   const sc           = status ? STATUS[status] : null
@@ -64,7 +61,7 @@ export default function ProductCard({ product }) {
               src={primaryImage}
               alt={product.name}
               loading="lazy"
-              onError={e => { e.currentTarget.style.display = 'none' }}
+              onError={handleProductImageError}
               style={{
                 width: '100%', height: '100%', objectFit: 'cover',
                 position: 'absolute', inset: 0,
@@ -80,6 +77,7 @@ export default function ProductCard({ product }) {
               src={hoverImage}
               alt={product.name}
               loading="lazy"
+              onError={handleProductImageError}
               style={{
                 width: '100%', height: '100%', objectFit: 'cover',
                 position: 'absolute', inset: 0,

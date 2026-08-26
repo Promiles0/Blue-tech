@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Package, Search, ChevronRight, ShoppingBag, Clock, Loader2, SendHorizonal, BadgeCheck, Undo2, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import apiService from '../api/service'
+import { getProductImage, handleProductImageError } from '../lib/productImage'
 
 const TABS = [
   { id: 'all',        label: 'All Orders',  icon: ShoppingBag   },
@@ -225,13 +226,12 @@ export default function OrderHistoryPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             {thumbs.map((item, idx) => (
                               <div key={idx} style={{ width: 52, height: 52, borderRadius: 12, overflow: 'hidden', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', flexShrink: 0 }}>
-                                {item.imageUrl ? (
-                                  <img src={item.imageUrl} alt={item.productName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : (
-                                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Package size={18} style={{ color: 'var(--muted-dark)' }} />
-                                  </div>
-                                )}
+                                <img
+                                  src={getProductImage(item.product ?? item)}
+                                  alt={item.productName}
+                                  onError={handleProductImageError}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
                               </div>
                             ))}
                             {extra > 0 && (

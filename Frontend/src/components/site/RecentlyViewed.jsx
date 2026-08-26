@@ -2,13 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Reveal } from '../../lib/motion'
 import { getRecentlyViewed } from '../../lib/recentlyViewed'
-
-// Already normalized by getRecentlyViewed, but guard at render time too
-function safeImageSrc(url) {
-  if (!url) return null
-  const m = url.match(/^\/uploads\/products\/(https?:\/\/.+)/)
-  return m ? m[1] : url
-}
+import { getProductImage, handleProductImageError } from '../../lib/productImage'
 
 export default function RecentlyViewed() {
   const [items, setItems] = useState([])
@@ -47,12 +41,12 @@ export default function RecentlyViewed() {
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--card-border)'; e.currentTarget.style.transform = 'none' }}
               >
                 <div style={{ height: 116, overflow: 'hidden', background: 'var(--card)' }}>
-                  {p.imageUrl && (
+                  {(
                     <img
-                      src={safeImageSrc(p.imageUrl)}
+                      src={getProductImage(p)}
                       alt={p.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={e => { e.target.style.display = 'none' }}
+                      onError={handleProductImageError}
                     />
                   )}
                 </div>

@@ -11,6 +11,7 @@ import { trackRecentlyViewed } from '../lib/recentlyViewed'
 import { StarDisplay } from '../components/site/StarRating'
 import LensZoom from '../components/site/LensZoom'
 import StickyCartBar from '../components/site/StickyCartBar'
+import { handleProductImageError, productImageList } from '../lib/productImage'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -95,9 +96,7 @@ export default function ProductDetail() {
 
   if (!product) return null
 
-  const images = product.images?.length
-    ? product.images
-    : product.imageUrl ? [{ imageUrl: product.imageUrl }] : []
+  const images = productImageList(product).map(imageUrl => ({ imageUrl }))
   const price = (parseFloat(product.price) || 0) + (parseFloat(selectedVariant?.priceAdjustment) || 0)
   const stockQty = selectedVariant?.stockQuantity ?? 0
   const avgRating = reviews.length
@@ -134,7 +133,7 @@ export default function ProductDetail() {
                     onClick={() => setActiveImage(index)}
                     style={{ width: 72, height: 72, borderRadius: 8, overflow: 'hidden', border: `2px solid ${index === activeImage ? 'var(--accent)' : 'var(--border)'}`, background: 'var(--card)', padding: 0, cursor: 'pointer', transition: 'border-color 0.2s' }}
                   >
-                    <img src={img.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={img.imageUrl} alt="" onError={handleProductImageError} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </button>
                 ))}
               </div>

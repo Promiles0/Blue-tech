@@ -1,14 +1,12 @@
 import api from "../api/axios";
+import { getProductImage, productImageList } from "../lib/productImage";
 
 const unwrapApiData = (payload) => payload?.data ?? payload;
 
 const normalizeProductDetail = (product) => {
   if (!product) return product;
 
-  const primaryImage =
-    product.images?.find((image) => image.isPrimary)?.imageUrl ||
-    product.images?.[0]?.imageUrl ||
-    null;
+  const primaryImage = getProductImage(product);
 
   const stock = Array.isArray(product.variants)
     ? product.variants.reduce((sum, variant) => sum + (variant.stockQuantity || 0), 0)
@@ -19,11 +17,11 @@ const normalizeProductDetail = (product) => {
     name: product.name,
     description: product.description,
     price: product.price,
-    imageUrl: product.imageUrl ?? primaryImage,
+    imageUrl: primaryImage,
     stock: product.stock ?? stock,
     category: product.category ?? (product.categoryName ? { name: product.categoryName } : null),
     variants: product.variants ?? [],
-    images: product.images ?? [],
+    images: productImageList(product).map(imageUrl => ({ imageUrl })),
   };
 };
 

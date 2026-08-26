@@ -93,7 +93,7 @@ export default function AdminUsers() {
                   <td>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
                       {/* Admin toggle */}
-                      {u.role === 'ADMIN' ? (
+                      {u.role?.toLowerCase() === 'admin' ? (
                         <button
                           onClick={() => setAdmin.mutate({ userId: u.userId, make: false })}
                           disabled={setAdmin.isPending}
@@ -145,7 +145,7 @@ export default function AdminUsers() {
 }
 
 function RoleBadge({ role }) {
-  const isAdmin = role === 'ADMIN'
+  const isAdmin = role?.toLowerCase() === 'admin'
   return (
     <span style={{
       fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20,

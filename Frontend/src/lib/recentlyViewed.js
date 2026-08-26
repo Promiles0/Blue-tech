@@ -1,3 +1,5 @@
+import { getProductImage } from './productImage'
+
 const KEY = 'noir_recently_viewed'
 const MAX = 12
 
@@ -15,18 +17,11 @@ function entryId(p) {
 
 export function trackRecentlyViewed(product) {
   const id = product.productId ?? product.id
-  const rawUrl =
-    product.images?.find(i => i.isPrimary)?.imageUrl
-    ?? product.images?.[0]?.imageUrl
-    ?? product.primaryImageUrl
-    ?? product.imageUrl
-    ?? ''
-
   const entry = {
     id,
     name:     product.name,
     price:    product.startingPrice ?? product.price,
-    imageUrl: normalizeImageUrl(rawUrl),
+    imageUrl: normalizeImageUrl(getProductImage(product)),
   }
 
   const stored  = getRecentlyViewed()

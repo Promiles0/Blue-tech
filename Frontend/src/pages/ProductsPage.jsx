@@ -91,10 +91,7 @@ export default function Products() {
     return () => { cancelled = true }
   }, [searchQ, category, sort, page, categoryIds]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const displayProducts = products.map(product => ({
-    ...product,
-    imageUrl: product.imageUrl ?? '',
-  }))
+  const displayProducts = products
   const currentSort     = SORT_OPTIONS.find(o => o.value === sort) ?? SORT_OPTIONS[0]
 
   return (
