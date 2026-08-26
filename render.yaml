@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: blue-tech
+    runtime: static
+    rootDir: Frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /favicon.ico
+        destination: /favicon.svg
+      - type: rewrite
+        source: /*
+        destination: /index.html
