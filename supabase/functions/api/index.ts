@@ -4,20 +4,40 @@ const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-const allowedOrigins = new Set([
+const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:5174",
-  ...(Deno.env.get("ALLOWED_ORIGINS") ?? "").split(",").map((origin) => origin.trim()).filter(Boolean),
+  "https://blue-tech.onrender.com",
+];
+
+const configuredOrigins = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = new Set([
+  ...DEFAULT_ALLOWED_ORIGINS,
+  ...configuredOrigins,
 ]);
-const configuredOrigin = (Deno.env.get("ALLOWED_ORIGINS") ?? "").split(",").map((origin) => origin.trim()).find(Boolean) ?? "http://localhost:5174";
 
 function corsHeaders(request?: Request) {
   const origin = request?.headers.get("Origin") ?? "";
+  const allowedOrigin = allowedOrigins.has(origin) ? origin : DEFAULT_ALLOWED_ORIGINS[0];
   return {
-    "Access-Control-Allow-Origin": allowedOrigins.has(origin) ? origin : configuredOrigin,
+    "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
     "Vary": "Origin",
   };
+}
+
+function withCors(response: Response, request: Request) {
+  const headers = new Headers(response.headers);
+  Object.entries(corsHeaders(request)).forEach(([key, value]) => headers.set(key, value));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 const response = (body: unknown, status = 200, request?: Request) =>
@@ -410,10 +430,10 @@ async function handle(request: Request) {
 }
 
 Deno.serve(async (request) => {
-  try { return await handle(request); }
+  try { return withCors(await handle(request), request); }
   catch (error) {
-    if (error instanceof Response) return error;
+    if (error instanceof Response) return withCors(error, request);
     console.error(error);
-    return failure("Unexpected server error", 500);
+    return failure("Unexpected server error", 500, request);
   }
 });
