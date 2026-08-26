@@ -155,6 +155,231 @@ function authResult(user: Record<string, unknown>, token: string) {
   };
 }
 
+function toNumber(value: unknown) {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function statusKey(value: unknown) {
+  return String(value ?? "PENDING").toUpperCase();
+}
+
+function isoDaysAgo(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString();
+}
+
+function startOfTodayIso() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+}
+
+function ymd(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function ym(date: Date) {
+  return date.toISOString().slice(0, 7);
+}
+
+function isCancelled(order: Record<string, unknown>) {
+  return statusKey(order.status) === "CANCELLED";
+}
+
+async function tableCount(table: string, filters?: (query: any) => unknown) {
+  let query = adminClient.from(table).select("id", { count: "exact", head: true });
+  if (filters) query = filters(query) as typeof query;
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
+}
+
+async function getOrderRows() {
+  const { data, error } = await adminClient
+    .from("orders")
+    .select("id,total_amount,status,created_at,ordered_at,user_id")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Record<string, unknown>[];
+}
+
+async function getLowStockAlerts(limit = 8) {
+  const { data, error } = await adminClient
+    .from("product_variants")
+    .select("sku_code,stock_quantity,products(name)")
+    .lt("stock_quantity", 5)
+    .order("stock_quantity", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    productName: (row.products as Record<string, unknown> | null)?.name ?? "Product",
+    skuCode: row.sku_code,
+    currentStock: toNumber(row.stock_quantity),
+  }));
+}
+
+async function getRecentOrders(orderRows: Record<string, unknown>[]) {
+  const recent = orderRows.slice(0, 5);
+  const userIds = [...new Set(recent.map((order) => order.user_id).filter(Boolean))];
+  const usersById = new Map<string, Record<string, unknown>>();
+
+  if (userIds.length) {
+    const { data } = await adminClient
+      .from("users")
+      .select("id,name,email")
+      .in("id", userIds);
+    ((data ?? []) as Record<string, unknown>[]).forEach((user) => usersById.set(String(user.id), user));
+  }
+
+  return recent.map((order) => {
+    const customer = usersById.get(String(order.user_id));
+    return {
+      orderId: order.id,
+      customerName: customer?.name ?? customer?.email ?? "Guest",
+      totalAmount: toNumber(order.total_amount),
+      status: statusKey(order.status),
+      orderedAt: order.ordered_at ?? order.created_at,
+    };
+  });
+}
+
+function buildRevenueSeries(orderRows: Record<string, unknown>[]) {
+  const buckets = new Map<string, number>();
+  for (let i = 13; i >= 0; i -= 1) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    buckets.set(ymd(date), 0);
+  }
+
+  const oldest = new Date();
+  oldest.setDate(oldest.getDate() - 13);
+  oldest.setHours(0, 0, 0, 0);
+
+  orderRows
+    .filter((order) => !isCancelled(order))
+    .forEach((order) => {
+      const createdAt = order.created_at ? new Date(String(order.created_at)) : null;
+      if (!createdAt || createdAt < oldest) return;
+      const key = ymd(createdAt);
+      buckets.set(key, (buckets.get(key) ?? 0) + toNumber(order.total_amount));
+    });
+
+  return [...buckets.entries()].map(([date, revenue]) => ({ date, revenue }));
+}
+
+async function getAdminDashboardStats() {
+  const now = Date.now();
+  const minus24h = new Date(now - 24 * 60 * 60 * 1000);
+  const minus7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  const minus30d = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+  const [orderRows, totalCustomers, totalVariants, lowStockAlerts, newCustomers24h] = await Promise.all([
+    getOrderRows(),
+    tableCount("users"),
+    tableCount("product_variants"),
+    getLowStockAlerts(),
+    tableCount("users", (query) => query.gte("created_at", isoDaysAgo(1))),
+  ]);
+
+  const activeOrders = orderRows.filter((order) => !isCancelled(order));
+  const sumAfter = (date: Date) => activeOrders
+    .filter((order) => order.created_at && new Date(String(order.created_at)) >= date)
+    .reduce((sum, order) => sum + toNumber(order.total_amount), 0);
+
+  const orders30dRows = activeOrders.filter((order) => order.created_at && new Date(String(order.created_at)) >= minus30d);
+  const ordersByStatus = activeOrders.reduce((acc, order) => {
+    const key = statusKey(order.status);
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const revenue30d = sumAfter(minus30d);
+
+  return {
+    revenue24h: sumAfter(minus24h),
+    revenue7d: sumAfter(minus7d),
+    revenue30d,
+    totalRevenue: activeOrders.reduce((sum, order) => sum + toNumber(order.total_amount), 0),
+    aov: orders30dRows.length ? Number((revenue30d / orders30dRows.length).toFixed(2)) : 0,
+    orders30d: orders30dRows.length,
+    totalOrders: orderRows.length,
+    totalCustomers,
+    totalVariants,
+    ordersToday: activeOrders.filter((order) => order.created_at && new Date(String(order.created_at)) >= new Date(startOfTodayIso())).length,
+    lowStockCount: lowStockAlerts.length,
+    pendingOrders: ordersByStatus.PENDING ?? 0,
+    newCustomers24h,
+    ordersByStatus,
+    lowStockAlerts,
+    topSellers: await getTopSellers(),
+    revenueSeries: buildRevenueSeries(orderRows),
+    recentOrders: await getRecentOrders(orderRows),
+  };
+}
+
+async function getOrderItemRows() {
+  const { data, error } = await adminClient
+    .from("order_items")
+    .select("quantity,unit_price,product_variants(products(name,categories(name)))");
+  if (error) return [];
+  return (data ?? []) as Record<string, unknown>[];
+}
+
+function orderItemProduct(item: Record<string, unknown>) {
+  return ((item.product_variants as Record<string, unknown> | null)?.products ?? {}) as Record<string, unknown>;
+}
+
+async function getTopSellers() {
+  const totals = new Map<string, { productName: string; totalSold: number; revenue: number }>();
+  const items = await getOrderItemRows();
+
+  items.forEach((item) => {
+    const product = orderItemProduct(item);
+    const productName = String(product.name ?? "Product");
+    const totalSold = toNumber(item.quantity);
+    const revenue = totalSold * toNumber(item.unit_price);
+    const current = totals.get(productName) ?? { productName, totalSold: 0, revenue: 0 };
+    current.totalSold += totalSold;
+    current.revenue += revenue;
+    totals.set(productName, current);
+  });
+
+  return [...totals.values()]
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 8);
+}
+
+async function getAdminAnalytics() {
+  const [topSellers, users] = await Promise.all([
+    getTopSellers(),
+    adminClient.from("users").select("created_at").order("created_at", { ascending: true }),
+  ]);
+
+  const categoryTotals = new Map<string, number>();
+  const items = await getOrderItemRows();
+  items.forEach((item) => {
+    const product = orderItemProduct(item);
+    const category = ((product.categories as Record<string, unknown> | null)?.name ?? "Uncategorized") as string;
+    const revenue = toNumber(item.quantity) * toNumber(item.unit_price);
+    categoryTotals.set(category, (categoryTotals.get(category) ?? 0) + revenue);
+  });
+
+  const growthBuckets = new Map<string, number>();
+  (((users.data ?? []) as Record<string, unknown>[])).forEach((user) => {
+    if (!user.created_at) return;
+    const key = ym(new Date(String(user.created_at)));
+    growthBuckets.set(key, (growthBuckets.get(key) ?? 0) + 1);
+  });
+
+  return {
+    topProducts: topSellers.map((seller) => ({ name: seller.productName, revenue: seller.revenue })),
+    byCategory: [...categoryTotals.entries()].map(([name, value]) => ({ name, value })),
+    growth: [...growthBuckets.entries()].map(([month, count]) => ({ month, count })),
+  };
+}
+
 async function productResult(product: Record<string, unknown>) {
   const [{ data: variants }, { data: images }] = await Promise.all([
     adminClient.from("product_variants").select("*").eq("product_id", product.id),
@@ -579,6 +804,24 @@ async function handle(request: Request) {
     const { data, error } = await adminClient.from("orders").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
     if (error) return failure(error.message, 500);
     return success("Orders fetched successfully", data ?? []);
+  }
+
+  if (method === "GET" && path === "/admin/dashboard/stats") {
+    await requireAdmin(request, user);
+    try {
+      return success("Dashboard stats fetched", await getAdminDashboardStats(), request);
+    } catch (error) {
+      return failure(error instanceof Error ? error.message : "Failed to load dashboard stats", 500, request);
+    }
+  }
+
+  if (method === "GET" && path === "/admin/analytics") {
+    await requireAdmin(request, user);
+    try {
+      return success("Analytics fetched", await getAdminAnalytics(), request);
+    } catch (error) {
+      return failure(error instanceof Error ? error.message : "Failed to load analytics", 500, request);
+    }
   }
 
   if (path.startsWith("/admin")) await requireAdmin(request, user);
