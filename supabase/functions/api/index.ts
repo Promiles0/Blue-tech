@@ -3,6 +3,8 @@ import { createClient, type User } from "npm:@supabase/supabase-js@2";
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const adminClient = createClient(supabaseUrl, serviceRoleKey);
+const googleClientId = Deno.env.get("GOOGLE_CLIENT_ID") ?? "71259894069-n4mnjohm3rjtvj36rn5apq18qie2945q.apps.googleusercontent.com";
+const jwtSecret = Deno.env.get("JWT_SECRET") ?? serviceRoleKey;
 
 const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:5174",
@@ -52,6 +54,107 @@ const categoryResult = (category: Record<string, unknown>) => ({ ...category, ca
 const variantResult = (variant: Record<string, unknown>) => ({ ...variant, variantId: variant.id, skuCode: variant.sku_code, sizeOrColor: variant.size_or_color, priceAdjustment: variant.price_adjustment, stockQuantity: variant.stock_quantity });
 const imageResult = (image: Record<string, unknown>) => ({ ...image, imageId: image.id, imageUrl: image.image_url, isPrimary: image.is_primary });
 
+function base64Url(bytes: Uint8Array) {
+  return btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+}
+
+function base64UrlJson(data: Record<string, unknown>) {
+  return base64Url(new TextEncoder().encode(JSON.stringify(data)));
+}
+
+function decodeBase64UrlJson(value: string) {
+  const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(padded), (char) => char.charCodeAt(0))));
+}
+
+async function signAppToken(user: Record<string, unknown>) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = base64UrlJson({ alg: "HS256", typ: "JWT" });
+  const payload = base64UrlJson({
+    sub: user.id,
+    email: user.email,
+    role: user.role ?? "user",
+    iat: now,
+    exp: now + 60 * 60 * 24 * 7,
+    iss: "blue-tech-edge",
+  });
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(jwtSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${header}.${payload}`));
+  return `${header}.${payload}.${base64Url(new Uint8Array(signature))}`;
+}
+
+async function verifyAppToken(token: string) {
+  try {
+    const [header, payload, signature] = token.split(".");
+    if (!header || !payload || !signature) return null;
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(jwtSecret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const expected = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${header}.${payload}`));
+    if (base64Url(new Uint8Array(expected)) !== signature) return null;
+    const claims = decodeBase64UrlJson(payload);
+    if (!claims.sub || Number(claims.exp ?? 0) < Math.floor(Date.now() / 1000)) return null;
+    const { data: user } = await adminClient.from("users").select("*").eq("id", claims.sub).maybeSingle();
+    return user ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function findAuthUserByEmail(email: string) {
+  for (let page = 1; page <= 20; page += 1) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    const found = data.users.find((user) => user.email?.toLowerCase() === email.toLowerCase());
+    if (found) return found;
+    if (data.users.length < 1000) break;
+  }
+  return null;
+}
+
+async function authUserIdForGoogleUser(email: string, name: string | null, picture: string | null) {
+  const existing = await findAuthUserByEmail(email);
+  if (existing) return existing.id;
+
+  const { data, error } = await adminClient.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    password: crypto.randomUUID(),
+    user_metadata: { name, picture, provider: "google" },
+  });
+  if (error || !data.user) throw error ?? new Error("Unable to create user");
+  return data.user.id;
+}
+
+function authResult(user: Record<string, unknown>, token: string) {
+  return {
+    token,
+    user: {
+      id: user.id,
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      picture: user.picture,
+      role: user.role,
+    },
+  };
+}
+
 async function productResult(product: Record<string, unknown>) {
   const [{ data: variants }, { data: images }] = await Promise.all([
     adminClient.from("product_variants").select("*").eq("product_id", product.id),
@@ -73,6 +176,15 @@ async function productResult(product: Record<string, unknown>) {
 async function getAuthUser(request: Request): Promise<User | null> {
   const token = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return null;
+  const appUser = await verifyAppToken(token);
+  if (appUser) return {
+    id: appUser.id as string,
+    email: appUser.email as string,
+    app_metadata: {},
+    user_metadata: {},
+    aud: "authenticated",
+    created_at: appUser.created_at as string ?? new Date().toISOString(),
+  } as User;
   const { data: { user } } = await adminClient.auth.getUser(token);
   return user;
 }
@@ -139,6 +251,50 @@ async function handle(request: Request) {
     const { data: profile } = await adminClient.from("users").select("*").eq("id", data.user.id).maybeSingle();
     if (profile?.is_suspended) return failure("Account suspended", 403);
     return success("Login successful!", { token: data.session.access_token, user: profile ?? { id: data.user.id, email: data.user.email } });
+  }
+
+  if (method === "POST" && path === "/auth/google") {
+    const { token } = await readJson(request);
+    if (!token) return failure("Google credential token is required", 400, request);
+
+    const verifyResponse = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(token)}`);
+    if (!verifyResponse.ok) return failure("Invalid or expired Google token", 401, request);
+
+    const googleUser = await verifyResponse.json();
+    if (!["https://accounts.google.com", "accounts.google.com"].includes(googleUser.iss)) {
+      return failure("Invalid Google token issuer", 401, request);
+    }
+    if (googleUser.aud !== googleClientId) {
+      return failure("Google token audience does not match this app", 401, request);
+    }
+    if (!googleUser.email || !googleUser.sub) {
+      return failure("Google token is missing required profile fields", 400, request);
+    }
+
+    const userId = await authUserIdForGoogleUser(googleUser.email, googleUser.name ?? null, googleUser.picture ?? null);
+    const userValues = {
+      id: userId,
+      email: googleUser.email,
+      name: googleUser.name ?? googleUser.email,
+      picture: googleUser.picture ?? null,
+      provider: "google",
+      provider_id: googleUser.sub,
+      last_login: new Date().toISOString(),
+    };
+    const { data: user, error } = await adminClient
+      .from("users")
+      .upsert(userValues, { onConflict: "id" })
+      .select("*")
+      .single();
+    if (error || !user) return failure(error?.message ?? "Unable to save Google user", 500, request);
+
+    await adminClient.from("profiles").upsert({
+      id: user.id,
+      email: user.email,
+      role: user.role?.toUpperCase() === "ADMIN" ? "ADMIN" : "USER",
+    }, { onConflict: "id" });
+
+    return success("Google login successful!", authResult(user, await signAppToken(user)), request);
   }
 
   if (method === "GET" && path === "/products") {
