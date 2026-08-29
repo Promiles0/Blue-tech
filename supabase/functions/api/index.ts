@@ -7,6 +7,7 @@ const googleClientId = Deno.env.get("GOOGLE_CLIENT_ID") ?? "71259894069-n4mnjohm
 const jwtSecret = Deno.env.get("JWT_SECRET") ?? serviceRoleKey;
 
 const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:5173",
   "http://localhost:5174",
   "https://blue-tech.onrender.com",
 ];
@@ -158,6 +159,14 @@ function authResult(user: Record<string, unknown>, token: string) {
 function toNumber(value: unknown) {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && typeof (error as Record<string, unknown>).message === "string") {
+    return (error as Record<string, unknown>).message as string;
+  }
+  return fallback;
 }
 
 function statusKey(value: unknown) {
@@ -701,6 +710,62 @@ async function markOrderPaid(orderId: number) {
   }
 }
 
+async function adminOrderCustomer(userId: unknown) {
+  if (!userId) return {} as Record<string, unknown>;
+  const { data } = await adminClient.from("users").select("name,email,phone").eq("id", userId).maybeSingle();
+  return (data ?? {}) as Record<string, unknown>;
+}
+
+async function adminOrderListResult(order: Record<string, unknown>) {
+  const customer = await adminOrderCustomer(order.user_id);
+  const { count } = await adminClient.from("order_items").select("id", { count: "exact", head: true }).eq("order_id", order.id);
+  return {
+    orderId: order.id,
+    customerName: customer.name ?? null,
+    customerEmail: customer.email ?? null,
+    itemCount: count ?? 0,
+    totalAmount: toNumber(order.total_amount),
+    status: statusKey(order.status),
+    orderedAt: order.ordered_at ?? order.created_at,
+  };
+}
+
+async function adminOrderDetailResult(order: Record<string, unknown>) {
+  const customer = await adminOrderCustomer(order.user_id);
+  const items = await orderItemsForOrder(order.id as number);
+  const { data: payment } = await adminClient.from("payment_records").select("*").eq("order_id", order.id).maybeSingle();
+  const { data: shipment } = await adminClient.from("shipments").select("*").eq("order_id", order.id).maybeSingle();
+
+  return {
+    orderId: order.id,
+    totalAmount: toNumber(order.total_amount),
+    status: statusKey(order.status),
+    orderedAt: order.ordered_at ?? order.created_at,
+    customerName: customer.name ?? null,
+    customerEmail: customer.email ?? null,
+    customerPhone: order.order_address_phone_number ?? customer.phone ?? null,
+    addressStreet: order.order_address_street,
+    addressCity: order.order_address_city,
+    addressCountry: order.order_address_country,
+    items,
+    payment: payment ? {
+      paymentId: payment.id,
+      status: payment.status,
+      amount: toNumber(payment.amount),
+      paidAt: payment.updated_at,
+      paymentMethod: payment.payment_method,
+      transactionReference: payment.transaction_reference,
+    } : null,
+    shipment: shipment ? {
+      shipmentId: shipment.id,
+      carrier: shipment.carrier,
+      trackingNumber: shipment.tracking_number,
+      status: shipment.status,
+      shippedAt: shipment.shipped_at,
+    } : null,
+  };
+}
+
 async function createStripePaymentIntent(amountUsd: number, metadata: Record<string, string>) {
   const secretKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!secretKey) throw new Error("Stripe is not configured on the server");
@@ -1103,7 +1168,7 @@ async function handle(request: Request) {
       try {
         return success("Cart fetched successfully", await getCartDetails(cartId), request);
       } catch (error) {
-        return failure(error instanceof Error ? error.message : "Failed to load cart", 500, request);
+        return failure(errorMessage(error, "Failed to load cart"), 500, request);
       }
     }
     if (method === "POST") {
@@ -1322,7 +1387,7 @@ async function handle(request: Request) {
       const result = await checkoutOrder(user, body);
       return response({ success: true, message: "Order placed successfully!", data: result }, 201, request);
     } catch (error) {
-      return failure(error instanceof Error ? error.message : "Checkout failed", 400, request);
+      return failure(errorMessage(error, "Checkout failed"), 400, request);
     }
   }
 
@@ -1357,7 +1422,7 @@ async function handle(request: Request) {
       if (paymentError) return failure(paymentError.message, 400, request);
       return success("Payment initialized", { status: "success", message: "Payment initialized", paymentLink: intent.client_secret }, request);
     } catch (error) {
-      return failure(error instanceof Error ? error.message : "Stripe initialization failed", 500, request);
+      return failure(errorMessage(error, "Stripe initialization failed"), 500, request);
     }
   }
 
@@ -1377,7 +1442,83 @@ async function handle(request: Request) {
       if (paymentError) return failure(paymentError.message, 400, request);
       return success("MoMo payment initiated", { status: "success", message: `Payment request sent to ${phone}. Please approve on your phone.`, paymentLink: ref }, request);
     } catch (error) {
-      return failure(error instanceof Error ? error.message : "Paypack initialization failed", 500, request);
+      return failure(errorMessage(error, "Paypack initialization failed"), 500, request);
+    }
+  }
+
+  if (path === "/admin/orders" || /^\/admin\/orders\/[^/]+/.test(path)) {
+    await requireAdmin(request, user);
+
+    if (method === "GET" && path === "/admin/orders") {
+      const status = url.searchParams.get("status");
+      let query = adminClient.from("orders").select("*").order("created_at", { ascending: false });
+      if (status && status.toLowerCase() !== "all") query = query.eq("status", status.toLowerCase());
+      const { data, error } = await query;
+      if (error) return failure(error.message, 500, request);
+      const orders = await Promise.all(((data ?? []) as Record<string, unknown>[]).map(adminOrderListResult));
+      return success("Orders fetched", orders, request);
+    }
+
+    if (method === "GET" && /^\/admin\/orders\/[^/]+$/.test(path)) {
+      const orderId = path.split("/").pop();
+      const { data, error } = await adminClient.from("orders").select("*").eq("id", orderId).maybeSingle();
+      if (error) return failure(error.message, 500, request);
+      if (!data) return failure("Order not found", 404, request);
+      return success("Order detail fetched", await adminOrderDetailResult(data), request);
+    }
+
+    if (method === "PATCH" && /^\/admin\/orders\/[^/]+\/status$/.test(path)) {
+      const orderId = path.split("/")[3];
+      const body = await readJson(request);
+      const status = String(body.status ?? "").toLowerCase();
+      const validStatuses = ["pending", "paid", "processing", "shipped", "delivered", "cancelled"];
+      if (!validStatuses.includes(status)) return failure("Invalid status", 400, request);
+      const { data, error } = await adminClient.from("orders").update({ status }).eq("id", orderId).select().maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      if (!data) return failure("Order not found", 404, request);
+      if (data.user_id) {
+        await notifyUser(data.user_id as string, status === "delivered"
+          ? `Your order #${orderId} has been marked as delivered! Click here to review your items.`
+          : `Your order #${orderId} status is now ${statusKey(status)}`);
+      }
+      return success("Status updated", await adminOrderDetailResult(data), request);
+    }
+
+    if (method === "POST" && /^\/admin\/orders\/[^/]+\/payments$/.test(path)) {
+      const orderId = path.split("/")[3];
+      const { data: order, error } = await adminClient.from("orders").select("*").eq("id", orderId).maybeSingle();
+      if (error) return failure(error.message, 500, request);
+      if (!order) return failure("Order not found", 404, request);
+      const { error: paymentError } = await adminClient.from("payment_records").upsert({
+        order_id: order.id, amount: order.total_amount, status: "SUCCESS", payment_method: "manual",
+        transaction_reference: `MANUAL-${orderId}-${Date.now()}`, updated_at: new Date().toISOString(),
+      }, { onConflict: "order_id" });
+      if (paymentError) return failure(paymentError.message, 400, request);
+      const { data: updated, error: updateError } = await adminClient.from("orders").update({ status: "paid" }).eq("id", orderId).select().maybeSingle();
+      if (updateError) return failure(updateError.message, 400, request);
+      if (order.user_id) {
+        await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`);
+      }
+      return success("Order marked as paid", await adminOrderDetailResult(updated), request);
+    }
+
+    if (method === "POST" && /^\/admin\/orders\/[^/]+\/shipments$/.test(path)) {
+      const orderId = path.split("/")[3];
+      const body = await readJson(request);
+      const { data: order, error } = await adminClient.from("orders").select("*").eq("id", orderId).maybeSingle();
+      if (error) return failure(error.message, 500, request);
+      if (!order) return failure("Order not found", 404, request);
+      const { error: shipmentError } = await adminClient.from("shipments").upsert({
+        order_id: order.id, address_id: order.address_id, carrier: body.carrier ?? null,
+        tracking_number: body.trackingNumber ?? null, status: "IN_TRANSIT", shipped_at: new Date().toISOString(),
+      }, { onConflict: "order_id" });
+      if (shipmentError) return failure(shipmentError.message, 400, request);
+      const { data: updated, error: updateError } = await adminClient.from("orders").update({ status: "shipped" }).eq("id", orderId).select().maybeSingle();
+      if (updateError) return failure(updateError.message, 400, request);
+      if (order.user_id) {
+        await notifyUser(order.user_id as string, `Your order #${orderId} status is now SHIPPED`);
+      }
+      return success("Shipment created", await adminOrderDetailResult(updated), request);
     }
   }
 
@@ -1386,7 +1527,7 @@ async function handle(request: Request) {
     try {
       return success("Dashboard stats fetched", await getAdminDashboardStats(), request);
     } catch (error) {
-      return failure(error instanceof Error ? error.message : "Failed to load dashboard stats", 500, request);
+      return failure(errorMessage(error, "Failed to load dashboard stats"), 500, request);
     }
   }
 
@@ -1395,7 +1536,7 @@ async function handle(request: Request) {
     try {
       return success("Analytics fetched", await getAdminAnalytics(), request);
     } catch (error) {
-      return failure(error instanceof Error ? error.message : "Failed to load analytics", 500, request);
+      return failure(errorMessage(error, "Failed to load analytics"), 500, request);
     }
   }
 

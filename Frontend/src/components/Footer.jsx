@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Globe, Mail, ExternalLink } from 'lucide-react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { MapPin, Phone, Mail } from 'lucide-react'
 import apiService from '../api/service'
+import { HELP_LINKS, SUPPORT_EMAIL } from '../lib/helpLinks'
 
 const ACCOUNT_LINKS = [['Profile', '/account'], ['Orders', '/orders'], ['Wishlist', '/wishlist'], ['Sign in', '/login']]
-const HELP_LINKS    = [['FAQ', '/help?v=faq'], ['Shipping', '/help?v=shipping'], ['Returns', '/help?v=returns'], ['Warranty', '/help?v=warranty']]
 
 const CAT_LIMIT = 3
 
 export default function Footer() {
   const [showAllCats, setShowAllCats] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
+  const reduce = useReducedMotion()
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -26,14 +29,7 @@ export default function Footer() {
   return (
     <footer style={{ borderTop: '1px solid var(--border)', marginTop: 0, background: 'var(--bg-surface-2)' }}>
       <div className="container-noir" style={{ padding: '60px 24px 0' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr 1fr 1fr',
-          gap: '48px 32px',
-          marginBottom: 48,
-        }}
-          className="footer-grid"
-        >
+        <div className="footer-grid" style={{ marginBottom: 48 }}>
           {/* Brand */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -44,16 +40,20 @@ export default function Footer() {
             <p style={{ color: 'var(--muted-dark)', fontSize: 14, lineHeight: 1.7, maxWidth: 220, marginBottom: 20 }}>
               Considered objects for a quieter, more deliberate digital life.
             </p>
-            {/* Social */}
-            <div style={{ display: 'flex', gap: 12 }}>
+            {/* Contact — collapsed */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: 'var(--muted-dark)', fontSize: 13 }}>
+              <MapPin size={13} style={{ flexShrink: 0 }} />
+              Kigali, Rwanda
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
               {[
-                { Icon: Globe,        href: '#', label: 'website' },
-                { Icon: Mail,         href: '#', label: 'email' },
-                { Icon: ExternalLink, href: '#', label: 'social' },
+                { Icon: Phone, href: 'tel:+250788304366', label: 'Call us' },
+                { Icon: Mail,  href: `mailto:${SUPPORT_EMAIL}`, label: 'Email us' },
               ].map(({ Icon, href, label }) => (
                 <a
                   key={label}
                   href={href}
+                  title={label}
                   style={{
                     width: 32, height: 32, borderRadius: 8,
                     border: '1px solid var(--border)',
@@ -67,6 +67,59 @@ export default function Footer() {
                 </a>
               ))}
             </div>
+
+            <button
+              onClick={() => setShowDetails(v => !v)}
+              style={{
+                fontSize: 13, color: 'var(--accent)', background: 'none',
+                border: 'none', padding: 0, cursor: 'pointer',
+                textAlign: 'left', transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              {showDetails ? '↑ Hide details' : 'See full details ↓'}
+            </button>
+
+            {/* Contact — expanded */}
+            <AnimatePresence initial={false}>
+              {showDetails && (
+                <motion.div
+                  key="footer-contact-details"
+                  initial={reduce ? false : { height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={reduce ? {} : { height: 0, opacity: 0 }}
+                  transition={reduce ? { duration: 0 } : { duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div style={{ paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, color: 'var(--muted-dark)', fontSize: 13, lineHeight: 1.5 }}>
+                      <MapPin size={13} style={{ flexShrink: 0, marginTop: 2 }} />
+                      KN59, ST 38, Near Gloria Hotel, Kigali, Rwanda
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <a href="tel:+250788304366" className="story-link" style={{ fontSize: 13, color: 'var(--muted-dark)', transition: 'color 0.2s' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
+                        +250 788 304 366
+                      </a>
+                      <a href="tel:+250788523788" className="story-link" style={{ fontSize: 13, color: 'var(--muted-dark)', transition: 'color 0.2s' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
+                        0788 523 788
+                      </a>
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                      <span className="status-pill status-pill--shipped">Est. 2014</span>
+                      <span className="status-pill status-pill--shipped">Dell &amp; HP Partnership</span>
+                      <span className="status-pill status-pill--shipped">Bitdefender Partnership</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* SHOP column — inline category expand */}

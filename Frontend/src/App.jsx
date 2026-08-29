@@ -27,6 +27,7 @@ import CategoryPage       from './pages/CategoryPage'
 import NotFoundPage           from './pages/NotFoundPage'
 import NotificationsPage      from './pages/NotificationsPage'
 import HelpPage               from './pages/HelpPage'
+import PromotionPage          from './pages/PromotionPage'
 import AdminLayout            from './pages/admin/AdminLayout'
 import AdminDashboard      from './pages/admin/AdminDashboard'
 import AdminProducts       from './pages/admin/AdminProducts'
@@ -134,6 +135,7 @@ function CustomerSite() {
         <Route path="/orders/:id"    element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/help"          element={<HelpPage />} />
+        <Route path="/promotions/:slug" element={<PromotionPage />} />
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

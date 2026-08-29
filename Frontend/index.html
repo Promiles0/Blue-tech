@@ -22,10 +22,51 @@
     />
     <!-- Google Identity Services script for the reusable GoogleLogin component -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Hide the Tawk.to widget the instant its container is added to the DOM — sits ahead of
+         the Tawk script below so there's no ~2s flash while waiting for Tawk_API.onLoad to fire.
+         Scoped to body:not(.chat-open) so our "Chat with us" button can reveal it again. -->
+    <style>
+      body:not(.chat-open) #tawkchat-container,
+      body:not(.chat-open) .tawk-min-container {
+        display: none !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
+    <!--Start of Tawk.to Script-->
+    <script type="text/javascript">
+      var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+      // The CSS above does the actual hiding (instant, no flash) — this is just a backup once
+      // the script itself has loaded. The site has its own "Chat with us" button
+      // (see Frontend/src/lib/liveChat.js) that opens this widget via the chat-open body class.
+      Tawk_API.onLoad = function () {
+        Tawk_API.hideWidget();
+        window.dispatchEvent(new Event('tawk:ready'));
+      };
+      // Keep the chat-open body class in sync with Tawk's own state, whether the widget was
+      // opened/closed via our button or via Tawk's own UI (e.g. its close button).
+      Tawk_API.onChatMaximized = function () {
+        document.body.classList.add('chat-open');
+      };
+      Tawk_API.onChatMinimized = function () {
+        document.body.classList.remove('chat-open');
+      };
+      Tawk_API.onChatHidden = function () {
+        document.body.classList.remove('chat-open');
+      };
+      (function(){
+      var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+      s1.async=true;
+      s1.src='https://embed.tawk.to/6a9200d55d251c344563f80c/1k1556h29';
+      s1.charset='UTF-8';
+      s1.setAttribute('crossorigin','*');
+      s0.parentNode.insertBefore(s1,s0);
+      })();
+    </script>
+    <!--End of Tawk.to Script-->
   </body>
 </html>

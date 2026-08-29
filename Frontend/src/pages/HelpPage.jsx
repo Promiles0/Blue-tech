@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 import { useEffect } from 'react'
 import { Reveal } from '../lib/motion'
+import { SUPPORT_EMAIL } from '../lib/helpLinks'
 
 const SECTIONS = {
   faq: {
@@ -9,28 +10,28 @@ const SECTIONS = {
       { q: 'How long does shipping take?', a: 'Standard shipping usually takes 3-5 business days depending on your location.' },
       { q: 'Can I track my order?', a: 'Yes, once your order is shipped, you will receive a tracking number via email.' },
       { q: 'What is your return policy?', a: 'We offer a 30-day return policy for unused products in their original packaging.' },
-      { q: 'How do I contact support?', a: 'You can reach us at support@bluetech.com or through our contact form.' }
+      { q: 'How do I contact support?', a: `You can reach us at ${SUPPORT_EMAIL} or through our contact form.` }
     ]
   },
   shipping: {
     title: 'Shipping & Delivery',
     body: `We offer premium shipping to over 20 countries. All orders are carefully packed and shipped from our centralized warehouse.
-    
+
     Standard Shipping: 3–5 business days
     Express Shipping: 1–2 business days
     International: 7–14 business days`
   },
   returns: {
     title: 'Returns & Exchanges',
-    body: `If you're not completely satisfied with your purchase, we're here to help. You can return or exchange any item within 30 days of delivery. 
-    
+    body: `If you're not completely satisfied with your purchase, we're here to help. You can return or exchange any item within 30 days of delivery.
+
     Items must be in original condition and include all packaging. Returns are processed within 5 business days of arrival at our facility.`
   },
   warranty: {
     title: 'Warranty Information',
-    body: `Every Blue-Tech product comes with a 2-year limited warranty against manufacturing defects. 
-    
-    This warranty does not cover accidental damage, wear and tear, or unauthorized modifications. For warranty claims, please contact support@bluetech.com with your order number.`
+    body: `Every Blue-Tech product comes with a 2-year limited warranty against manufacturing defects.
+
+    This warranty does not cover accidental damage, wear and tear, or unauthorized modifications. For warranty claims, please contact ${SUPPORT_EMAIL} with your order number.`
   }
 }
 
@@ -78,8 +79,8 @@ export default function HelpPage() {
         <div style={{ marginTop: 80, padding: '32px', background: 'var(--surface)', borderRadius: 16, textAlign: 'center' }}>
           <h4 style={{ color: 'var(--text)', marginBottom: 12 }}>Still have questions?</h4>
           <p style={{ color: 'var(--muted-dark)', fontSize: 14, marginBottom: 20 }}>Our team is available Mon–Fri, 9am–5pm EST.</p>
-          <a href="mailto:support@bluetech.com" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
-            support@bluetech.com
+          <a href={`mailto:${SUPPORT_EMAIL}`} style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>
+            {SUPPORT_EMAIL}
           </a>
         </div>
       </div>

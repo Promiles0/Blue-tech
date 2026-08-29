@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, ChevronDown, X, Moon, Sun } from 'lucide-react'
+import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, X, Moon, Sun } from 'lucide-react'
 import NotificationBell from './site/NotificationBell'
+import CategoriesMenu from './site/CategoriesMenu'
+import HelpMenu from './site/HelpMenu'
 import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useUI } from '../context/UIContext'
 import { useTheme } from '../context/ThemeContext'
-import apiService from '../api/service'
 
 export default function Header() {
   const { user, logout, isAdmin }                           = useAuth()
@@ -17,24 +17,13 @@ export default function Header() {
   const { theme, toggleTheme }                              = useTheme()
   const navigate                                            = useNavigate()
   const [userMenuOpen, setUserMenuOpen]                     = useState(false)
-  const [browseOpen, setBrowseOpen]                         = useState(false)
   const [searchOpen, setSearchOpen]                         = useState(false)
   const [searchQuery, setSearchQuery]                       = useState('')
   const [badgeKey, setBadgeKey]                             = useState(0)
   const prevCountRef                                       = useRef(count)
   const userMenuRef                                         = useRef(null)
-  const browseRef                                           = useRef(null)
   const searchRef                                           = useRef(null)
   const searchInputRef                                      = useRef(null)
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const res = await apiService.categories.getAll()
-      return Array.isArray(res.data) ? res.data : []
-    },
-    staleTime: 1000 * 60 * 5,
-  })
 
   // Scroll-linked transforms — liquid glass
   const { scrollY }  = useScroll()
@@ -58,7 +47,6 @@ export default function Header() {
   useEffect(() => {
     const onDown = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) setUserMenuOpen(false)
-      if (browseRef.current && !browseRef.current.contains(e.target)) setBrowseOpen(false)
       if (searchRef.current && !searchRef.current.contains(e.target)) { setSearchOpen(false); setSearchQuery('') }
     }
     document.addEventListener('mousedown', onDown)
@@ -135,108 +123,7 @@ export default function Header() {
             Store
           </Link>
 
-          <div ref={browseRef} style={{ position: 'relative' }}>
-            <button
-              onClick={() => setBrowseOpen(open => !open)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 14, fontWeight: 400, color: 'var(--text)',
-                background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.2s', padding: 0,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
-            >
-              Categories
-              <ChevronDown size={14} style={{ transform: browseOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-            </button>
-
-            {browseOpen && (
-              <>
-                {/* Full-width mega menu — fixed to viewport width */}
-                <div
-                  style={{
-                    position: 'fixed',
-                    top: 'var(--header-h, 58px)',
-                    left: 0, right: 0,
-                    background: 'var(--bg)',
-                    backdropFilter: 'blur(24px)',
-                    WebkitBackdropFilter: 'blur(24px)',
-                    borderBottom: '1px solid var(--glass-border)',
-                    boxShadow: '0 24px 64px rgba(0,0,0,0.3)',
-                    zIndex: 99,
-                    padding: '36px 0 40px',
-                  }}
-                >
-                  <div className="container-noir">
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: 48 }}>
-
-                      {/* Left — label */}
-                      <div>
-                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>
-                          Shop by category
-                        </p>
-                        <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6, maxWidth: 200 }}>
-                          Explore our full range of considered products.
-                        </p>
-                        <Link
-                          to="/products"
-                          onClick={() => setBrowseOpen(false)}
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 6,
-                            marginTop: 20, fontSize: 13, fontWeight: 600,
-                            color: 'var(--accent)', textDecoration: 'none',
-                            transition: 'opacity 0.15s',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
-                          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                        >
-                          View all <ChevronDown size={12} style={{ transform: 'rotate(-90deg)' }} />
-                        </Link>
-                      </div>
-
-                      {/* Right — category grid */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                        {categories.map(cat => (
-                          <Link
-                            key={cat.categoryId}
-                            to={`/products?category=${encodeURIComponent(cat.name)}`}
-                            onClick={() => setBrowseOpen(false)}
-                            style={{
-                              display: 'block',
-                              padding: '14px 16px',
-                              borderRadius: 12,
-                              background: 'var(--glass-bg)',
-                              border: '1px solid var(--glass-border)',
-                              color: 'var(--text)',
-                              textDecoration: 'none',
-                              fontSize: 14,
-                              fontWeight: 500,
-                              transition: 'background 0.15s, color 0.15s, border-color 0.15s',
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.background = 'var(--accent-dim)'
-                              e.currentTarget.style.borderColor = 'var(--accent-border)'
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.background = 'var(--glass-bg)'
-                              e.currentTarget.style.borderColor = 'var(--glass-border)'
-                            }}
-                          >
-                            {cat.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Click-away backdrop */}
-                <div
-                  onClick={() => setBrowseOpen(false)}
-                  style={{ position: 'fixed', inset: 0, zIndex: 98 }}
-                />
-              </>
-            )}
-          </div>
+          <CategoriesMenu />
         </nav>
 
         {/* Right icons */}
@@ -296,6 +183,8 @@ export default function Header() {
               {searchOpen ? <X size={18} /> : <Search size={18} />}
             </IconBtn>
           </div>
+
+          <HelpMenu />
 
           <IconBtn onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
             {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}

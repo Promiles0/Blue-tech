@@ -1,362 +1,263 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Truck, Shield, RotateCcw } from 'lucide-react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { ArrowRight, Truck, Shield, RotateCcw, SlidersHorizontal, Loader2, MessageCircle } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import Testimonials from '../components/site/Testimonials'
 import RecentlyViewed from '../components/site/RecentlyViewed'
-import HeroCarousel from '../components/site/HeroCarousel'
-import { Reveal, Parallax, Magnetic } from '../lib/motion'
+import FilterRail from '../components/site/FilterRail'
+import PromoCarousel from '../components/site/PromoCarousel'
+import { Reveal } from '../lib/motion'
 import apiService from '../api/service'
-import { PRODUCT_IMAGE_FALLBACK, getProductImage, handleProductImageError } from '../lib/productImage'
+import { openLiveChat, useLiveChatReady } from '../lib/liveChat'
 
-// ── Word-by-word stagger ────────────────────────────────────────────────────
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.25 } },
-}
-const wordVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1] } },
-}
-
-function StaggeredHeadline({ lines }) {
-  const reduce = useReducedMotion()
-  const words = lines.flatMap((line, li) => [
-    ...line.split(' ').map((word, wi) => ({ word, line: li, wi })),
-    { word: null, line: li, wi: -1 }, // line break marke
-  ])
-
-  if (reduce) {
-    return (
-      <>
-        {lines.map((line, i) => (
-          <span key={i} style={{ display: 'block' }}>{line}</span>
-        ))}
-      </>
-    )
-  }
-
-  return (
-    <motion.span
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      style={{ display: 'inline' }}
-    >
-      {words.map((item, i) =>
-        item.word === null ? (
-          <br key={`br-${item.line}`} />
-        ) : (
-          <motion.span key={i} variants={wordVariants} style={{ display: 'inline-block', marginRight: '0.28em' }}>
-            {item.word}
-          </motion.span>
-        )
-      )}
-    </motion.span>
-  )
-}
-
-const TAGLINES = [
-  'Quietly engineered.',
-  'Boldly designed.',
-  'Built to last.',
-  'Chosen with care.',
-  'Made for the detail-obsessed.',
-]
-
-function RotatingTagline() {
-  const [index, setIndex] = useState(0)
-  const reduce = useReducedMotion()
-
-  useEffect(() => {
-    const id = setInterval(() => setIndex(i => (i + 1) % TAGLINES.length), 4000)
-    return () => clearInterval(id)
-  }, [])
-
-  if (reduce) return <span style={{ display: 'block' }}>{TAGLINES[0]}</span>
-
-  return (
-    <span style={{ display: 'block', minHeight: '2.2em', position: 'relative' }}>
-      <AnimatePresence mode="wait">
-        <motion.span
-          key={index}
-          initial={{ opacity: 0, filter: 'blur(8px)', y: 8 }}
-          animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
-          exit={{ opacity: 0, filter: 'blur(8px)', y: -8 }}
-          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-          style={{ display: 'block' }}
-        >
-          {TAGLINES[index]}
-        </motion.span>
-      </AnimatePresence>
-    </span>
-  )
-}
+const emptyFilters = { brands: [], minPrice: '', maxPrice: '' }
+const PAGE_SIZE = 12
 
 export default function Home() {
-  const [products,        setProducts]        = useState([])
-  const [categories,      setCategories]      = useState([])
-  const [activeCategory,  setActiveCategory]  = useState(null)
-  const [loading,         setLoading]         = useState(true)
+  const [pool,    setPool]    = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filters, setFilters] = useState(emptyFilters)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
+  // Load-more pagination — page/hasMore track the server-side cursor,
+  // loadingMore only covers the "fetch next batch" request (not the initial load)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  // Debounce the price inputs so we don't refetch on every keystroke
+  const [debouncedMin, setDebouncedMin] = useState('')
+  const [debouncedMax, setDebouncedMax] = useState('')
   useEffect(() => {
-    apiService.categories.getAll()
-      .then(({ data }) => setCategories(Array.isArray(data) ? data : []))
-      .catch(() => {})
-  }, [])
+    const id = setTimeout(() => {
+      setDebouncedMin(filters.minPrice)
+      setDebouncedMax(filters.maxPrice)
+    }, 400)
+    return () => clearTimeout(id)
+  }, [filters.minPrice, filters.maxPrice])
 
+  const fetchProductsPage = (pageNum) => {
+    const hasPriceFilter = debouncedMin !== '' || debouncedMax !== ''
+    if (hasPriceFilter) {
+      const params = new URLSearchParams()
+      if (debouncedMin !== '') params.set('minPrice', debouncedMin)
+      if (debouncedMax !== '') params.set('maxPrice', debouncedMax)
+      params.set('sort', 'createdAt,desc')
+      params.set('page', String(pageNum))
+      params.set('size', String(PAGE_SIZE))
+      return apiService.products.search(params)
+    }
+    return apiService.products.getAllPaginated(`page=${pageNum}&size=${PAGE_SIZE}`)
+  }
+
+  // Filters changed — reset to page 0 and replace the pool
   useEffect(() => {
     let cancelled = false
-    apiService.products.getAllPaginated('page=0&size=8')
+    setLoading(true)
+    setPage(0)
+
+    fetchProductsPage(0)
       .then(({ data }) => {
-        if (!cancelled) {
-          const content = data?.content ?? (Array.isArray(data) ? data : [])
-          setProducts(content)
-        }
+        if (cancelled) return
+        const content = data?.content ?? (Array.isArray(data) ? data : [])
+        setPool(content)
+        setHasMore(data?.totalPages != null ? data.totalPages > 1 : content.length === PAGE_SIZE)
       })
-      .catch(() => { if (!cancelled) setProducts([]) })
+      .catch(() => { if (!cancelled) { setPool([]); setHasMore(false) } })
       .finally(() => { if (!cancelled) setLoading(false) })
+
     return () => { cancelled = true }
-  }, [])
+  }, [debouncedMin, debouncedMax])
 
-  const filtered = activeCategory
-    ? products.filter(p => (p.category?.name ?? p.categoryName) === activeCategory)
-    : products
+  const loadMore = () => {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const nextPage = page + 1
 
-  const displayProducts = filtered
-  const storyProducts = displayProducts.length ? displayProducts : products
-  const storyPrimary = storyProducts[0]
-  const storySecondary = storyProducts[1] ?? storyProducts[0]
+    fetchProductsPage(nextPage)
+      .then(({ data }) => {
+        const content = data?.content ?? (Array.isArray(data) ? data : [])
+        setPool(prev => [...prev, ...content])
+        setPage(nextPage)
+        setHasMore(data?.totalPages != null ? nextPage + 1 < data.totalPages : content.length === PAGE_SIZE)
+      })
+      .catch(() => setHasMore(false))
+      .finally(() => setLoadingMore(false))
+  }
+
+  // Brand isn't a real product attribute yet — best-effort match against the name
+  const displayProducts = filters.brands.length
+    ? pool.filter(p => filters.brands.some(b => (p.name ?? '').toLowerCase().includes(b.toLowerCase())))
+    : pool
+
+  const activeCount = filters.brands.length + (filters.minPrice ? 1 : 0) + (filters.maxPrice ? 1 : 0)
+
+  const toggleBrand = (b) => setFilters(f => ({
+    ...f,
+    brands: f.brands.includes(b) ? f.brands.filter(x => x !== b) : [...f.brands, b],
+  }))
+  const setMinPrice = (v) => setFilters(f => ({ ...f, minPrice: v }))
+  const setMaxPrice = (v) => setFilters(f => ({ ...f, maxPrice: v }))
+  const clearAll     = () => setFilters(emptyFilters)
+
+  const chatReady = useLiveChatReady()
 
   return (
     <div>
 
-      {/* ── Hero ─────────────────────────────────────────── */}
-      <section style={{ padding: '72px 0 56px' }}>
-        <div className="container-noir hero-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 64, alignItems: 'center',
-        }}>
+      <PromoCarousel />
 
-          {/* Left copy */}
-          <div>
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                border: '1px solid var(--border)', borderRadius: 100,
-                padding: '6px 14px', marginBottom: 28,
-                fontSize: 13, color: 'var(--muted-dark)',
-              }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'block' }} />
-              New season ~ 2026
-            </motion.div>
+      {/* ── Filter rail + product grid — the top of the page ─── */}
+      <div className="container-noir shop-layout" style={{ padding: '10px 0 64px' }}>
+        <FilterRail
+          filters={filters}
+          setters={{ toggleBrand, setMinPrice, setMaxPrice }}
+          activeCount={activeCount}
+          onClearAll={clearAll}
+          mobileOpen={mobileFiltersOpen}
+          onMobileClose={() => setMobileFiltersOpen(false)}
+        />
 
-            <h1 style={{
-              fontFamily: '"Space Grotesk",sans-serif',
-              fontSize: 'clamp(36px, 4.5vw, 64px)',
-              fontWeight: 900, lineHeight: 1.05,
-              letterSpacing: '-0.03em',
-              marginBottom: 22,
-              color: 'var(--text)',
-            }}>
-              <StaggeredHeadline lines={['Considered', 'objects.']} />
-              <span style={{ color: 'var(--accent)', display: 'block', marginTop: '0.05em' }}>
-                <RotatingTagline />
-              </span>
-            </h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.65 }}
-              style={{ color: 'var(--muted)', fontSize: 16, lineHeight: 1.75, maxWidth: 420, marginBottom: 36 }}
-            >
-              A curated collection of audio, wearables, and computing —
-              selected for people who choose what surrounds them with care.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.8 }}
-              style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}
-            >
-              <Magnetic strength={0.2}>
-                <Link
-                  to="/products"
-                  className="noir-btn-primary shine"
-                  style={{ fontSize: 15, padding: '13px 24px' }}
-                >
-                  Shop the collection <ArrowRight size={16} />
-                </Link>
-              </Magnetic>
-              <Link
-                to="/products?category=Audio"
-                className="noir-btn-outline"
-                style={{ fontSize: 15, padding: '13px 24px' }}
-              >
-                Explore 
-              </Link>
-            </motion.div>
-          </div>
-
-          {/* Right — auto-sliding hero carousel */}
-          <Reveal delay={0.15}>
-            <Parallax speed={0.08}>
-              <HeroCarousel />
-            </Parallax>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ── Category tabs ──────────────────────────────────── */}
-      {categories.length > 0 && (
-        <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
-          <div className="container-noir" style={{ display: 'flex', minWidth: 560 }}>
-            {categories.map(cat => (
-              <button
-                key={cat.categoryId ?? cat.id}
-                onClick={() => setActiveCategory(prev => prev === cat.name ? null : cat.name)}
-                style={{
-                  flex: 1, padding: '18px 8px',
-                  fontSize: 14, fontWeight: 500,
-                  color: activeCategory === cat.name ? 'var(--text)' : 'var(--muted-dark)',
-                  background: 'none', border: 'none',
-                  borderBottom: `2px solid ${activeCategory === cat.name ? 'var(--accent)' : 'transparent'}`,
-                  cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s',
-                  whiteSpace: 'nowrap',
-                }}
-                onMouseEnter={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = 'var(--text-secondary)' }}
-                onMouseLeave={e => { if (activeCategory !== cat.name) e.currentTarget.style.color = 'var(--muted-dark)' }}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Featured product grid ───────────────────────────── */}
-      <section style={{ padding: '56px 0 48px' }}>
-        <div className="container-noir">
+        <div>
           <Reveal>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
               <div>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 6 }}>LATEST ARRIVALS</p>
-                <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }}>New this season</h2>
+                <h1 style={{
+                  fontFamily: '"Space Grotesk",sans-serif',
+                  fontSize: 'clamp(26px, 3vw, 34px)', fontWeight: 900,
+                  letterSpacing: '-0.02em', lineHeight: 1.1,
+                  color: 'var(--text)', marginBottom: 6,
+                }}>
+                  Considered objects.
+                </h1>
+                <p style={{ fontSize: 14, color: 'var(--muted)' }}>Built to last — laptops chosen with care, not just specs.</p>
               </div>
-              <Link
-                to="/products"
-                style={{ fontSize: 14, color: 'var(--muted-dark)', display: 'flex', alignItems: 'center', gap: 4, transition: 'color 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
+              <button
+                className="filter-mobile-btn noir-btn-outline"
+                onClick={() => setMobileFiltersOpen(true)}
+                style={{ fontSize: 13 }}
               >
-                View all <ArrowRight size={14} />
-              </Link>
+                <SlidersHorizontal size={14} /> Filters{activeCount > 0 ? ` (${activeCount})` : ''}
+              </button>
             </div>
           </Reveal>
 
           {loading ? (
             <div className="grid-4">
-              {[...Array(8)].map((_, i) => (
+              {[...Array(PAGE_SIZE)].map((_, i) => (
                 <div key={i} className="skeleton" style={{ height: 340, borderRadius: 12 }} />
               ))}
+            </div>
+          ) : displayProducts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '64px 0', border: '1px solid var(--border)', borderRadius: 12 }}>
+              <p style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 16 }}>No products match your filters.</p>
+              <button onClick={clearAll} className="noir-btn-outline" style={{ fontSize: 13 }}>Clear filters</button>
             </div>
           ) : (
             <div className="grid-4">
               {displayProducts.map((p, i) => (
-                <Reveal key={p.productId ?? p.id} delay={i * 0.05}>
+                <Reveal key={p.productId ?? p.id} delay={Math.min((i % PAGE_SIZE) * 0.05, 0.3)}>
                   <ProductCard product={p} />
                 </Reveal>
               ))}
             </div>
           )}
-        </div>
-      </section>
 
-      {/* ── Brand story bento ───────────────────────────────── */}
+          {!loading && displayProducts.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 40 }}>
+              {hasMore ? (
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="noir-btn-outline"
+                  style={{ fontSize: 13, minWidth: 168, justifyContent: 'center', opacity: loadingMore ? 0.7 : 1, cursor: loadingMore ? 'default' : 'pointer' }}
+                >
+                  {loadingMore ? <><Loader2 size={14} className="animate-spin" /> Loading…</> : 'Load more products'}
+                </button>
+              ) : (
+                <p style={{ fontSize: 13, color: 'var(--muted-dark)' }}>You've seen it all.</p>
+              )}
+
+              <Link
+                to="/products"
+                style={{ fontSize: 13, color: 'var(--muted-dark)', display: 'flex', alignItems: 'center', gap: 4, transition: 'color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
+              >
+                View full catalog <ArrowRight size={13} />
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Talk to someone — pre-purchase help prompt ───────── */}
       <Reveal>
         <section style={{ padding: '0 0 72px' }}>
           <div className="container-noir">
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1.4fr 1fr',
-              gap: 16,
-              minHeight: 400,
+              position: 'relative', overflow: 'hidden',
+              borderRadius: 20, border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              padding: 'clamp(36px, 5vw, 56px) 24px',
+              textAlign: 'center',
             }}>
-              <Parallax speed={0.06}>
-                <div style={{ borderRadius: 16, overflow: 'hidden', height: '100%', minHeight: 360, background: 'var(--surface)', position: 'relative' }}>
-                  <img
-                    src={storyPrimary ? getProductImage(storyPrimary) : PRODUCT_IMAGE_FALLBACK}
-                    alt={storyPrimary?.name ?? ''}
-                    onError={handleProductImageError}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
-                  />
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%)',
-                    display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-                    padding: 28,
-                  }}>
-                    <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 6, color: 'var(--brand-text)' }}>
-                      Craft before convenience
-                    </p>
-                    <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.65 }}>
-                      Every product is chosen for how it feels to live with, not just how it performs on a spec sheet.
-                    </p>
-                  </div>
-                </div>
-              </Parallax>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {[
-                  { product: storySecondary, label: storySecondary?.categoryName ?? storySecondary?.category?.name ?? 'Featured product' },
-                ].map(({ product, label }) => (
-                  <div key={label} style={{ flex: 1, borderRadius: 16, overflow: 'hidden', background: 'var(--surface)', position: 'relative', minHeight: 180 }}>
-                    <img
-                      src={product ? getProductImage(product) : PRODUCT_IMAGE_FALLBACK}
-                      alt={product?.name ?? label}
-                      onError={handleProductImageError}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }}
-                    />
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 55%)', display: 'flex', alignItems: 'flex-end', padding: 18 }}>
-                      <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, color: 'var(--brand-text)' }}>{label}</span>
-                    </div>
-                  </div>
-                ))}
+              <div aria-hidden style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none',
+                background: 'radial-gradient(60% 100% at 50% 0%, var(--accent-dim), transparent 70%)',
+              }} />
+              <div style={{ position: 'relative' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>
+                  Not sure where to start?
+                </p>
+                <h2 style={{
+                  fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(24px, 3vw, 32px)',
+                  fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 12,
+                }}>
+                  Talk to someone before you buy.
+                </h2>
+                <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.65, maxWidth: 460, margin: '0 auto 28px' }}>
+                  Tell us what you'll use it for and your budget — we'll point you to the right machine, no pressure.
+                </p>
+                <button
+                  onClick={openLiveChat}
+                  disabled={!chatReady}
+                  className="noir-btn-primary shine"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '12px 24px',
+                    opacity: chatReady ? 1 : 0.6, cursor: chatReady ? 'pointer' : 'default',
+                  }}
+                >
+                  {chatReady
+                    ? <><MessageCircle size={16} /> Chat with us</>
+                    : <><Loader2 size={16} className="animate-spin" /> Loading chat…</>}
+                </button>
+                <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 14 }}>
+                  Usually replies within a few hours.
+                </p>
               </div>
             </div>
           </div>
         </section>
       </Reveal>
 
-      {/* ── Trust badges ────────────────────────────────────── */}
+      {/* ── Trust signals — quiet Muji/Away-style strip ─────── */}
       <Reveal>
-        <section style={{ padding: '0 0 72px' }}>
-          <div className="container-noir">
-            <div style={{
-              background: 'var(--bg)', border: '1px solid var(--border)',
-              borderRadius: 16, padding: '44px 48px',
-              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32,
-            }}>
-              {[
-                { icon: <Truck size={22} />, title: 'Free shipping', desc: 'On all orders over $200.' },
-                { icon: <Shield size={22} />, title: '2-year warranty', desc: 'Quietly confident craftsmanship.' },
-                { icon: <RotateCcw size={22} />, title: '30-day returns', desc: "If it isn't right, send it back." },
-              ].map(({ icon, title, desc }) => (
-                <div key={title}>
-                  <div style={{ color: 'var(--accent)', marginBottom: 12 }}>{icon}</div>
-                  <p style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>{title}</p>
-                  <p style={{ fontSize: 13, color: 'var(--muted-dark)', lineHeight: 1.55 }}>{desc}</p>
+        <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '36px 0' }}>
+          <div className="container-noir grid-3" style={{ gap: 40 }}>
+            {[
+              { icon: <Truck size={17} />, title: 'Free shipping', desc: 'On all orders over $200.' },
+              { icon: <Shield size={17} />, title: '2-year warranty', desc: 'Quietly confident craftsmanship.' },
+              { icon: <RotateCcw size={17} />, title: '30-day returns', desc: "If it isn't right, send it back." },
+            ].map(({ icon, title, desc }) => (
+              <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                <div style={{ color: 'var(--muted-dark)', flexShrink: 0, marginTop: 1 }}>{icon}</div>
+                <div>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text)', marginBottom: 4 }}>{title}</p>
+                  <p style={{ fontSize: 13, color: 'var(--muted-dark)', lineHeight: 1.5 }}>{desc}</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </section>
       </Reveal>
