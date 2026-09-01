@@ -1,86 +1,55 @@
-# E-COMMERCE-PLATFORM
-
-## Introduction
-
-The E-Commerce Platform is a sophisticated full-stack solution designed to bridge the gap between high-end aesthetics and enterprise-grade reliability.
-Built using Spring Boot for a robust backend and React + Tailwind CSS for a cinematic frontend, this system handles the complete retail lifecycle—from intelligent
-product discovery to secure financial transactions and automated shipment tracking.
-
-## System Architecture
-
-The system follows a strictly Tiered Micro-Architectural Pattern, ensuring high decoupling and easy scalability.
-
-### Backend Structure (The "Brain")
-
-* config/: System-wide configuration (Security, CORS, Data Seeding).
-* controller/: REST API endpoints managing the request-response lifecycle.
-* service/: The core business logic layer utilizing @Transactional integrity.
-* entity/: JPA-mapped database models representing the relational schema.
-* dto/: Data Transfer Objects for secure, filtered data transmission.
-* repository/: Abstraction layer for database persistence (Spring Data JPA).
-* security/: JWT and OAuth2 implementations for stateless authentication.
-* exception/: Centralized Global Exception Handling.
-
-## Tech Stack
-
-Backend: Java 17, Spring Boot, Spring Security
-
-## Key Features
-
-### Backend Excellence
-
-1. Atomic Operations: Ensuring inventory and payments are always in sync.
-2. Smart Seeding: Automatic creation of Master Admin and Categories on first boot.
-3. Audit Logging: Internal tracking of every administrative action for accountability.
-4. Notification Engine: Real-time triggers for emails and in-app notifications.
-
-### Security & Integrity
-
-1. Stateless Auth: All requests are validated via encrypted JWT tokens.
-2. Password Safety: BCrypt hashing utilized for all user credentials.
-3. CORS Protection: Pre-configured gatekeeping to prevent unauthorized API calls.
-4. Data Privacy: DTO pattern prevents internal database leaks to the client.
-
 # Blue-tech
 
 ## Introduction
 
-The E-Commerce Platform is a sophisticated full-stack solution designed to bridge the gap between high-end aesthetics and enterprise-grade reliability.
-Built using Spring Boot for a robust backend and React + Tailwind CSS for a cinematic frontend, this system handles the complete retail lifecycle—from intelligent
-product discovery to secure financial transactions and automated shipment tracking.
+Blue-tech is a full-stack e-commerce platform pairing a React + Tailwind CSS frontend with a
+Supabase backend (Postgres, Auth, Storage, and Edge Functions). It handles the full retail
+lifecycle — product discovery, cart and checkout, coupons, payments, and admin operations
+(orders, shipments, users, reviews) — without a separately hosted API server.
 
 ## System Architecture
 
-The system follows a strictly Tiered Micro-Architectural Pattern, ensuring high decoupling and easy scalability.
+* `Frontend/` — the React app (Vite). All UI, routing, and client-side state.
+* `supabase/functions/api/` — a single Deno Edge Function that serves the REST API
+  (`/auth`, `/products`, `/cart`, `/orders`, `/payments`, `/admin/*`, etc.).
+* `supabase/migrations/` — versioned SQL migrations applied with `supabase db push`.
+* `supabase/complete_schema.sql` / `reset_schema.sql` — the declarative schema, kept in sync
+  with the migrations.
 
-### Backend Structure (The "Brain")
+### Frontend structure
 
-* config/: System-wide configuration (Security, CORS, Data Seeding).
-* controller/: REST API endpoints managing the request-response lifecycle.
-* service/: The core business logic layer utilizing @Transactional integrity.
-* entity/: JPA-mapped database models representing the relational schema.
-* dto/: Data Transfer Objects for secure, filtered data transmission.
-* repository/: Abstraction layer for database persistence (Spring Data JPA).
-* security/: JWT and OAuth2 implementations for stateless authentication.
-* exception/: Centralized Global Exception Handling.
+* `src/pages/` — route-level views, including the `admin/` dashboard pages.
+* `src/components/` — reusable UI components.
+* `src/api/` / `src/services/` — HTTP clients for the Supabase Edge Function API.
+* `src/context/`, `src/hooks/`, `src/lib/` — app state, custom hooks, and shared utilities.
+
+### Backend structure (Supabase)
+
+* Auth — Supabase Auth (email/password and Google sign-in), with a lightweight app-issued
+  JWT layered on top for Google users.
+* Data — Postgres tables for users, products, orders, coupons, reviews, shipments, and more
+  (see `supabase/complete_schema.sql`).
+* API — the Edge Function in `supabase/functions/api/index.ts` implements every route,
+  including admin-only endpoints gated by a role check against `public.users`/`public.profiles`.
+* Rate limiting — Upstash Redis (optional; fails open if not configured).
 
 ## Tech Stack
 
-Backend: Java 17, Spring Boot, Spring Security
+Frontend: React, Vite, Tailwind CSS
+Backend: Supabase (Postgres, Auth, Storage, Edge Functions on Deno)
 
 ## Key Features
 
-### Backend Excellence
+1. Atomic checkout: stock reductions and coupon redemption use compare-and-swap updates to
+   stay correct under concurrent requests.
+2. Coupons: percent/fixed discounts with usage limits, min subtotal, and validity windows.
+3. Admin console: dashboard stats, analytics, order/shipment management, user role and
+   suspension controls, and review moderation.
+4. Notifications: in-app notifications for order status changes and payment outcomes.
 
-1. Atomic Operations: Ensuring inventory and payments are always in sync.
-2. Smart Seeding: Automatic creation of Master Admin and Categories on first boot.
-3. Audit Logging: Internal tracking of every administrative action for accountability.
-4. Notification Engine: Real-time triggers for emails and in-app notifications.
+## Security & Integrity
 
-### Security & Integrity
-
-1. Stateless Auth: All requests are validated via encrypted JWT tokens.
-2. Password Safety: BCrypt hashing utilized for all user credentials.
-3. CORS Protection: Pre-configured gatekeeping to prevent unauthorized API calls.
-4. Data Privacy: DTO pattern prevents internal database leaks to the client.
-
+1. Stateless Auth: requests are validated via Supabase session tokens or an app-issued JWT.
+2. CORS: the Edge Function enforces an explicit allowed-origins list.
+3. Data Privacy: API responses are shaped by explicit result-mapping functions, never raw
+   database rows, so sensitive columns never reach the client.
