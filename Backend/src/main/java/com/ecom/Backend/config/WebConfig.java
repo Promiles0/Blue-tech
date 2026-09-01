@@ -16,11 +16,17 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${app.upload.dir}")
     private String uploadDir;
 
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
     @Override
     public void addCorsMappings(org.springframework.web.servlet.config.annotation.CorsRegistry registry) {
         if (registry == null) return;
+        // allowedOriginPatterns("*") + allowCredentials(true) let ANY website read
+        // credentialed responses from this API — an explicit allowlist is required
+        // once credentials are involved (mirrors the Supabase edge function's CORS list).
         registry.addMapping("/**")
-                .allowedOriginPatterns("*")
+                .allowedOrigins(frontendUrl, "http://localhost:5173", "http://localhost:5174")
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
