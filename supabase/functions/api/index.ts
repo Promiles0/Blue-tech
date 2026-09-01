@@ -1,10 +1,61 @@
 import { createClient, type User } from "npm:@supabase/supabase-js@2";
+import { Ratelimit } from "npm:@upstash/ratelimit@2";
+import { Redis } from "npm:@upstash/redis@1";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const adminClient = createClient(supabaseUrl, serviceRoleKey);
 const googleClientId = Deno.env.get("GOOGLE_CLIENT_ID") ?? "71259894069-n4mnjohm3rjtvj36rn5apq18qie2945q.apps.googleusercontent.com";
 const jwtSecret = Deno.env.get("JWT_SECRET") ?? serviceRoleKey;
+
+// ── Rate limiting (Upstash Redis) ───────────────────────────────────────────
+// Edge functions are stateless between invocations — an in-memory counter would
+// reset on every cold start and wouldn't be shared across concurrent instances,
+// so counters live in Upstash's REST-based Redis instead.
+//
+// Set these in the Supabase dashboard: Project Settings → Edge Functions → Secrets
+// (or `supabase secrets set UPSTASH_REDIS_REST_URL=... UPSTASH_REDIS_REST_TOKEN=...`)
+// Get the values from an Upstash Redis database (free tier): upstash.com → Create
+// Database → REST API section → copy "UPSTASH_REDIS_REST_URL" and
+// "UPSTASH_REDIS_REST_TOKEN" verbatim (same names).
+//
+// Until those secrets are set, rate limiting is skipped entirely (fails open) —
+// this lets the function keep working before Upstash is configured, rather than
+// hard-failing every request.
+const upstashUrl = Deno.env.get("UPSTASH_REDIS_REST_URL");
+const upstashToken = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
+const redis = upstashUrl && upstashToken ? new Redis({ url: upstashUrl, token: upstashToken }) : null;
+if (!redis) console.warn("Rate limiting disabled: UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set.");
+
+const rateLimiters = redis ? {
+  authLogin: new Ratelimit({ redis, prefix: "rl:auth-login", limiter: Ratelimit.slidingWindow(5, "15 m") }),
+  authRegister: new Ratelimit({ redis, prefix: "rl:auth-register", limiter: Ratelimit.slidingWindow(3, "1 h") }),
+  authGoogle: new Ratelimit({ redis, prefix: "rl:auth-google", limiter: Ratelimit.slidingWindow(5, "15 m") }),
+  coupon: new Ratelimit({ redis, prefix: "rl:coupon", limiter: Ratelimit.slidingWindow(10, "1 h") }),
+  checkout: new Ratelimit({ redis, prefix: "rl:checkout", limiter: Ratelimit.slidingWindow(20, "1 h") }),
+  global: new Ratelimit({ redis, prefix: "rl:global", limiter: Ratelimit.slidingWindow(100, "1 m") }),
+} : null;
+
+function clientIp(request: Request) {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
+
+// Reusable guard — call at the top of any handler that needs a limit. Throws a
+// Response (caught by the top-level Deno.serve handler) on rejection, same
+// pattern as requireUser/requireAdmin.
+async function enforceRateLimit(limiter: Ratelimit | undefined, identifier: string, request?: Request) {
+  if (!limiter) return; // Upstash not configured — fail open
+  const { success, reset } = await limiter.limit(identifier);
+  if (!success) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
+    throw new Response(JSON.stringify({ success: false, message: "Too many attempts, try again later" }), {
+      status: 429,
+      headers: { ...corsHeaders(request), "Content-Type": "application/json", "Retry-After": String(retryAfterSeconds) },
+    });
+  }
+}
 
 const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -54,6 +105,19 @@ const failure = (message: string, status = 400, request?: Request) => response({
 const categoryResult = (category: Record<string, unknown>) => ({ ...category, categoryId: category.id, categoryName: category.name });
 const variantResult = (variant: Record<string, unknown>) => ({ ...variant, variantId: variant.id, skuCode: variant.sku_code, sizeOrColor: variant.size_or_color, priceAdjustment: variant.price_adjustment, stockQuantity: variant.stock_quantity });
 const imageResult = (image: Record<string, unknown>) => ({ ...image, imageId: image.id, imageUrl: image.image_url, isPrimary: image.is_primary });
+// Whitelists public.users columns for client responses — never spread the raw row (it carries
+// password_hash, provider_id and other fields that must never leave the server).
+const userResult = (row: Record<string, unknown> | null | undefined) => row ? ({
+  id: row.id,
+  userId: row.id,
+  name: row.name,
+  email: row.email,
+  phone: row.phone,
+  picture: row.picture,
+  role: row.role,
+  isSuspended: row.is_suspended,
+  createdAt: row.created_at,
+}) : null;
 
 function base64Url(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes))
@@ -526,7 +590,7 @@ async function notifyUser(userId: string, message: string) {
   await adminClient.from("notifications").insert({ user_id: userId, message });
 }
 
-async function checkoutOrder(user: User, body: Record<string, unknown>) {
+async function checkoutOrder(user: User, body: Record<string, unknown>, request: Request) {
   const cartId = await getOrCreateCartId(user.id);
   const { data: cartItems, error: cartItemsError } = await adminClient
     .from("cart_items")
@@ -608,6 +672,8 @@ async function checkoutOrder(user: User, body: Record<string, unknown>) {
     let totalAmount = itemsTotal;
     const couponCode = typeof body.couponCode === "string" ? body.couponCode.trim() : "";
     if (couponCode) {
+      // Coupon codes are short strings — guard against brute-forcing valid ones.
+      await enforceRateLimit(rateLimiters?.coupon, `ip:${clientIp(request)}`, request);
       const { data: coupon, error: couponError } = await adminClient.from("coupons").select("*").ilike("code", couponCode).maybeSingle();
       if (couponError) throw couponError;
       if (!coupon) throw new Error("Invalid coupon code");
@@ -620,8 +686,19 @@ async function checkoutOrder(user: User, body: Record<string, unknown>) {
 
       const discount = coupon.kind === "PERCENT" ? itemsTotal * (toNumber(coupon.coupon_value) / 100) : toNumber(coupon.coupon_value);
       totalAmount = Math.max(0, itemsTotal - discount);
-      const { error: couponUpdateError } = await adminClient.from("coupons").update({ uses: toNumber(coupon.uses) + 1 }).eq("id", coupon.id);
+
+      // Compare-and-swap on the current `uses` value (same pattern as reduceVariantStock) so two
+      // concurrent checkouts can't both read uses=N and both redeem a single-use coupon before
+      // either write lands — a plain read-then-write here would lose one of the increments.
+      const { data: couponUpdated, error: couponUpdateError } = await adminClient
+        .from("coupons")
+        .update({ uses: toNumber(coupon.uses) + 1 })
+        .eq("id", coupon.id)
+        .eq("uses", coupon.uses)
+        .select("id")
+        .maybeSingle();
       if (couponUpdateError) throw couponUpdateError;
+      if (!couponUpdated) throw new Error("Coupon could not be applied — please try again");
     }
 
     totalAmount = Number((totalAmount + shippingFee).toFixed(2));
@@ -766,6 +843,99 @@ async function adminOrderDetailResult(order: Record<string, unknown>) {
   };
 }
 
+async function orderStatsForUser(userId: string) {
+  const { data, error } = await adminClient.from("orders").select("total_amount").eq("user_id", userId);
+  if (error) throw error;
+  const rows = (data ?? []) as Record<string, unknown>[];
+  return { orderCount: rows.length, totalSpent: Number(rows.reduce((sum, o) => sum + toNumber(o.total_amount), 0).toFixed(2)) };
+}
+
+function adminUserRow(row: Record<string, unknown>, stats: { orderCount: number; totalSpent: number }) {
+  return {
+    userId: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    role: row.role,
+    suspended: Boolean(row.is_suspended),
+    createdAt: row.created_at,
+    lastLogin: row.last_login,
+    orderCount: stats.orderCount,
+    totalSpent: stats.totalSpent,
+  };
+}
+
+async function adminUserResult(row: Record<string, unknown>) {
+  return adminUserRow(row, await orderStatsForUser(row.id as string));
+}
+
+async function getAdminUsersList(search: string | null) {
+  const { data, error } = await adminClient.from("users").select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  let rows = (data ?? []) as Record<string, unknown>[];
+  if (search) {
+    const q = search.toLowerCase();
+    rows = rows.filter((u) => String(u.name ?? "").toLowerCase().includes(q) || String(u.email ?? "").toLowerCase().includes(q));
+  }
+
+  const { data: orders } = await adminClient.from("orders").select("user_id,total_amount");
+  const statsByUser = new Map<string, { orderCount: number; totalSpent: number }>();
+  ((orders ?? []) as Record<string, unknown>[]).forEach((order) => {
+    const key = String(order.user_id);
+    const current = statsByUser.get(key) ?? { orderCount: 0, totalSpent: 0 };
+    current.orderCount += 1;
+    current.totalSpent += toNumber(order.total_amount);
+    statsByUser.set(key, current);
+  });
+
+  return rows.map((row) => adminUserRow(row, statsByUser.get(String(row.id)) ?? { orderCount: 0, totalSpent: 0 }));
+}
+
+function adminShipmentResult(row: Record<string, unknown>) {
+  const order = (row.orders ?? {}) as Record<string, unknown>;
+  const customer = (order.users ?? {}) as Record<string, unknown>;
+  return {
+    shipmentId: row.id,
+    orderId: row.order_id,
+    customerEmail: customer.email ?? null,
+    carrier: row.carrier,
+    trackingNumber: row.tracking_number,
+    status: row.status,
+    shippedAt: row.shipped_at,
+  };
+}
+
+function adminReviewResult(row: Record<string, unknown>) {
+  const product = (row.products ?? {}) as Record<string, unknown>;
+  const author = (row.users ?? {}) as Record<string, unknown>;
+  return {
+    reviewId: row.id,
+    productName: product.name ?? null,
+    authorName: author.name ?? null,
+    authorEmail: author.email ?? null,
+    rating: row.rating,
+    comment: row.comment,
+    hidden: Boolean(row.hidden),
+    createdAt: row.created_at,
+  };
+}
+
+function couponResult(row: Record<string, unknown>) {
+  return {
+    couponId: row.id,
+    code: row.code,
+    kind: row.kind,
+    value: toNumber(row.coupon_value),
+    minSubtotal: row.min_subtotal != null ? toNumber(row.min_subtotal) : null,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    maxUses: row.max_uses,
+    uses: toNumber(row.uses),
+    isActive: Boolean(row.is_active),
+    createdAt: row.created_at,
+  };
+}
+
 async function createStripePaymentIntent(amountUsd: number, metadata: Record<string, string>) {
   const secretKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!secretKey) throw new Error("Stripe is not configured on the server");
@@ -854,6 +1024,13 @@ async function requireUser(request: Request) {
     status: 401,
     headers: { ...corsHeaders(request), "Content-Type": "application/json" },
   });
+  // Suspension was previously only checked at /auth/login — an already-issued token (Google
+  // sign-in, or a session from before the suspension) kept working for every other endpoint.
+  const { data: profile } = await adminClient.from("users").select("is_suspended").eq("id", user.id).maybeSingle();
+  if (profile?.is_suspended) throw new Response(JSON.stringify({ success: false, message: "Account suspended" }), {
+    status: 403,
+    headers: { ...corsHeaders(request), "Content-Type": "application/json" },
+  });
   return user;
 }
 
@@ -890,7 +1067,12 @@ async function handle(request: Request) {
 
   if (method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(request) });
 
+  // Conservative baseline DoS guard across every route — specific endpoints below layer
+  // tighter limits on top of this one.
+  await enforceRateLimit(rateLimiters?.global, `ip:${clientIp(request)}`, request);
+
   if (method === "POST" && path === "/auth/register") {
+    await enforceRateLimit(rateLimiters?.authRegister, `ip:${clientIp(request)}`, request);
     const { name, email, password } = await readJson(request);
     if (!email || !password) return failure("Email and password are required");
     const { data, error } = await adminClient.auth.admin.createUser({
@@ -904,15 +1086,17 @@ async function handle(request: Request) {
   }
 
   if (method === "POST" && path === "/auth/login") {
+    await enforceRateLimit(rateLimiters?.authLogin, `ip:${clientIp(request)}`, request);
     const { email, password } = await readJson(request);
     const { data, error } = await adminClient.auth.signInWithPassword({ email, password });
     if (error || !data.user || !data.session) return failure(error?.message ?? "Login failed", 401);
     const { data: profile } = await adminClient.from("users").select("*").eq("id", data.user.id).maybeSingle();
     if (profile?.is_suspended) return failure("Account suspended", 403);
-    return success("Login successful!", { token: data.session.access_token, user: profile ?? { id: data.user.id, email: data.user.email } });
+    return success("Login successful!", { token: data.session.access_token, user: userResult(profile) ?? { id: data.user.id, email: data.user.email } });
   }
 
   if (method === "POST" && path === "/auth/google") {
+    await enforceRateLimit(rateLimiters?.authGoogle, `ip:${clientIp(request)}`, request);
     const { token } = await readJson(request);
     if (!token) return failure("Google credential token is required", 400, request);
 
@@ -946,6 +1130,7 @@ async function handle(request: Request) {
       .select("*")
       .single();
     if (error || !user) return failure(error?.message ?? "Unable to save Google user", 500, request);
+    if (user.is_suspended) return failure("Account suspended", 403, request);
 
     await adminClient.from("profiles").upsert({
       id: user.id,
@@ -996,14 +1181,14 @@ async function handle(request: Request) {
 
   if (method === "GET" && path === "/reviews/recent") {
     const limit = Math.min(Number(url.searchParams.get("limit") ?? 8), 50);
-    const { data, error } = await adminClient.from("reviews").select("*, products(*), users(name)").order("created_at", { ascending: false }).limit(limit);
+    const { data, error } = await adminClient.from("reviews").select("*, products(*), users(name)").eq("hidden", false).order("created_at", { ascending: false }).limit(limit);
     if (error) return failure(error.message, 500);
     return success("Recent reviews fetched successfully", data ?? []);
   }
 
   if (method === "GET" && /^\/products\/[^/]+\/reviews$/.test(path)) {
     const productId = path.split("/")[2];
-    const { data, error } = await adminClient.from("reviews").select("*, users(name)").eq("product_id", productId).order("created_at", { ascending: false });
+    const { data, error } = await adminClient.from("reviews").select("*, users(name)").eq("product_id", productId).eq("hidden", false).order("created_at", { ascending: false });
     if (error) return failure(error.message, 500);
     return success("Product reviews fetched successfully", data ?? []);
   }
@@ -1302,7 +1487,7 @@ async function handle(request: Request) {
 
   if (method === "GET" && path === "/reviews/recent") {
     const limit = Math.min(Number(url.searchParams.get("limit") ?? 8), 50);
-    const { data, error } = await adminClient.from("reviews").select("*, products(*), users(name)").order("created_at", { ascending: false }).limit(limit);
+    const { data, error } = await adminClient.from("reviews").select("*, products(*), users(name)").eq("hidden", false).order("created_at", { ascending: false }).limit(limit);
     if (error) return failure(error.message, 500);
     return success("Recent reviews fetched successfully", data ?? []);
   }
@@ -1310,7 +1495,7 @@ async function handle(request: Request) {
   if (/^\/products\/[^/]+\/reviews$/.test(path)) {
     const productId = path.split("/")[2];
     if (method === "GET") {
-      const { data, error } = await adminClient.from("reviews").select("*, users(name)").eq("product_id", productId).order("created_at", { ascending: false });
+      const { data, error } = await adminClient.from("reviews").select("*, users(name)").eq("product_id", productId).eq("hidden", false).order("created_at", { ascending: false });
       if (error) return failure(error.message, 500);
       return success("Product reviews fetched successfully", data ?? []);
     }
@@ -1325,7 +1510,7 @@ async function handle(request: Request) {
   if (method === "GET" && path === "/users/profile") {
     const { data, error } = await adminClient.from("users").select("*").eq("id", user.id).maybeSingle();
     if (error) return failure(error.message, 500);
-    return success("Profile fetched successfully", data ?? { id: user.id, email: user.email });
+    return success("Profile fetched successfully", userResult(data) ?? { id: user.id, email: user.email });
   }
 
   if (path === "/users/addresses" || /^\/users\/addresses\/[^/]+/.test(path)) {
@@ -1382,11 +1567,13 @@ async function handle(request: Request) {
   }
 
   if (method === "POST" && path === "/orders/checkout") {
+    await enforceRateLimit(rateLimiters?.checkout, `user:${user.id}`, request);
     try {
       const body = await readJson(request);
-      const result = await checkoutOrder(user, body);
+      const result = await checkoutOrder(user, body, request);
       return response({ success: true, message: "Order placed successfully!", data: result }, 201, request);
     } catch (error) {
+      if (error instanceof Response) return withCors(error, request);
       return failure(errorMessage(error, "Checkout failed"), 400, request);
     }
   }
@@ -1519,6 +1706,174 @@ async function handle(request: Request) {
         await notifyUser(order.user_id as string, `Your order #${orderId} status is now SHIPPED`);
       }
       return success("Shipment created", await adminOrderDetailResult(updated), request);
+    }
+  }
+
+  if (path === "/admin/users" || /^\/admin\/users\/[^/]+\/(admin|suspend)$/.test(path)) {
+    await requireAdmin(request, user);
+
+    if (method === "GET" && path === "/admin/users") {
+      const search = url.searchParams.get("search");
+      const users = await getAdminUsersList(search);
+      return success("Users fetched", users, request);
+    }
+
+    if (method === "PATCH" && /^\/admin\/users\/[^/]+\/admin$/.test(path)) {
+      const targetId = path.split("/")[3];
+      const body = await readJson(request);
+      const role = body.make ? "admin" : "user";
+      const { data, error } = await adminClient.from("users").update({ role }).eq("id", targetId).select().maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      if (!data) return failure("User not found", 404, request);
+      await adminClient.from("profiles").update({ role: role === "admin" ? "ADMIN" : "USER" }).eq("id", targetId);
+      return success("Role updated", await adminUserResult(data), request);
+    }
+
+    if (method === "PATCH" && /^\/admin\/users\/[^/]+\/suspend$/.test(path)) {
+      const targetId = path.split("/")[3];
+      const body = await readJson(request);
+      const { data, error } = await adminClient.from("users").update({ is_suspended: Boolean(body.suspend) }).eq("id", targetId).select().maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      if (!data) return failure("User not found", 404, request);
+      return success("Suspension updated", await adminUserResult(data), request);
+    }
+  }
+
+  if (path === "/admin/shipments" || /^\/admin\/shipments\/[^/]+$/.test(path)) {
+    await requireAdmin(request, user);
+
+    if (method === "GET" && path === "/admin/shipments") {
+      const { data, error } = await adminClient.from("shipments").select("*, orders(user_id, users(email))").order("id", { ascending: false });
+      if (error) return failure(error.message, 500, request);
+      return success("Shipments fetched", ((data ?? []) as Record<string, unknown>[]).map(adminShipmentResult), request);
+    }
+
+    if (method === "PATCH" && /^\/admin\/shipments\/[^/]+$/.test(path)) {
+      const shipmentId = path.split("/").pop();
+      const body = await readJson(request);
+      const updates: Record<string, unknown> = {};
+      if (body.carrier !== undefined) updates.carrier = body.carrier;
+      if (body.trackingNumber !== undefined) updates.tracking_number = body.trackingNumber;
+      if (body.status !== undefined) updates.status = String(body.status).toUpperCase();
+      const { data, error } = await adminClient.from("shipments").update(updates).eq("id", shipmentId).select("*, orders(user_id, users(email))").maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      if (!data) return failure("Shipment not found", 404, request);
+      return success("Shipment updated", adminShipmentResult(data), request);
+    }
+  }
+
+  if (path === "/admin/reviews" || /^\/admin\/reviews\/[^/]+$/.test(path)) {
+    await requireAdmin(request, user);
+
+    if (method === "GET" && path === "/admin/reviews") {
+      const rating = url.searchParams.get("rating");
+      let query = adminClient.from("reviews").select("*, products(name), users(name,email)").order("created_at", { ascending: false }).limit(200);
+      if (rating) query = query.eq("rating", Number(rating));
+      const { data, error } = await query;
+      if (error) return failure(error.message, 500, request);
+      return success("Reviews fetched", ((data ?? []) as Record<string, unknown>[]).map(adminReviewResult), request);
+    }
+
+    if (method === "PATCH" && /^\/admin\/reviews\/[^/]+$/.test(path)) {
+      const reviewId = path.split("/").pop();
+      const body = await readJson(request);
+      const { data, error } = await adminClient.from("reviews").update({ hidden: Boolean(body.isHidden) }).eq("id", reviewId).select("*, products(name), users(name,email)").maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      if (!data) return failure("Review not found", 404, request);
+      return success("Review updated", adminReviewResult(data), request);
+    }
+
+    if (method === "DELETE" && /^\/admin\/reviews\/[^/]+$/.test(path)) {
+      const reviewId = path.split("/").pop();
+      const { error } = await adminClient.from("reviews").delete().eq("id", reviewId);
+      if (error) return failure(error.message, 400, request);
+      return success("Review deleted", null, request);
+    }
+  }
+
+  if (path === "/admin/coupons" || /^\/admin\/coupons\/[^/]+/.test(path)) {
+    await requireAdmin(request, user);
+
+    if (method === "GET" && path === "/admin/coupons") {
+      const { data, error } = await adminClient.from("coupons").select("*").order("created_at", { ascending: false });
+      if (error) return failure(error.message, 500, request);
+      return success("Coupons fetched", ((data ?? []) as Record<string, unknown>[]).map(couponResult), request);
+    }
+
+    if (method === "GET" && path === "/admin/coupons/validate") {
+      const code = url.searchParams.get("code") ?? "";
+      const { data: coupon, error } = await adminClient.from("coupons").select("*").ilike("code", code).maybeSingle();
+      if (error) return failure(error.message, 500, request);
+      if (!coupon) return failure("Coupon not found", 404, request);
+      if (!coupon.is_active) return failure("Coupon is not active", 400, request);
+      if (coupon.max_uses != null && toNumber(coupon.uses) >= toNumber(coupon.max_uses)) return failure("Coupon usage limit reached", 400, request);
+      const now = new Date();
+      if (coupon.starts_at && new Date(coupon.starts_at) > now) return failure("Coupon is not yet valid", 400, request);
+      if (coupon.ends_at && new Date(coupon.ends_at) < now) return failure("Coupon has expired", 400, request);
+      return success("Coupon valid", couponResult(coupon), request);
+    }
+
+    if (method === "POST" && path === "/admin/coupons") {
+      const body = await readJson(request);
+      const code = String(body.code ?? "").trim();
+      const kind = String(body.kind ?? "").toUpperCase();
+      const value = Number(body.value);
+      if (!code || !["PERCENT", "FIXED"].includes(kind) || !Number.isFinite(value) || value <= 0) {
+        return failure("A valid code, kind and positive value are required", 400, request);
+      }
+      const { data, error } = await adminClient.from("coupons").insert({
+        code: code.toUpperCase(),
+        kind,
+        coupon_value: value,
+        min_subtotal: body.minSubtotal != null && body.minSubtotal !== "" ? Number(body.minSubtotal) : null,
+        starts_at: body.startsAt || null,
+        ends_at: body.endsAt || null,
+        max_uses: body.maxUses != null && body.maxUses !== "" ? Number(body.maxUses) : null,
+        is_active: body.isActive !== undefined ? Boolean(body.isActive) : true,
+      }).select().single();
+      if (error) return failure(error.message, 400, request);
+      return response({ success: true, message: "Coupon created", data: couponResult(data) }, 201, request);
+    }
+
+    if (method === "PUT" && /^\/admin\/coupons\/[^/]+$/.test(path)) {
+      const id = path.split("/").pop();
+      const body = await readJson(request);
+      const code = String(body.code ?? "").trim();
+      const kind = String(body.kind ?? "").toUpperCase();
+      const value = Number(body.value);
+      if (!code || !["PERCENT", "FIXED"].includes(kind) || !Number.isFinite(value) || value <= 0) {
+        return failure("A valid code, kind and positive value are required", 400, request);
+      }
+      const { data, error } = await adminClient.from("coupons").update({
+        code: code.toUpperCase(),
+        kind,
+        coupon_value: value,
+        min_subtotal: body.minSubtotal != null && body.minSubtotal !== "" ? Number(body.minSubtotal) : null,
+        starts_at: body.startsAt || null,
+        ends_at: body.endsAt || null,
+        max_uses: body.maxUses != null && body.maxUses !== "" ? Number(body.maxUses) : null,
+        is_active: body.isActive !== undefined ? Boolean(body.isActive) : true,
+      }).eq("id", id).select().maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      if (!data) return failure("Coupon not found", 404, request);
+      return success("Coupon updated", couponResult(data), request);
+    }
+
+    if (method === "PATCH" && /^\/admin\/coupons\/[^/]+\/toggle$/.test(path)) {
+      const id = path.split("/")[3];
+      const { data: existing, error: fetchError } = await adminClient.from("coupons").select("is_active").eq("id", id).maybeSingle();
+      if (fetchError) return failure(fetchError.message, 500, request);
+      if (!existing) return failure("Coupon not found", 404, request);
+      const { data, error } = await adminClient.from("coupons").update({ is_active: !existing.is_active }).eq("id", id).select().maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      return success("Coupon toggled", couponResult(data), request);
+    }
+
+    if (method === "DELETE" && /^\/admin\/coupons\/[^/]+$/.test(path)) {
+      const id = path.split("/").pop();
+      const { error } = await adminClient.from("coupons").delete().eq("id", id);
+      if (error) return failure(error.message, 400, request);
+      return success("Coupon deleted", null, request);
     }
   }
 

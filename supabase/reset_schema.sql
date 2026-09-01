@@ -188,6 +188,7 @@ create table public.reviews (
   product_id bigint not null references public.products(id) on delete cascade,
   rating smallint not null check (rating between 1 and 5),
   comment text,
+  hidden boolean not null default false,
   created_at timestamptz not null default now(),
   unique (user_id, product_id)
 );
