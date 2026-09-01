@@ -17,21 +17,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=League+Spartan:wght@800&display=swap"
       rel="stylesheet"
     />
     <!-- Google Identity Services script for the reusable GoogleLogin component -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-
-    <!-- Hide the Tawk.to widget the instant its container is added to the DOM — sits ahead of
-         the Tawk script below so there's no ~2s flash while waiting for Tawk_API.onLoad to fire.
-         Scoped to body:not(.chat-open) so our "Chat with us" button can reveal it again. -->
-    <style>
-      body:not(.chat-open) #tawkchat-container,
-      body:not(.chat-open) .tawk-min-container {
-        display: none !important;
-      }
-    </style>
   </head>
   <body>
     <div id="root"></div>
@@ -40,24 +30,19 @@
     <!--Start of Tawk.to Script-->
     <script type="text/javascript">
       var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-      // The CSS above does the actual hiding (instant, no flash) — this is just a backup once
-      // the script itself has loaded. The site has its own "Chat with us" button
-      // (see Frontend/src/lib/liveChat.js) that opens this widget via the chat-open body class.
+      // autoStart:false means the widget never renders or connects on page load at all — no
+      // bubble, no flash. It only starts when our own "Chat with us" button calls
+      // Tawk_API.start() (see Frontend/src/lib/liveChat.js). This replaces an earlier attempt
+      // that CSS-hid Tawk's container by guessing its class names — Tawk doesn't publicly
+      // document those, so that hide never actually matched anything.
+      Tawk_API.autoStart = false;
       Tawk_API.onLoad = function () {
-        Tawk_API.hideWidget();
         window.dispatchEvent(new Event('tawk:ready'));
       };
-      // Keep the chat-open body class in sync with Tawk's own state, whether the widget was
-      // opened/closed via our button or via Tawk's own UI (e.g. its close button).
-      Tawk_API.onChatMaximized = function () {
-        document.body.classList.add('chat-open');
-      };
-      Tawk_API.onChatMinimized = function () {
-        document.body.classList.remove('chat-open');
-      };
-      Tawk_API.onChatHidden = function () {
-        document.body.classList.remove('chat-open');
-      };
+      // Once the visitor closes the chat, hide it again rather than leaving a bubble behind —
+      // it should only reappear via our own button.
+      Tawk_API.onChatMinimized = function () { Tawk_API.hideWidget(); };
+      Tawk_API.onChatHidden = function () { Tawk_API.hideWidget(); };
       (function(){
       var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
       s1.async=true;

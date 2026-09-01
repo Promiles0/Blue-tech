@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
 
-// Opens the Tawk.to widget loaded in index.html (its default bubble is hidden there —
-// this is the only way to open it, via our own "Chat with us" button).
+// Opens the Tawk.to widget loaded in index.html. autoStart:false there means it never shows
+// itself on page load — this is the only thing that starts and reveals it.
 export function openLiveChat() {
   const api = typeof window !== 'undefined' ? window.Tawk_API : null
   if (!api) return
-  // hideWidget() (in index.html) put Tawk itself into a hidden state, not just our CSS —
-  // undo that first so toggle/maximize actually has something to show.
-  if (typeof api.showWidget === 'function') api.showWidget()
-  if (typeof api.toggle === 'function') api.toggle()
-  else if (typeof api.maximize === 'function') api.maximize()
+  // autoStart is false (index.html) so the widget hasn't connected or rendered yet — start()
+  // with showWidget:true both connects it and reveals it; maximize() then opens the full chat
+  // window instead of just the small bubble. Safe to call repeatedly (e.g. reopening later).
+  if (typeof api.start === 'function') api.start({ showWidget: true })
+  else if (typeof api.showWidget === 'function') api.showWidget()
+  if (typeof api.maximize === 'function') api.maximize()
 }
 
 function isLiveChatReady() {

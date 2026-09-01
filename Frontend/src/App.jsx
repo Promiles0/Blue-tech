@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { LayoutDashboard } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider }         from './context/ThemeContext'
@@ -10,6 +10,7 @@ import { WishlistProvider }       from './context/WishlistContext'
 import { NotificationProvider }  from './context/NotificationContext'
 import { useAuth }               from './context/AuthContext'
 import SiteLayout          from './components/site/SiteLayout'
+import SplashScreen        from './components/site/SplashScreen'
 import ProtectedRoute      from './components/ProtectedRoute'
 import HomePage            from './pages/HomePage'
 import LoginPage           from './pages/LoginPage'
@@ -52,28 +53,55 @@ function ScrollToTop() {
   return null
 }
 
+// Shows the typing-effect splash for at least as long as the wordmark takes to type out, AND at
+// least until auth resolves — whichever is longer. `children` always renders immediately
+// underneath (real data-fetching starts in parallel). Once both conditions are met, `exiting`
+// tells the splash to start its fade-out; it only actually stops being rendered once the splash
+// reports the fade has finished (onExited), so the transition can't get cut short.
+function SplashGate({ children }) {
+  const { loading } = useAuth()
+  const [typingDone, setTypingDone] = useState(false)
+  const [splashGone, setSplashGone] = useState(false)
+  const exiting = typingDone && !loading
+
+  return (
+    <>
+      {!splashGone && (
+        <SplashScreen
+          exiting={exiting}
+          onTypingDone={() => setTypingDone(true)}
+          onExited={() => setSplashGone(true)}
+        />
+      )}
+      {children}
+    </>
+  )
+}
+
 export default function App() {
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <NotificationProvider>
-                  <UIProvider>
-                    <ScrollToTop />
-                    <Routes>
-                      {/* Admin section — no SiteLayout, ADMIN role required */}
-                      <Route path="/admin/*" element={<AdminSection />} />
+            <SplashGate>
+              <CartProvider>
+                <WishlistProvider>
+                  <NotificationProvider>
+                    <UIProvider>
+                      <ScrollToTop />
+                      <Routes>
+                        {/* Admin section — no SiteLayout, ADMIN role required */}
+                        <Route path="/admin/*" element={<AdminSection />} />
 
-                      {/* Customer site — wrapped in SiteLayout */}
-                      <Route path="*" element={<CustomerSite />} />
-                    </Routes>
-                  </UIProvider>
-                </NotificationProvider>
-              </WishlistProvider>
-            </CartProvider>
+                        {/* Customer site — wrapped in SiteLayout */}
+                        <Route path="*" element={<CustomerSite />} />
+                      </Routes>
+                    </UIProvider>
+                  </NotificationProvider>
+                </WishlistProvider>
+              </CartProvider>
+            </SplashGate>
           </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>
