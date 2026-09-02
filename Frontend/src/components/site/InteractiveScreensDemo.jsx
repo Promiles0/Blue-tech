@@ -2,10 +2,16 @@ import { useRef, useState, useEffect } from 'react'
 import { useInView, useReducedMotion } from 'framer-motion'
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react'
 
-// TODO: drop the real walkthrough footage in Frontend/public/videos/interactive-screens-demo.mp4
-// (see the README in that folder for specs). Until it exists this section falls back to a
-// static gradient with a notice instead of a broken video element.
-const DEMO_VIDEO_SRC = '/videos/interactive-screens-demo.mp4'
+// The real footage is too large for git (>100MB), so it's served from Supabase Storage
+// instead of a local /public path. Upload it to a public "media" bucket at
+// interactive-screens-demo.mp4 (see Frontend/public/videos/README.md), or point
+// VITE_INTERACTIVE_DEMO_VIDEO_URL at any other public URL to override. Until either
+// exists this section falls back to a static gradient with a notice.
+const DEMO_VIDEO_SRC =
+  import.meta.env.VITE_INTERACTIVE_DEMO_VIDEO_URL ||
+  (import.meta.env.VITE_SUPABASE_URL
+    ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/media/interactive-screens-demo.mp4`
+    : '/videos/interactive-screens-demo.mp4')
 
 const eyebrow = { fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }
 const heading = { fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(24px,3vw,32px)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)' }
