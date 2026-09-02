@@ -82,7 +82,7 @@ export default function PromoCarousel() {
               {PROMO_SLIDES.map((slide, i) => (
                 <Link
                   key={slide.slug}
-                  to={`/promotions/${slide.slug}`}
+                  to={slide.to ?? `/promotions/${slide.slug}`}
                   draggable={false}
                   onClick={e => { if (draggedRef.current) e.preventDefault() }}
                   style={{

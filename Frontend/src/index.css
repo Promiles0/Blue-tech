@@ -251,6 +251,45 @@ input, textarea, select { font-family: inherit; }
   .container-noir { padding: 0 16px; }
 }
 
+/* Two-column image/copy split used by the Interactive Screens page's
+   sticky-scroll feature walkthrough and the education/business toggle. */
+.iscreens-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+  width: 100%;
+}
+@media (max-width: 860px) {
+  .iscreens-split { grid-template-columns: 1fr; gap: 28px; }
+}
+
+/* Configurations section — 7/5 split (mockup / spec panel) on desktop, stacked below. */
+.iscreens-config-grid {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 40px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .iscreens-config-grid { grid-template-columns: 1fr; }
+}
+
+/* Sheen sweep across the display mockup on hover — a more dramatic, skewed variant
+   of .shine, scoped to this one component. */
+.config-display-frame { position: relative; overflow: hidden; }
+.config-sheen {
+  position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+  background: linear-gradient(75deg, transparent, rgba(255,255,255,0.35), transparent);
+  transform: skewX(-20deg) translateX(0%);
+  transition: transform 1400ms cubic-bezier(0.16,1,0.3,1);
+  pointer-events: none;
+}
+.config-display-frame:hover .config-sheen { transform: skewX(-20deg) translateX(420%); }
+
+.config-cta-arrow { transition: transform 0.25s cubic-bezier(0.16,1,0.3,1); }
+.config-cta:hover .config-cta-arrow { transform: translateX(4px); }
+
 .account-grid {
   display: grid;
   grid-template-columns: 1fr 320px;

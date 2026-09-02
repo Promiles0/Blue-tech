@@ -16,6 +16,7 @@ import HomePage            from './pages/HomePage'
 import LoginPage           from './pages/LoginPage'
 import RegisterPage        from './pages/RegisterPage'
 import ProductsPage        from './pages/ProductsPage'
+import InteractiveScreensPage from './pages/InteractiveScreensPage'
 import ProductDetailPage   from './pages/ProductDetailPage'
 import CartPage            from './pages/CartPage'
 import WishlistPage        from './pages/WishlistPage'
@@ -152,6 +153,7 @@ function CustomerSite() {
         <Route path="/register"     element={<RegisterPage />} />
         <Route path="/products"          element={<ProductsPage />} />
         <Route path="/products/:id"      element={<ProductDetailPage />} />
+        <Route path="/interactive-screens" element={<InteractiveScreensPage />} />
         <Route path="/search"            element={<SearchPage />} />
         <Route path="/category/:slug"    element={<CategoryPage />} />
 

@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { useTheme } from '../context/ThemeContext'
 import apiService from '../api/service'
+import Logo from './site/Logo'
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth()
@@ -60,9 +61,8 @@ export default function Navbar() {
       <div className="container-noir" style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
         {/* Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block', flexShrink: 0 }} />
-          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <Logo height={17} />
         </Link>
 
         {/* Center links */}

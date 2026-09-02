@@ -49,3 +49,6 @@ desktop.ini
 # Custom
 Backend/target/
 Frontend/dist/
+
+# Large local media (exceeds GitHub's 100MB limit) — host externally instead
+Frontend/public/videos/interactive-screens-demo.mp4

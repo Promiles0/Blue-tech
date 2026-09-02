@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { MapPin, Phone, Mail } from 'lucide-react'
 import apiService from '../api/service'
 import { HELP_LINKS, SUPPORT_EMAIL } from '../lib/helpLinks'
+import Logo from './site/Logo'
 
 const ACCOUNT_LINKS = [['Profile', '/account'], ['Orders', '/orders'], ['Wishlist', '/wishlist'], ['Sign in', '/login']]
 
@@ -32,11 +33,9 @@ export default function Footer() {
         <div className="footer-grid" style={{ marginBottom: 48 }}>
           {/* Brand */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-              {/* <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em' }}>NOIR</span> */}
-             <span style={{ fontFamily: '"League Spartan", sans-serif', fontWeight: 800, fontSize: '15px', letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span>
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
+              <Logo height={17} />
+            </div>
             <p style={{ color: 'var(--muted-dark)', fontSize: 14, lineHeight: 1.7, maxWidth: 220, marginBottom: 20 }}>
               Considered objects for a quieter, more deliberate digital life.
             </p>

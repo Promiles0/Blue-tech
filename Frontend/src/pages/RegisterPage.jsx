@@ -4,6 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import GoogleLogin from '../components/GoogleLogin'
 import PasswordStrength, { isFair } from '../components/site/PasswordStrength'
+import Logo from '../components/site/Logo'
 
 export default function Register() {
   const [name, setName]         = useState('')
@@ -70,9 +71,8 @@ export default function Register() {
         boxShadow: 'var(--card-shadow)',
         position: 'relative', zIndex: 1,
       }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>NOIR</span>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', marginBottom: 40 }}>
+          <Logo height={17} />
         </Link>
 
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>Get started</p>

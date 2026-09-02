@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import GoogleLogin from '../components/GoogleLogin'
+import Logo from '../components/site/Logo'
 
 export default function Login() {
   const [email, setEmail]       = useState('')
@@ -66,9 +67,8 @@ export default function Login() {
         boxShadow: 'var(--card-shadow)',
         position: 'relative', zIndex: 1,
       }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-          <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', marginBottom: 40 }}>
+          <Logo height={17} />
         </Link>
 
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>Welcome back</p>

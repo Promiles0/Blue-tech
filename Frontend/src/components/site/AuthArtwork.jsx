@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import Logo from './Logo'
 
 const ORB_VARIANTS = [
   { size: 380, x: '60%', y: '10%',  color: 'radial-gradient(circle, var(--accent-border) 0%, transparent 70%)', dur: 18 },
@@ -67,9 +68,8 @@ export default function AuthArtwork() {
         position: 'absolute', bottom: 40, left: 40,
         display: 'flex', flexDirection: 'column', gap: 6,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-          <span style={{ fontWeight: 800, fontSize: 13, letterSpacing: '0.14em', color: '#fff' }}>NOIR</span>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Logo height={14} color="#ffffff" />
         </div>
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', maxWidth: 160, lineHeight: 1.6 }}>
           Dark-luxury shopping, redefined.

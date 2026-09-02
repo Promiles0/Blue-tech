@@ -62,6 +62,11 @@ const apiService = {
     subscribe: (email) => api.post('/newsletter/subscribe', { email }),
   },
 
+  // --- QUOTE REQUESTS ---
+  quotes: {
+    create: (data) => api.post('/quote-requests', data),
+  },
+
   // --- ORDERS ---
   orders: {
     checkout: (orderRequest) => api.post('/orders/checkout', orderRequest),

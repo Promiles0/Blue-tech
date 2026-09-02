@@ -7,8 +7,20 @@ import carePlans       from '../assets/promos/care-plans.jpeg'
 // `slug` drives both the carousel link (/promotions/:slug) and the
 // placeholder landing page's lookup, so keep this the single source of
 // truth for both. `gradient` stays as the overlay tint / fallback while
-// `image` loads.
+// `image` loads. A slide can set `to` to link somewhere other than the
+// generic /promotions/:slug placeholder — e.g. a real dedicated page.
 export const PROMO_SLIDES = [
+  {
+    slug: 'interactive-screens',
+    to: '/interactive-screens',
+    title: 'Built for classrooms and boardrooms.',
+    subtitle: 'Touch, stylus, camera & mic — one screen.',
+    // TODO: swap in real product photography once available (see
+    // Frontend/src/components/site/InteractiveScreensHero.jsx for the
+    // matching placeholder-video pattern used on the dedicated page).
+    image: null,
+    gradient: 'linear-gradient(135deg, #12142a 0%, #22284a 55%, #354380 100%)',
+  },
   {
     slug: 'gaming-builds',
     title: 'Built for the frame rate.',

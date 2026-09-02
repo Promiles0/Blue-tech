@@ -3,13 +3,15 @@ import { Link, useNavigate } from 'react-router-dom'
 import { X, Search, User, LogOut } from 'lucide-react'
 import { useUI } from '../../context/UIContext'
 import { useAuth } from '../../context/AuthContext'
+import Logo from './Logo'
 
 const NAV_ITEMS = [
-  { label: 'Shop',      to: '/products' },
-  { label: 'Audio',     to: '/products?category=Audio' },
-  { label: 'Wearables', to: '/products?category=Wearables' },
-  { label: 'Cameras',   to: '/products?category=Cameras' },
-  { label: 'Computing', to: '/products?category=Computing' },
+  { label: 'Shop',                to: '/products' },
+  { label: 'Interactive Screens', to: '/interactive-screens' },
+  { label: 'Audio',               to: '/products?category=Audio' },
+  { label: 'Wearables',           to: '/products?category=Wearables' },
+  { label: 'Cameras',             to: '/products?category=Cameras' },
+  { label: 'Computing',           to: '/products?category=Computing' },
 ]
 
 export default function MobileNav() {
@@ -53,9 +55,8 @@ export default function MobileNav() {
           >
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-                <span style={{ fontFamily: '"Space Grotesk",sans-serif', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em' }}>NOIR</span>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <Logo height={17} />
               </div>
               <button onClick={close} style={{ background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', padding: 8, cursor: 'pointer' }}>
                 <X size={20} />

@@ -4,6 +4,7 @@ import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, X, Moon,
 import NotificationBell from './site/NotificationBell'
 import CategoriesMenu from './site/CategoriesMenu'
 import HelpMenu from './site/HelpMenu'
+import Logo from './site/Logo'
 import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
@@ -105,11 +106,9 @@ export default function Header() {
       }}>
 
         {/* Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'block' }} />
-          {/* <span style={{ fontFamily: '"league Spartan",', fontWeight: 800, fontSize: 15, letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span> */}
-          <span style={{ fontFamily: '"League Spartan", sans-serif', fontWeight: 800, fontSize: '15px', letterSpacing: '0.12em', color: 'var(--text)' }}>Blue-Tech</span>
-            </Link>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <Logo height={17} />
+        </Link>
 
         {/* Center nav — hidden on mobile */}
         <nav className="nav-links" style={{ display: 'flex', gap: 28, alignItems: 'center' }}>
@@ -124,6 +123,16 @@ export default function Header() {
           </Link>
 
           <CategoriesMenu />
+
+          <Link
+            to="/interactive-screens"
+            className="story-link"
+            style={{ fontSize: 14, fontWeight: 400, color: 'var(--text)', transition: 'color 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
+          >
+            Interactive Screens
+          </Link>
         </nav>
 
         {/* Right icons */}

@@ -33,6 +33,7 @@ const rateLimiters = redis ? {
   authGoogle: new Ratelimit({ redis, prefix: "rl:auth-google", limiter: Ratelimit.slidingWindow(5, "15 m") }),
   coupon: new Ratelimit({ redis, prefix: "rl:coupon", limiter: Ratelimit.slidingWindow(10, "1 h") }),
   checkout: new Ratelimit({ redis, prefix: "rl:checkout", limiter: Ratelimit.slidingWindow(20, "1 h") }),
+  quoteRequest: new Ratelimit({ redis, prefix: "rl:quote-request", limiter: Ratelimit.slidingWindow(5, "1 h") }),
   global: new Ratelimit({ redis, prefix: "rl:global", limiter: Ratelimit.slidingWindow(100, "1 m") }),
 } : null;
 
@@ -936,6 +937,98 @@ function couponResult(row: Record<string, unknown>) {
   };
 }
 
+function quoteRequestResult(row: Record<string, unknown>) {
+  return {
+    quoteRequestId: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    organization: row.organization,
+    intendedUse: row.intended_use,
+    screenSize: row.screen_size,
+    quantity: toNumber(row.quantity),
+    notes: row.notes,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
+// ── Resend (transactional email) ────────────────────────────────────────────
+// TODO: set RESEND_API_KEY once you've created a free Resend account (resend.com)
+// and generated an API key — Supabase dashboard: Project Settings → Edge Functions
+// → Secrets (or `supabase secrets set RESEND_API_KEY=...`). Until it's set, email
+// sending is skipped (logged, not thrown) so quote requests still save successfully.
+//
+// TODO: verify a sending domain in Resend and swap this "from" address for a real
+// one on that domain (e.g. quotes@blue-tech.com). While developing, you can leave
+// this as Resend's built-in test/onboarding domain instead: "onboarding@resend.dev".
+const RESEND_FROM_EMAIL = "Blue-Tech <quotes@blue-tech.com>"; // TODO: verify domain, or use onboarding@resend.dev for now
+
+// Where internal "new quote request" notifications land. Falls back to the site's
+// public support inbox (kept in sync manually with Frontend/src/lib/helpLinks.js's
+// SUPPORT_EMAIL — separate runtime/build, so it can't be shared directly). Override
+// by setting a QUOTE_NOTIFICATION_EMAIL secret if you want a dedicated inbox.
+const QUOTE_NOTIFICATION_EMAIL = Deno.env.get("QUOTE_NOTIFICATION_EMAIL") ?? "bluetech2020@gmail.com";
+
+async function sendResendEmail(payload: { from: string; to: string; subject: string; html: string }) {
+  const apiKey = Deno.env.get("RESEND_API_KEY");
+  if (!apiKey) {
+    console.warn("RESEND_API_KEY not set — skipping email send. See the TODO above RESEND_FROM_EMAIL.");
+    return;
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    console.error(`Resend send failed (${res.status}): ${body}`);
+  }
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" } as Record<string, string>)[char] ?? char);
+}
+
+function internalQuoteEmailHtml(fields: {
+  name: string; email: string; phone: string; organization: string | null;
+  intendedUse: string; screenSize: string; quantity: number; notes: string | null;
+}) {
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:6px 16px 6px 0;color:#666;font-size:13px;white-space:nowrap;vertical-align:top;">${escapeHtml(label)}</td><td style="padding:6px 0;font-size:13px;color:#111;">${escapeHtml(value)}</td></tr>`;
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+      <h2 style="color:#354380;margin:0 0 16px;">New interactive screen quote request</h2>
+      <table style="border-collapse:collapse;width:100%;">
+        ${row("Name", fields.name)}
+        ${row("Email", fields.email)}
+        ${row("Phone", fields.phone)}
+        ${row("Organization", fields.organization || "—")}
+        ${row("Intended use", fields.intendedUse === "classroom" ? "Classroom" : "Office / Business")}
+        ${row("Screen size", fields.screenSize)}
+        ${row("Quantity", String(fields.quantity))}
+        ${row("Notes", fields.notes || "—")}
+      </table>
+    </div>
+  `;
+}
+
+// Deliberately no pricing details here — this is a "we got it" confirmation, not a quote.
+function customerQuoteEmailHtml(fields: { name: string; screenSize: string; quantity: number }) {
+  const qtyNote = fields.quantity > 1 ? ` (×${fields.quantity})` : "";
+  return `
+    <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;">
+      <p style="color:#354380;font-weight:700;font-size:18px;margin:0 0 20px;">Blue-Tech</p>
+      <p>Hi ${escapeHtml(fields.name)},</p>
+      <p>Thanks for reaching out about the ${escapeHtml(fields.screenSize)} interactive screen${qtyNote}. We've received your
+      request and someone from our team will follow up shortly to help with next steps.</p>
+      <p>If anything changes in the meantime, just reply to this email.</p>
+      <p style="margin-top:24px;color:#666;font-size:13px;">— The Blue-Tech team</p>
+    </div>
+  `;
+}
+
 async function createStripePaymentIntent(amountUsd: number, metadata: Record<string, string>) {
   const secretKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!secretKey) throw new Error("Stripe is not configured on the server");
@@ -1239,6 +1332,60 @@ async function handle(request: Request) {
       }
     }
     return response({ received: true }, 200, request);
+  }
+
+  if (method === "POST" && path === "/quote-requests") {
+    await enforceRateLimit(rateLimiters?.quoteRequest, `ip:${clientIp(request)}`, request);
+    const body = await readJson(request);
+
+    const name = String(body.name ?? "").trim();
+    const email = String(body.email ?? "").trim();
+    const phone = String(body.phone ?? "").trim();
+    const organization = body.organization ? String(body.organization).trim() : null;
+    const intendedUse = String(body.intendedUse ?? "").toLowerCase();
+    const screenSize = String(body.screenSize ?? "").trim();
+    const quantity = Number(body.quantity ?? 1);
+    const notes = body.notes ? String(body.notes).trim() : null;
+
+    if (!name || !email || !phone || !screenSize) {
+      return failure("Name, email, phone, and screen size are required", 400, request);
+    }
+    if (!["classroom", "office"].includes(intendedUse)) {
+      return failure("Intended use must be 'classroom' or 'office'", 400, request);
+    }
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      return failure("Quantity must be at least 1", 400, request);
+    }
+
+    const { data: quote, error } = await adminClient.from("quote_requests").insert({
+      name, email, phone, organization,
+      intended_use: intendedUse, screen_size: screenSize, quantity, notes,
+    }).select().single();
+    if (error) return failure(error.message, 400, request);
+
+    // Email delivery is best-effort — the quote is already saved above, so a Resend
+    // hiccup (or RESEND_API_KEY not being configured yet) shouldn't turn a successful
+    // submission into an error response for the customer.
+    try {
+      await Promise.all([
+        sendResendEmail({
+          from: RESEND_FROM_EMAIL,
+          to: QUOTE_NOTIFICATION_EMAIL,
+          subject: `New quote request — ${screenSize} (×${quantity}) from ${name}`,
+          html: internalQuoteEmailHtml({ name, email, phone, organization, intendedUse, screenSize, quantity, notes }),
+        }),
+        sendResendEmail({
+          from: RESEND_FROM_EMAIL,
+          to: email,
+          subject: "We've received your quote request",
+          html: customerQuoteEmailHtml({ name, screenSize, quantity }),
+        }),
+      ]);
+    } catch (emailError) {
+      console.error("Quote request email dispatch failed:", emailError);
+    }
+
+    return response({ success: true, message: "Quote request received", data: quoteRequestResult(quote) }, 201, request);
   }
 
   const user = await requireUser(request);
