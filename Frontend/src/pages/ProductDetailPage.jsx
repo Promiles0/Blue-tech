@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ShoppingBag, Heart, ArrowLeft, Check, BadgeCheck, Plus, Minus } from 'lucide-react'
+import { ShoppingBag, Heart, ArrowLeft, Check, BadgeCheck, Plus, Minus, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import api from '../api/axios'
 import apiService from '../api/service'
@@ -12,6 +12,7 @@ import { StarDisplay } from '../components/site/StarRating'
 import LensZoom from '../components/site/LensZoom'
 import StickyCartBar from '../components/site/StickyCartBar'
 import { handleProductImageError, productImageList } from '../lib/productImage'
+import { buildWhatsAppLink } from '../lib/helpLinks'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -102,6 +103,15 @@ export default function ProductDetail() {
   const avgRating = reviews.length
     ? (reviews.reduce((sum, review) => sum + (review.rating ?? 0), 0) / reviews.length).toFixed(1)
     : null
+  const requiresVariant = (product.variants?.length > 0) && !selectedVariant
+  const variantLabel = selectedVariant?.sizeOrColor ?? selectedVariant?.skuCode ?? ''
+  const whatsappHref = buildWhatsAppLink({
+    productName: product.name ?? '',
+    variantLabel,
+    price: price.toFixed(2),
+    qty,
+    productUrl: `${window.location.origin}/products/${id}`,
+  })
 
   return (
     <div style={{ padding: '48px 0 80px' }}>
@@ -240,6 +250,28 @@ export default function ProductDetail() {
                 <Heart size={18} fill={wishlisted ? 'currentColor' : 'none'} />
               </button>
             </div>
+
+            <a
+              href={requiresVariant ? undefined : whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-disabled={requiresVariant}
+              onClick={e => { if (requiresVariant) e.preventDefault() }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                width: '100%', padding: '14px', fontSize: 15, fontWeight: 600, borderRadius: 8,
+                marginTop: 12, textDecoration: 'none', transition: 'background 0.18s',
+                background: requiresVariant ? 'var(--surface)' : '#25D366',
+                color: requiresVariant ? 'var(--muted-dark)' : '#fff',
+                border: `1px solid ${requiresVariant ? 'var(--border)' : '#25D366'}`,
+                cursor: requiresVariant ? 'not-allowed' : 'pointer',
+                opacity: requiresVariant ? 0.6 : 1,
+                pointerEvents: requiresVariant ? 'none' : 'auto',
+              }}
+            >
+              <MessageCircle size={16} />
+              Chat on WhatsApp
+            </a>
           </div>
         </div>
 

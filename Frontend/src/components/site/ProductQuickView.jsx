@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ShoppingBag, Heart, Truck, Plus, Minus, ArrowRight, Check } from 'lucide-react'
+import { X, ShoppingBag, Heart, Truck, Plus, Minus, ArrowRight, Check, MessageCircle } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import { useUI } from '../../context/UIContext'
 import { useWishlist } from '../../context/WishlistContext'
 import apiService from '../../api/service'
 import { handleProductImageError, productImageList } from '../../lib/productImage'
+import { buildWhatsAppLink } from '../../lib/helpLinks'
 
 export default function ProductQuickView() {
   const { quickViewProduct, setQuickViewProduct } = useUI()
@@ -75,6 +76,15 @@ export default function ProductQuickView() {
   const price = unitPrice * qty
   const wishlisted = wishlistIds.has(pid)
   const variantInCart = selectedVariant ? isInCart(selectedVariant.variantId ?? selectedVariant.id) : false
+  const requiresVariant = (product?.variants?.length > 0) && !selectedVariant
+  const variantLabel = selectedVariant?.sizeOrColor ?? selectedVariant?.skuCode ?? ''
+  const whatsappHref = buildWhatsAppLink({
+    productName: product?.name ?? '',
+    variantLabel,
+    price: unitPrice.toFixed(2),
+    qty,
+    productUrl: `${window.location.origin}/products/${pid}`,
+  })
 
   return (
     <AnimatePresence>
@@ -246,6 +256,28 @@ export default function ProductQuickView() {
                         <Heart size={17} fill={wishlisted ? 'currentColor' : 'none'} />
                       </button>
                     </div>
+
+                    <a
+                      href={requiresVariant ? undefined : whatsappHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-disabled={requiresVariant}
+                      onClick={e => { if (requiresVariant) e.preventDefault() }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        width: '100%', padding: '13px', fontSize: 14, fontWeight: 600, borderRadius: 8,
+                        marginBottom: 14, textDecoration: 'none', transition: 'background 0.18s',
+                        background: requiresVariant ? 'var(--surface)' : '#25D366',
+                        color: requiresVariant ? 'var(--muted-dark)' : '#fff',
+                        border: `1px solid ${requiresVariant ? 'var(--border)' : '#25D366'}`,
+                        cursor: requiresVariant ? 'not-allowed' : 'pointer',
+                        opacity: requiresVariant ? 0.6 : 1,
+                        pointerEvents: requiresVariant ? 'none' : 'auto',
+                      }}
+                    >
+                      <MessageCircle size={15} />
+                      Chat on WhatsApp
+                    </a>
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted-dark)', fontSize: 12 }}>
