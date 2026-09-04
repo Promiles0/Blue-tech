@@ -38,6 +38,7 @@ import AdminOrders         from './pages/admin/AdminOrders'
 import AdminShipments      from './pages/admin/AdminShipments'
 import AdminUsers          from './pages/admin/AdminUsers'
 import AdminReviews        from './pages/admin/AdminReviews'
+import AdminQuoteRequests  from './pages/admin/AdminQuoteRequests'
 import AdminAnalytics      from './pages/admin/AdminAnalytics'
 import AdminAudit          from './pages/admin/AdminAudit'
 import AdminNotifications  from './pages/admin/AdminNotifications'
@@ -131,6 +132,7 @@ function AdminSection() {
         <Route path="shipments"  element={<AdminShipments />} />
         <Route path="users"      element={<AdminUsers />} />
         <Route path="reviews"    element={<AdminReviews />} />
+        <Route path="quote-requests" element={<AdminQuoteRequests />} />
         <Route path="coupons"      element={<AdminCoupons />} />
         <Route path="hero-slides"  element={<AdminHeroSlides />} />
         <Route path="analytics"    element={<AdminAnalytics />} />

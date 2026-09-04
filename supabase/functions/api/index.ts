@@ -465,6 +465,12 @@ async function productResult(product: Record<string, unknown>) {
     ...product,
     productId: product.id,
     categoryId: product.category_id,
+    screenSize: product.screen_size,
+    resolution: product.resolution,
+    touchPoints: product.touch_points,
+    os: product.os,
+    connectivity: product.connectivity,
+    warranty: product.warranty,
     variants: (variants ?? []).map(variantResult),
     images: imageRows.map(imageResult),
     imageUrl: primaryImage?.image_url ?? null,
@@ -1403,12 +1409,19 @@ async function handle(request: Request) {
     const body = await readJson(request);
     const variants = Array.isArray(body.variants) ? body.variants : [];
     const images = Array.isArray(body.images) ? body.images : [];
+    const touchPointsInput = body.touchPoints ?? body.touch_points;
     const productValues = {
       name: body.name,
       description: body.description ?? null,
       price: Number(body.price),
       category_id: body.categoryId ?? body.category_id ?? null,
       stock: body.stock ?? variants.reduce((total: number, variant: Record<string, unknown>) => total + Number(variant.stockQuantity ?? variant.stock_quantity ?? 0), 0),
+      screen_size: body.screenSize ?? body.screen_size ?? null,
+      resolution: body.resolution ?? null,
+      touch_points: touchPointsInput != null && touchPointsInput !== "" ? Number(touchPointsInput) : null,
+      os: body.os ?? null,
+      connectivity: body.connectivity ?? null,
+      warranty: body.warranty ?? null,
     };
     if (!productValues.name || !Number.isFinite(productValues.price)) return failure("Name and a valid price are required");
 
@@ -1935,6 +1948,30 @@ async function handle(request: Request) {
       const { error } = await adminClient.from("reviews").delete().eq("id", reviewId);
       if (error) return failure(error.message, 400, request);
       return success("Review deleted", null, request);
+    }
+  }
+
+  if (path === "/admin/quote-requests" || /^\/admin\/quote-requests\/[^/]+$/.test(path)) {
+    await requireAdmin(request, user);
+
+    if (method === "GET" && path === "/admin/quote-requests") {
+      const status = url.searchParams.get("status");
+      let query = adminClient.from("quote_requests").select("*").order("created_at", { ascending: false }).limit(200);
+      if (status) query = query.eq("status", status);
+      const { data, error } = await query;
+      if (error) return failure(error.message, 500, request);
+      return success("Quote requests fetched", ((data ?? []) as Record<string, unknown>[]).map(quoteRequestResult), request);
+    }
+
+    if (method === "PATCH" && /^\/admin\/quote-requests\/[^/]+$/.test(path)) {
+      const quoteRequestId = path.split("/").pop();
+      const body = await readJson(request);
+      const status = String(body.status ?? "");
+      if (!["new", "contacted", "closed"].includes(status)) return failure("Invalid status", 400, request);
+      const { data, error } = await adminClient.from("quote_requests").update({ status }).eq("id", quoteRequestId).select().maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      if (!data) return failure("Quote request not found", 404, request);
+      return success("Quote request updated", quoteRequestResult(data), request);
     }
   }
 

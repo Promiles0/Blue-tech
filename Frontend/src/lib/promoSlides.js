@@ -4,6 +4,12 @@ import studentDeals    from '../assets/promos/student-deals.jpeg'
 import tradeIn         from '../assets/promos/trade-in.jpeg'
 import carePlans       from '../assets/promos/care-plans.jpeg'
 
+// Glob-imported (not a static import like the others above) so this file keeps building
+// before the photo exists — drop interactive-screens.{jpeg,jpg,png,webp} into assets/promos/
+// and it's picked up automatically, no code change needed.
+const interactiveScreensMatches = import.meta.glob('../assets/promos/interactive-screens.{jpeg,jpg,png,webp}', { eager: true, import: 'default' })
+const interactiveScreens = Object.values(interactiveScreensMatches)[0] ?? null
+
 // `slug` drives both the carousel link (/promotions/:slug) and the
 // placeholder landing page's lookup, so keep this the single source of
 // truth for both. `gradient` stays as the overlay tint / fallback while
@@ -15,10 +21,7 @@ export const PROMO_SLIDES = [
     to: '/interactive-screens',
     title: 'Built for classrooms and boardrooms.',
     subtitle: 'Touch, stylus, camera & mic — one screen.',
-    // TODO: swap in real product photography once available (see
-    // Frontend/src/components/site/InteractiveScreensHero.jsx for the
-    // matching placeholder-video pattern used on the dedicated page).
-    image: null,
+    image: interactiveScreens,
     gradient: 'linear-gradient(135deg, #12142a 0%, #22284a 55%, #354380 100%)',
   },
   {

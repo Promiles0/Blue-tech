@@ -2,19 +2,27 @@ import { useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { GraduationCap, Building2 } from 'lucide-react'
 
-// TODO: swap these gradient/icon placeholders for real photography —
-// classroom (teacher presenting, students engaging) and office (team
-// collaborating, video call on screen) shots respectively.
+// Real photography, dropped into src/assets/interactive-screens/education.* and
+// business.* (any of jpeg/jpg/png/webp). Glob-imported rather than statically imported so
+// this component keeps building even before the files exist — each tab falls back to its
+// gradient+icon until its photo lands, so code and photo don't need to ship together.
+const educationPhotoMatches = import.meta.glob('../../assets/interactive-screens/education.{jpeg,jpg,png,webp}', { eager: true, import: 'default' })
+const businessPhotoMatches  = import.meta.glob('../../assets/interactive-screens/business.{jpeg,jpg,png,webp}', { eager: true, import: 'default' })
+const educationPhoto = Object.values(educationPhotoMatches)[0] ?? null
+const businessPhoto  = Object.values(businessPhotoMatches)[0] ?? null
+
 const USE_CASES = {
   education: {
     label: 'Education',
     icon: GraduationCap,
+    image: educationPhoto,
     gradient: 'linear-gradient(150deg, #12142a 0%, #22284a 55%, #354380 100%)',
     copy: "Turn a lesson plan into something students actually touch — annotate slides live, pull up a diagram the whole class can point at, and mirror any student's tablet to the front of the room in one tap.",
   },
   business: {
     label: 'Business',
     icon: Building2,
+    image: businessPhoto,
     gradient: 'linear-gradient(150deg, #161c3a 0%, #2a3568 55%, #5a73b0 100%)',
     copy: "Run the meeting from the screen, not around it — sketch on a shared whiteboard, drop a video call straight onto the display, and pick up exactly where the last session left off.",
   },
@@ -75,17 +83,21 @@ export default function InteractiveScreensUseCases() {
                 transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
                 style={{ position: 'absolute', inset: 0, background: current.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <Icon size={88} strokeWidth={1.05} color="rgba(255,255,255,0.8)" />
+                {current.image
+                  ? <img src={current.image} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <Icon size={88} strokeWidth={1.05} color="rgba(255,255,255,0.8)" />}
               </motion.div>
             </AnimatePresence>
-            <div style={{
-              position: 'absolute', top: 14, left: 14, zIndex: 1,
-              background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: 100, padding: '4px 11px', fontSize: 10.5, fontWeight: 500,
-              color: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(6px)',
-            }}>
-              Placeholder — swap in real photography
-            </div>
+            {!current.image && (
+              <div style={{
+                position: 'absolute', top: 14, left: 14, zIndex: 1,
+                background: 'rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 100, padding: '4px 11px', fontSize: 10.5, fontWeight: 500,
+                color: 'rgba(255,255,255,0.75)', backdropFilter: 'blur(6px)',
+              }}>
+                Placeholder — swap in real photography
+              </div>
+            )}
           </div>
 
           {/* Copy */}

@@ -5,10 +5,12 @@ import { getProductImage, handleProductImageError } from '../../lib/productImage
 
 const EMPTY_VARIANT = { variantId: null, skuCode: '', sizeOrColor: '', priceAdjustment: '', stockQuantity: 0 }
 const EMPTY_IMAGE   = { imageUrl: '', isPrimary: false }
+const EMPTY_SPECS = { screenSize: '', resolution: '', touchPoints: '', os: '', connectivity: '', warranty: '' }
 const EMPTY_FORM = {
   name: '', description: '', price: '', categoryId: '',
   variants: [{ ...EMPTY_VARIANT }],
   images:   [{ ...EMPTY_IMAGE }],
+  ...EMPTY_SPECS,
 }
 
 function formFromDetail(p) {
@@ -28,6 +30,12 @@ function formFromDetail(p) {
       imageUrl:  i.imageUrl ?? '',
       isPrimary: i.isPrimary ?? false,
     })) : [{ ...EMPTY_IMAGE }],
+    screenSize:   p.screenSize ?? '',
+    resolution:   p.resolution ?? '',
+    touchPoints:  p.touchPoints ?? '',
+    os:           p.os ?? '',
+    connectivity: p.connectivity ?? '',
+    warranty:     p.warranty ?? '',
   }
 }
 
@@ -163,6 +171,12 @@ export default function AdminProducts() {
           stockQuantity:   Number(v.stockQuantity),
         })),
         images,
+        screenSize:   form.screenSize.trim() || undefined,
+        resolution:   form.resolution.trim() || undefined,
+        touchPoints:  form.touchPoints !== '' ? Number(form.touchPoints) : undefined,
+        os:           form.os.trim() || undefined,
+        connectivity: form.connectivity.trim() || undefined,
+        warranty:     form.warranty.trim() || undefined,
       }
       if (modal === 'create') {
         await apiService.admin.products.create(payload)
@@ -450,6 +464,36 @@ export default function AdminProducts() {
                 </button>
               </div>
             ))}
+
+            {/* Specs — only meaningful for some categories (e.g. Interactive Screens); left
+                blank/null for everything else. */}
+            <SectionLabel style={{ marginTop: 20 }}>Interactive Screens spec sheet (optional)</SectionLabel>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <label style={labelStyle}>
+                <span>Screen size</span>
+                <input className="noir-input" value={form.screenSize} onChange={e => setForm(f => ({ ...f, screenSize: e.target.value }))} placeholder='e.g. 86"' />
+              </label>
+              <label style={labelStyle}>
+                <span>Resolution</span>
+                <input className="noir-input" value={form.resolution} onChange={e => setForm(f => ({ ...f, resolution: e.target.value }))} placeholder="e.g. 4K UHD (3840×2160)" />
+              </label>
+              <label style={labelStyle}>
+                <span>Touch points</span>
+                <input className="noir-input" type="number" min="0" value={form.touchPoints} onChange={e => setForm(f => ({ ...f, touchPoints: e.target.value }))} placeholder="e.g. 20" />
+              </label>
+              <label style={labelStyle}>
+                <span>OS</span>
+                <input className="noir-input" value={form.os} onChange={e => setForm(f => ({ ...f, os: e.target.value }))} placeholder="e.g. Android 13 + OPS slot" />
+              </label>
+              <label style={labelStyle}>
+                <span>Connectivity</span>
+                <input className="noir-input" value={form.connectivity} onChange={e => setForm(f => ({ ...f, connectivity: e.target.value }))} placeholder="e.g. HDMI ×2, USB-C, RJ45, Wi-Fi 6" />
+              </label>
+              <label style={labelStyle}>
+                <span>Warranty</span>
+                <input className="noir-input" value={form.warranty} onChange={e => setForm(f => ({ ...f, warranty: e.target.value }))} placeholder="e.g. 3-year on-site" />
+              </label>
+            </div>
 
             {/* Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 28 }}>

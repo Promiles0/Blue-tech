@@ -62,6 +62,14 @@ create table if not exists public.products (
   stock integer not null default 0 check (stock >= 0),
   average_rating numeric(3,2) not null default 0 check (average_rating between 0 and 5),
   review_count integer not null default 0 check (review_count >= 0),
+  -- Optional spec sheet, meaningful for some categories (e.g. Interactive Screens) and
+  -- left null for everything else.
+  screen_size text,
+  resolution text,
+  touch_points integer check (touch_points is null or touch_points >= 0),
+  os text,
+  connectivity text,
+  warranty text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

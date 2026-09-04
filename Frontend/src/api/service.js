@@ -103,6 +103,10 @@ const apiService = {
       update: (id, data) => api.patch(`/admin/reviews/${id}`, data),
       delete: (id) => api.delete(`/admin/reviews/${id}`),
     },
+    quoteRequests: {
+      getAll: (status) => api.get(`/admin/quote-requests${status ? `?status=${status}` : ''}`),
+      updateStatus: (id, status) => api.patch(`/admin/quote-requests/${id}`, { status }),
+    },
     products: {
       getAll: (page = 0, size = 12) => api.get(`/products?page=${page}&size=${size}`),
       getOne: (id) => api.get(`/products/${id}`),
