@@ -123,5 +123,5 @@ const selectStyle = {
 const saveBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5,
   background: 'var(--admin-primary)', border: 'none', borderRadius: 8,
-  color: '#fff', padding: '7px 14px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap',
+  color: 'var(--admin-primary-fg)', padding: '7px 14px', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap',
 }

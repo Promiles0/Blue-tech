@@ -252,7 +252,7 @@ export default function AdminProducts() {
       <div className="surface" style={{ borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
+            <tr style={{ borderBottom: '1px solid var(--admin-border)' }}>
               {['Product', 'Category', 'Price', 'Variants', 'Actions'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--muted-dark)', fontWeight: 600, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
               ))}
@@ -261,7 +261,7 @@ export default function AdminProducts() {
           <tbody>
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid #141414' }}>
+                <tr key={i} style={{ borderBottom: '1px solid var(--admin-border)' }}>
                   {Array.from({ length: 5 }).map((__, j) => (
                     <td key={j} style={{ padding: '14px 16px' }}>
                       <div className="skeleton" style={{ height: 14, borderRadius: 4 }} />
@@ -324,7 +324,7 @@ export default function AdminProducts() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700 }}>{modal === 'create' ? 'Add Product' : 'Edit Product'}</h2>
               <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'var(--muted-dark)', cursor: 'pointer', padding: 4 }}
-                onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
                 <X size={18} />
               </button>
             </div>
@@ -398,7 +398,7 @@ export default function AdminProducts() {
                 <div style={{ paddingBottom: 0 }}>
                   {i === 0 && <div style={{ height: 20 }} />}
                   <button onClick={() => removeVariant(i)} disabled={form.variants.length === 1}
-                    style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '10px', display: 'flex', alignItems: 'center', opacity: form.variants.length === 1 ? 0.3 : 1 }}>
+                    style={{ background: 'none', border: '1px solid var(--admin-border)', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '10px', display: 'flex', alignItems: 'center', opacity: form.variants.length === 1 ? 0.3 : 1 }}>
                     <X size={12} />
                   </button>
                 </div>
@@ -420,7 +420,7 @@ export default function AdminProducts() {
                   Primary
                 </label>
                 <button onClick={() => removeImage(i)}
-                  style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
+                  style={{ background: 'none', border: '1px solid var(--admin-border)', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
                   <X size={12} />
                 </button>
               </div>
@@ -434,7 +434,7 @@ export default function AdminProducts() {
               onDrop={e => { e.preventDefault(); setDragActive(false); addFiles(e.dataTransfer.files) }}
               style={{
                 marginTop: 10, marginBottom: 10, padding: '22px 16px', textAlign: 'center',
-                border: `1px dashed ${dragActive ? 'var(--accent)' : '#3a2a6a'}`,
+                border: `1px dashed ${dragActive ? 'var(--accent)' : 'var(--accent-border)'}`,
                 borderRadius: 8, background: dragActive ? 'var(--accent-dim2)' : 'transparent',
                 transition: 'border-color 0.2s, background 0.2s',
               }}
@@ -459,7 +459,7 @@ export default function AdminProducts() {
                   Primary
                 </label>
                 <button onClick={() => setFileUploads(prev => prev.filter((_, idx) => idx !== i))}
-                  style={{ background: 'none', border: '1px solid #2a2a2a', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
+                  style={{ background: 'none', border: '1px solid var(--admin-border)', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
                   <X size={12} />
                 </button>
               </div>
@@ -530,13 +530,13 @@ function IconBtn({ icon: Icon, onClick, title, danger, loading, disabled }) {
       title={title}
       style={{
         width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'none', border: '1px solid #1e1e1e', borderRadius: 6,
+        background: 'none', border: '1px solid var(--admin-border)', borderRadius: 6,
         color: danger ? '#ef4444' : 'var(--muted-dark)', cursor: disabled || loading ? 'not-allowed' : 'pointer',
         transition: 'border-color 0.15s, color 0.15s',
         opacity: disabled || loading ? 0.4 : 1,
       }}
-      onMouseEnter={e => { if (!disabled && !loading) { e.currentTarget.style.borderColor = danger ? '#ef4444' : 'var(--border-hover)'; e.currentTarget.style.color = danger ? '#ef4444' : '#fff' } }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--card)'; e.currentTarget.style.color = danger ? '#ef4444' : 'var(--muted-dark)' }}
+      onMouseEnter={e => { if (!disabled && !loading) { e.currentTarget.style.borderColor = danger ? '#ef4444' : 'var(--border-hover)'; e.currentTarget.style.color = danger ? '#ef4444' : 'var(--text)' } }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--admin-border)'; e.currentTarget.style.color = danger ? '#ef4444' : 'var(--muted-dark)' }}
     >
       <Icon size={13} />
     </button>

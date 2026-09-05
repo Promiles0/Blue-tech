@@ -722,6 +722,7 @@ input, textarea, select { font-family: inherit; }
   --admin-border:       rgba(255,255,255,0.07);
   --admin-primary:      #354380;
   --admin-primary-hover:#2a3568;
+  --admin-primary-fg:   #ffffff; /* text/icon color for content sitting on --admin-primary */
   --admin-amber:        #f59e0b;
   --admin-success:      #22c55e;
   --admin-warning:      #f59e0b;
@@ -748,6 +749,7 @@ input, textarea, select { font-family: inherit; }
   --admin-border:       rgba(0,0,0,0.08);
   --admin-primary:      #f59e0b; /* Orange CTA buttons */
   --admin-primary-hover:#d97706;
+  --admin-primary-fg:   #241a06; /* dark text/icon — white-on-orange fails contrast */
   --admin-muted:        rgba(0,0,0,0.50);
 
   --admin-sidebar-text: #ffffff;
@@ -760,6 +762,13 @@ input, textarea, select { font-family: inherit; }
 .admin-container {
   --accent: var(--admin-primary);
   --accent-hover: var(--admin-primary-hover);
+}
+
+/* .noir-btn-primary's own `color: #fff` assumes --accent is always the (dark) brand navy,
+   which is true site-wide but not here — --admin-primary swaps to orange in light mode, and
+   white text on orange fails contrast. Scoped so the general site button is unaffected. */
+.admin-container .noir-btn-primary {
+  color: var(--admin-primary-fg);
 }
 
 /* .surface — premium card used by every admin container */

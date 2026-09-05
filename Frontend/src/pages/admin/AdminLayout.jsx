@@ -136,13 +136,13 @@ export default function AdminLayout() {
         <Outlet />
       </main>
       <Toaster
-        theme="dark"
+        theme={theme}
         position="top-right"
         toastOptions={{
           style: {
-            background: 'var(--surface)',
-            border: '1px solid #262626',
-            color: '#fff',
+            background: 'var(--admin-card)',
+            border: '1px solid var(--admin-border)',
+            color: 'var(--text)',
             fontSize: '13px',
           },
         }}

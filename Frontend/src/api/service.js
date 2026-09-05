@@ -78,6 +78,7 @@ const apiService = {
   payments: {
     createIntent: (orderId) => api.post(`/payments/initialize/${orderId}`),
     initiateMomo: (orderId, phone) => api.post(`/payments/momo/${orderId}`, { phone }),
+    getStatus: (orderId) => api.get(`/payments/status/${orderId}`),
   },
 
   // --- HERO SLIDES ---

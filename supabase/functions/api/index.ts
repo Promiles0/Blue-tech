@@ -234,6 +234,29 @@ function errorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+// Paypack only accepts local-format Rwandan MSISDNs (07XXXXXXXX). Customers type
+// "+250 788 123 456", "250788123456", or "078 812 3456" — normalise all of those
+// before the number ever reaches the cashin call.
+function normalizeRwandaPhone(input: unknown) {
+  const digits = String(input ?? "").replace(/\D/g, "");
+  let local = digits;
+  if (local.startsWith("250")) local = local.slice(3);
+  if (local.length === 9 && local.startsWith("7")) local = `0${local}`;
+  if (!/^07[2389]\d{7}$/.test(local)) return null;
+  return local;
+}
+
+// MTN Rwanda holds 078/079, Airtel Rwanda holds 072/073. Paypack routes purely on
+// the prefix, so a mismatch would silently bill the other network.
+function momoProviderFor(localPhone: string) {
+  return /^07[89]/.test(localPhone) ? "MOMO" : "AIRTEL_MONEY";
+}
+
+function usdToRwfRate() {
+  const raw = Number(Deno.env.get("USD_TO_RWF_RATE"));
+  return Number.isFinite(raw) && raw > 0 ? raw : 1450;
+}
+
 function statusKey(value: unknown) {
   return String(value ?? "PENDING").toUpperCase();
 }
@@ -277,6 +300,19 @@ async function getOrderRows() {
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Record<string, unknown>[];
+}
+
+// The live `notifications` table only stores {id, user_id, message, read, created_at}, but the
+// frontend (NotificationBell, NotificationsPage, AdminNotifications) was built against a richer
+// shape — map the DB row into that shape here rather than teaching every consumer the raw columns.
+function mapNotification(row: Record<string, unknown>) {
+  return {
+    notificationId: row.id,
+    title: row.message,
+    message: row.message,
+    isRead: row.read,
+    createdAt: row.created_at,
+  };
 }
 
 async function getLowStockAlerts(limit = 8) {
@@ -959,6 +995,30 @@ function quoteRequestResult(row: Record<string, unknown>) {
   };
 }
 
+function heroSlideResult(row: Record<string, unknown>) {
+  return {
+    slideId: row.id,
+    imageUrl: row.image_url,
+    label: row.label,
+    altText: row.alt_text,
+    sortOrder: toNumber(row.sort_order),
+    isActive: Boolean(row.is_active),
+  };
+}
+
+function auditLogResult(row: Record<string, unknown>) {
+  return {
+    logId: row.id,
+    userId: row.user_id,
+    action: row.action,
+    targetTable: row.target_table,
+    targetId: row.target_id,
+    description: row.description,
+    ipAddress: row.ip_address,
+    createdAt: row.created_at,
+  };
+}
+
 // ── Resend (transactional email) ────────────────────────────────────────────
 // TODO: set RESEND_API_KEY once you've created a free Resend account (resend.com)
 // and generated an API key — Supabase dashboard: Project Settings → Edge Functions
@@ -1063,6 +1123,20 @@ async function verifyStripeSignature(payload: string, header: string, secret: st
   return computed === signature;
 }
 
+// Paypack error bodies are not consistently shaped ({message}, {error}, plain text…),
+// so keep the raw payload in the logs — otherwise a failed cashin is undebuggable.
+function paypackError(stage: string, status: number, raw: string) {
+  console.error(`[paypack] ${stage} failed: HTTP ${status} — ${raw.slice(0, 500)}`);
+  let parsed: Record<string, unknown> = {};
+  try { parsed = JSON.parse(raw) ?? {}; } catch { /* non-JSON body */ }
+  const message = parsed.message;
+  const inner = parsed.error;
+  const detail = typeof message === "string" ? message
+    : typeof inner === "string" ? inner
+    : raw.slice(0, 200);
+  return new Error(detail ? `Paypack ${stage} failed: ${detail}` : `Paypack ${stage} failed (HTTP ${status})`);
+}
+
 async function getPaypackToken() {
   const appId = Deno.env.get("PAYPACK_APP_ID");
   const appSecret = Deno.env.get("PAYPACK_APP_SECRET");
@@ -1073,25 +1147,73 @@ async function getPaypackToken() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ client_id: appId, client_secret: appSecret }),
   });
-  const data = await res.json();
-  if (!res.ok || !data?.access) throw new Error("Paypack authentication failed");
+  const raw = await res.text();
+  if (!res.ok) throw paypackError("authentication", res.status, raw);
+  const data = JSON.parse(raw);
+  if (!data?.access) throw paypackError("authentication", res.status, raw);
   return { token: data.access as string, baseUrl };
 }
 
 async function initiateMomoPayment(order: Record<string, unknown>, phone: string) {
   const { token, baseUrl } = await getPaypackToken();
-  const rate = Number(Deno.env.get("USD_TO_RWF_RATE") ?? 1300);
-  const amountRwf = Math.round(toNumber(order.total_amount) * rate);
+  const amountRwf = Math.round(toNumber(order.total_amount) * usdToRwfRate());
+  if (amountRwf < 100) throw new Error("Order total is below the 100 RWF mobile money minimum");
+  console.log(`[paypack] cashin order=${order.id} amount=${amountRwf} RWF number=${phone}`);
   const res = await fetch(`${baseUrl}/transactions/cashin`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
     body: JSON.stringify({ amount: amountRwf, number: phone }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.message ?? "Paypack cashin request failed");
+  const raw = await res.text();
+  if (!res.ok) throw paypackError("cashin", res.status, raw);
+  const data = JSON.parse(raw);
   const ref = data?.ref;
-  if (!ref) throw new Error("Paypack did not return a transaction ref");
+  if (!ref) throw paypackError("cashin", res.status, raw);
+  console.log(`[paypack] cashin accepted order=${order.id} ref=${ref} status=${data?.status}`);
   return ref as string;
+}
+
+// Webhook fallback: Paypack retries a failed callback only a few times, so a missed
+// delivery would strand an order in "pending" forever. Poll the transaction directly.
+async function findPaypackTransaction(ref: string) {
+  const { token, baseUrl } = await getPaypackToken();
+  const res = await fetch(`${baseUrl}/transactions/find/${encodeURIComponent(ref)}`, {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  const raw = await res.text();
+  if (!res.ok) throw paypackError("transaction lookup", res.status, raw);
+  const data = JSON.parse(raw);
+  return String(data?.status ?? data?.data?.status ?? "").toLowerCase();
+}
+
+async function findStripeIntentStatus(intentId: string) {
+  const secretKey = Deno.env.get("STRIPE_SECRET_KEY");
+  if (!secretKey) throw new Error("Stripe is not configured on the server");
+  const res = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(intentId)}`, {
+    headers: { "Authorization": `Bearer ${secretKey}` },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    console.error(`[stripe] intent lookup failed: ${data?.error?.message ?? res.status}`);
+    throw new Error(data?.error?.message ?? "Stripe intent lookup failed");
+  }
+  return String(data?.status ?? "");
+}
+
+// Single place that moves a payment out of PENDING, shared by both webhooks and the
+// polling endpoint, so a payment confirmed by either route settles identically.
+async function settlePayment(recordId: number, orderId: number, paid: boolean) {
+  await adminClient.from("payment_records")
+    .update({ status: paid ? "SUCCESS" : "FAILED", updated_at: new Date().toISOString() })
+    .eq("id", recordId);
+  if (paid) {
+    await markOrderPaid(orderId);
+  } else {
+    const { data: order } = await adminClient.from("orders").select("user_id").eq("id", orderId).maybeSingle();
+    if (order?.user_id) {
+      await notifyUser(order.user_id as string, `Your payment for order #${orderId} failed. Please try again.`);
+    }
+  }
 }
 
 async function verifyPaypackSignature(rawBody: string, signature: string, secret: string) {
@@ -1278,6 +1400,12 @@ async function handle(request: Request) {
     return success("Categories fetched successfully", (data ?? []).map(categoryResult));
   }
 
+  if (method === "GET" && path === "/hero-slides") {
+    const { data, error } = await adminClient.from("hero_slides").select("*").eq("is_active", true).order("sort_order");
+    if (error) return failure(error.message, 500);
+    return success("Hero slides fetched successfully", (data ?? []).map(heroSlideResult));
+  }
+
   if (method === "GET" && path === "/reviews/recent") {
     const limit = Math.min(Number(url.searchParams.get("limit") ?? 8), 50);
     const { data, error } = await adminClient.from("reviews").select("*, products(*), users(name)").eq("hidden", false).order("created_at", { ascending: false }).limit(limit);
@@ -1300,12 +1428,14 @@ async function handle(request: Request) {
       return failure("Invalid Stripe webhook signature", 400, request);
     }
     const event = JSON.parse(rawBody);
-    if (event.type === "payment_intent.succeeded") {
+    console.log(`[stripe] webhook received: ${event.type}`);
+    if (event.type === "payment_intent.succeeded" || event.type === "payment_intent.payment_failed") {
       const intent = event.data?.object;
       const { data: record } = await adminClient.from("payment_records").select("id,order_id").eq("transaction_reference", intent?.id).maybeSingle();
-      if (record) {
-        await adminClient.from("payment_records").update({ status: "SUCCESS", updated_at: new Date().toISOString() }).eq("id", record.id);
-        await markOrderPaid(record.order_id as number);
+      if (!record) {
+        console.error(`[stripe] no payment_record for intent ${intent?.id}`);
+      } else {
+        await settlePayment(record.id as number, record.order_id as number, event.type === "payment_intent.succeeded");
       }
     }
     return response({ received: true }, 200, request);
@@ -1319,22 +1449,15 @@ async function handle(request: Request) {
       return failure("Invalid Paypack webhook signature", 400, request);
     }
     const payload = JSON.parse(rawBody);
+    const data = payload.data ?? {};
+    const status = String(data.status ?? "").toLowerCase();
+    console.log(`[paypack] webhook received: kind=${payload.kind} ref=${data.ref} status=${status}`);
     if (payload.kind === "transaction:processed") {
-      const data = payload.data ?? {};
-      const ref = data.ref;
-      const status = String(data.status ?? "").toLowerCase();
-      const { data: record } = await adminClient.from("payment_records").select("id,order_id").eq("transaction_reference", ref).maybeSingle();
-      if (record) {
-        if (status === "successful") {
-          await adminClient.from("payment_records").update({ status: "SUCCESS", updated_at: new Date().toISOString() }).eq("id", record.id);
-          await markOrderPaid(record.order_id as number);
-        } else if (status === "failed") {
-          await adminClient.from("payment_records").update({ status: "FAILED", updated_at: new Date().toISOString() }).eq("id", record.id);
-          const { data: order } = await adminClient.from("orders").select("user_id").eq("id", record.order_id).maybeSingle();
-          if (order?.user_id) {
-            await notifyUser(order.user_id as string, `Your MoMo payment for order #${record.order_id} failed. Please try again.`);
-          }
-        }
+      const { data: record } = await adminClient.from("payment_records").select("id,order_id").eq("transaction_reference", data.ref).maybeSingle();
+      if (!record) {
+        console.error(`[paypack] no payment_record for ref ${data.ref}`);
+      } else if (status === "successful" || status === "failed") {
+        await settlePayment(record.id as number, record.order_id as number, status === "successful");
       }
     }
     return response({ received: true }, 200, request);
@@ -1607,7 +1730,7 @@ async function handle(request: Request) {
     const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 100);
     const { data, error } = await adminClient.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(limit);
     if (error) return failure(error.message, 500);
-    return success("Notifications fetched successfully", data ?? []);
+    return success("Notifications fetched successfully", (data ?? []).map(mapNotification));
   }
 
   if (method === "POST" && path === "/notifications/mark-read") {
@@ -1635,7 +1758,7 @@ async function handle(request: Request) {
     const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 100);
     const { data, error } = await adminClient.from("notifications").select("*").order("created_at", { ascending: false }).limit(limit);
     if (error) return failure(error.message, 500);
-    return success("Admin notifications fetched successfully", data ?? []);
+    return success("Admin notifications fetched successfully", (data ?? []).map(mapNotification));
   }
 
   if (method === "POST" && path === "/notifications/admin/mark-all-read") {
@@ -1764,7 +1887,7 @@ async function handle(request: Request) {
     try {
       const intent = await createStripePaymentIntent(toNumber(order.total_amount), { orderId: String(order.id), userEmail: String(user.email ?? "") });
       const { error: paymentError } = await adminClient.from("payment_records").upsert({
-        order_id: order.id, amount: order.total_amount, transaction_reference: intent.id, status: "PENDING", payment_method: "card", updated_at: new Date().toISOString(),
+        order_id: order.id, amount: order.total_amount, transaction_reference: intent.id, status: "PENDING", payment_method: "CARD", updated_at: new Date().toISOString(),
       }, { onConflict: "order_id" });
       if (paymentError) return failure(paymentError.message, 400, request);
       return success("Payment initialized", { status: "success", message: "Payment initialized", paymentLink: intent.client_secret }, request);
@@ -1776,21 +1899,81 @@ async function handle(request: Request) {
   if (method === "POST" && /^\/payments\/momo\/[^/]+$/.test(path)) {
     const orderId = path.split("/").pop();
     const body = await readJson(request);
-    const phone = body.phone;
-    if (!phone) return failure("Phone number is required", 400, request);
+    if (!body.phone) return failure("Phone number is required", 400, request);
+    const phone = normalizeRwandaPhone(body.phone);
+    if (!phone) {
+      return failure("Enter a valid Rwandan mobile money number, e.g. 0788123456 or +250788123456", 400, request);
+    }
     const { data: order, error } = await adminClient.from("orders").select("*").eq("id", orderId).eq("user_id", user.id).maybeSingle();
     if (error) return failure(error.message, 500, request);
     if (!order) return failure("Order not found", 404, request);
+
+    // Paypack picks the network from the prefix alone, so a mismatch here would bill
+    // the wrong wallet without any error — catch it before the cashin call.
+    const provider = momoProviderFor(phone);
+    const chosen = String(order.payment_method ?? "").toUpperCase();
+    if ((chosen === "MOMO" || chosen === "AIRTEL_MONEY") && chosen !== provider) {
+      const expected = chosen === "MOMO" ? "MTN (078/079)" : "Airtel (072/073)";
+      return failure(`This looks like an ${provider === "MOMO" ? "MTN" : "Airtel"} number, but the order was placed with ${chosen === "MOMO" ? "MTN MoMo" : "Airtel Money"}. Use an ${expected} number or change the payment method.`, 400, request);
+    }
+
     try {
       const ref = await initiateMomoPayment(order, phone);
       const { error: paymentError } = await adminClient.from("payment_records").upsert({
-        order_id: order.id, amount: order.total_amount, transaction_reference: ref, status: "PENDING", payment_method: order.payment_method, updated_at: new Date().toISOString(),
+        order_id: order.id, amount: order.total_amount, transaction_reference: ref, status: "PENDING", payment_method: provider, updated_at: new Date().toISOString(),
       }, { onConflict: "order_id" });
       if (paymentError) return failure(paymentError.message, 400, request);
       return success("MoMo payment initiated", { status: "success", message: `Payment request sent to ${phone}. Please approve on your phone.`, paymentLink: ref }, request);
     } catch (error) {
+      // Leave a trace of the failed attempt — otherwise a rejected cashin vanishes and
+      // there is nothing to look at afterwards.
+      await adminClient.from("payment_records").upsert({
+        order_id: order.id, amount: order.total_amount, transaction_reference: null, status: "FAILED", payment_method: provider, updated_at: new Date().toISOString(),
+      }, { onConflict: "order_id" });
       return failure(errorMessage(error, "Paypack initialization failed"), 500, request);
     }
+  }
+
+  // Reconciliation endpoint the checkout screen polls while the customer approves on
+  // their handset. It is also the safety net for a webhook that never arrived: when the
+  // record is still PENDING we ask the provider directly instead of waiting forever.
+  if (method === "GET" && /^\/payments\/status\/[^/]+$/.test(path)) {
+    const orderId = path.split("/").pop();
+    const { data: order, error } = await adminClient.from("orders").select("id,user_id,status").eq("id", orderId).eq("user_id", user.id).maybeSingle();
+    if (error) return failure(error.message, 500, request);
+    if (!order) return failure("Order not found", 404, request);
+
+    const { data: record } = await adminClient.from("payment_records").select("*").eq("order_id", order.id).maybeSingle();
+    if (!record) return success("Payment status fetched", { orderId: order.id, orderStatus: order.status, paymentStatus: "NONE" }, request);
+
+    let paymentStatus = String(record.status ?? "PENDING").toUpperCase();
+    if (paymentStatus === "PENDING" && record.transaction_reference) {
+      try {
+        const ref = String(record.transaction_reference);
+        const remote = ref.startsWith("pi_")
+          ? await findStripeIntentStatus(ref)
+          : await findPaypackTransaction(ref);
+        if (remote === "successful" || remote === "succeeded") {
+          await settlePayment(record.id as number, order.id as number, true);
+          paymentStatus = "SUCCESS";
+        } else if (remote === "failed" || remote === "canceled") {
+          await settlePayment(record.id as number, order.id as number, false);
+          paymentStatus = "FAILED";
+        }
+      } catch (pollError) {
+        // A provider hiccup must not break the polling UI — report the last known state.
+        console.error(`[payments] status poll failed for order ${order.id}: ${errorMessage(pollError, "unknown")}`);
+      }
+    }
+
+    const { data: fresh } = await adminClient.from("orders").select("status").eq("id", order.id).maybeSingle();
+    return success("Payment status fetched", {
+      orderId: order.id,
+      orderStatus: fresh?.status ?? order.status,
+      paymentStatus,
+      paymentMethod: record.payment_method,
+      transactionReference: record.transaction_reference,
+    }, request);
   }
 
   if (path === "/admin/orders" || /^\/admin\/orders\/[^/]+/.test(path)) {
@@ -1837,7 +2020,7 @@ async function handle(request: Request) {
       if (error) return failure(error.message, 500, request);
       if (!order) return failure("Order not found", 404, request);
       const { error: paymentError } = await adminClient.from("payment_records").upsert({
-        order_id: order.id, amount: order.total_amount, status: "SUCCESS", payment_method: "manual",
+        order_id: order.id, amount: order.total_amount, status: "SUCCESS", payment_method: "MANUAL",
         transaction_reference: `MANUAL-${orderId}-${Date.now()}`, updated_at: new Date().toISOString(),
       }, { onConflict: "order_id" });
       if (paymentError) return failure(paymentError.message, 400, request);
@@ -1975,6 +2158,80 @@ async function handle(request: Request) {
     }
   }
 
+  if (method === "GET" && path === "/admin/audit") {
+    await requireAdmin(request, user);
+    const limit = Math.min(Number(url.searchParams.get("limit") ?? 200) || 200, 500);
+    const { data, error } = await adminClient.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(limit);
+    if (error) return failure(error.message, 500, request);
+    return success("Audit logs fetched", ((data ?? []) as Record<string, unknown>[]).map(auditLogResult), request);
+  }
+
+  if (path === "/admin/hero-slides" || /^\/admin\/hero-slides\/[^/]+$/.test(path)) {
+    await requireAdmin(request, user);
+
+    if (method === "GET" && path === "/admin/hero-slides") {
+      const { data, error } = await adminClient.from("hero_slides").select("*").order("sort_order");
+      if (error) return failure(error.message, 500, request);
+      return success("Hero slides fetched", ((data ?? []) as Record<string, unknown>[]).map(heroSlideResult), request);
+    }
+
+    if (method === "POST" && path === "/admin/hero-slides") {
+      const body = await readJson(request);
+      const imageUrl = String(body.imageUrl ?? "").trim();
+      const label = String(body.label ?? "").trim();
+      if (!imageUrl || !label) return failure("Image URL and label are required", 400, request);
+      const { data, error } = await adminClient.from("hero_slides").insert({
+        image_url: imageUrl,
+        label,
+        alt_text: body.altText || null,
+        sort_order: Number(body.sortOrder) || 0,
+        is_active: body.isActive !== undefined ? Boolean(body.isActive) : true,
+      }).select().single();
+      if (error) return failure(error.message, 400, request);
+      return response({ success: true, message: "Hero slide created", data: heroSlideResult(data) }, 201, request);
+    }
+
+    if (method === "PUT" && /^\/admin\/hero-slides\/[^/]+$/.test(path)) {
+      const id = path.split("/").pop();
+      const body = await readJson(request);
+      const imageUrl = String(body.imageUrl ?? "").trim();
+      const label = String(body.label ?? "").trim();
+      if (!imageUrl || !label) return failure("Image URL and label are required", 400, request);
+      const { data, error } = await adminClient.from("hero_slides").update({
+        image_url: imageUrl,
+        label,
+        alt_text: body.altText || null,
+        sort_order: Number(body.sortOrder) || 0,
+        is_active: body.isActive !== undefined ? Boolean(body.isActive) : true,
+      }).eq("id", id).select().maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      if (!data) return failure("Hero slide not found", 404, request);
+      return success("Hero slide updated", heroSlideResult(data), request);
+    }
+
+    if (method === "DELETE" && /^\/admin\/hero-slides\/[^/]+$/.test(path)) {
+      const id = path.split("/").pop();
+      const { error } = await adminClient.from("hero_slides").delete().eq("id", id);
+      if (error) return failure(error.message, 400, request);
+      return success("Hero slide deleted", null, request);
+    }
+  }
+
+  // Customer-facing: any signed-in user validating a coupon at checkout, not an admin action —
+  // must stay outside the requireAdmin gate below or every non-admin shopper gets a 403.
+  if (method === "GET" && path === "/coupons/validate") {
+    const code = url.searchParams.get("code") ?? "";
+    const { data: coupon, error } = await adminClient.from("coupons").select("*").ilike("code", code).maybeSingle();
+    if (error) return failure(error.message, 500, request);
+    if (!coupon) return failure("Coupon not found", 404, request);
+    if (!coupon.is_active) return failure("Coupon is not active", 400, request);
+    if (coupon.max_uses != null && toNumber(coupon.uses) >= toNumber(coupon.max_uses)) return failure("Coupon usage limit reached", 400, request);
+    const now = new Date();
+    if (coupon.starts_at && new Date(coupon.starts_at) > now) return failure("Coupon is not yet valid", 400, request);
+    if (coupon.ends_at && new Date(coupon.ends_at) < now) return failure("Coupon has expired", 400, request);
+    return success("Coupon valid", couponResult(coupon), request);
+  }
+
   if (path === "/admin/coupons" || /^\/admin\/coupons\/[^/]+/.test(path)) {
     await requireAdmin(request, user);
 
@@ -1982,19 +2239,6 @@ async function handle(request: Request) {
       const { data, error } = await adminClient.from("coupons").select("*").order("created_at", { ascending: false });
       if (error) return failure(error.message, 500, request);
       return success("Coupons fetched", ((data ?? []) as Record<string, unknown>[]).map(couponResult), request);
-    }
-
-    if (method === "GET" && path === "/admin/coupons/validate") {
-      const code = url.searchParams.get("code") ?? "";
-      const { data: coupon, error } = await adminClient.from("coupons").select("*").ilike("code", code).maybeSingle();
-      if (error) return failure(error.message, 500, request);
-      if (!coupon) return failure("Coupon not found", 404, request);
-      if (!coupon.is_active) return failure("Coupon is not active", 400, request);
-      if (coupon.max_uses != null && toNumber(coupon.uses) >= toNumber(coupon.max_uses)) return failure("Coupon usage limit reached", 400, request);
-      const now = new Date();
-      if (coupon.starts_at && new Date(coupon.starts_at) > now) return failure("Coupon is not yet valid", 400, request);
-      if (coupon.ends_at && new Date(coupon.ends_at) < now) return failure("Coupon has expired", 400, request);
-      return success("Coupon valid", couponResult(coupon), request);
     }
 
     if (method === "POST" && path === "/admin/coupons") {

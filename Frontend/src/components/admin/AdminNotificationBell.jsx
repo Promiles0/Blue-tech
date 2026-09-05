@@ -102,12 +102,12 @@ export default function AdminNotificationBell() {
         onClick={open ? () => setOpen(false) : handleOpen}
         style={{
           background: 'none', border: 'none',
-          color: open ? '#fff' : 'var(--admin-muted)',
+          color: open ? 'var(--text)' : 'var(--admin-muted)',
           padding: 6, display: 'flex', alignItems: 'center',
           transition: 'color 0.2s', borderRadius: 6, cursor: 'pointer',
           position: 'relative',
         }}
-        onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
         onMouseLeave={e => { if (!open) e.currentTarget.style.color = 'var(--admin-muted)' }}
       >
         <Bell size={16} />
@@ -188,7 +188,7 @@ export default function AdminNotificationBell() {
                       transition: 'background 0.12s',
                       display: 'flex', gap: 9, alignItems: 'flex-start',
                       background: hoverId === n.notificationId && n.href
-                        ? 'rgba(255,255,255,0.04)'
+                        ? 'var(--overlay-hover)'
                         : n.isRead ? 'transparent' : 'rgba(124,92,240,0.04)',
                     }}
                   >
@@ -198,7 +198,7 @@ export default function AdminNotificationBell() {
                     }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: n.isRead ? 400 : 600, color: n.isRead ? 'var(--admin-muted)' : '#fff' }}>
+                        <span style={{ fontSize: 12, fontWeight: n.isRead ? 400 : 600, color: n.isRead ? 'var(--admin-muted)' : 'var(--text)' }}>
                           {n.title}
                         </span>
                         {!n.isRead && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, marginTop: 4 }} />}

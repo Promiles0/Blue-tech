@@ -188,7 +188,7 @@ export default function AdminNotifications() {
                 fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20,
                 cursor: 'pointer', transition: 'all 0.12s', border: 'none',
                 background: catFilter === c ? 'var(--admin-primary)' : 'var(--glass-bg2)',
-                color: catFilter === c ? '#fff' : 'var(--admin-muted)',
+                color: catFilter === c ? 'var(--admin-primary-fg)' : 'var(--admin-muted)',
               }}
             >
               {CAT_LABEL[c]}

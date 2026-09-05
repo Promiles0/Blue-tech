@@ -12,7 +12,7 @@ export default function CouponInput({ onApply, onRemove, applied, compact }) {
     setError('')
     setLoading(true)
     try {
-      const { data } = await api.get(`/admin/coupons/validate?code=${encodeURIComponent(code.trim())}`)
+      const { data } = await api.get(`/coupons/validate?code=${encodeURIComponent(code.trim())}`)
       const coupon = data.data ?? data
       onApply(coupon)
       setCode('')

@@ -57,7 +57,7 @@ function Modal({ title, form, setForm, onSave, onClose, saving }) {
           <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 8, background: 'var(--admin-border)', border: 'none', color: 'var(--text)', opacity: 0.85, fontSize: 13, cursor: 'pointer' }}>
             Cancel
           </button>
-          <button onClick={onSave} disabled={saving} style={{ flex: 1, padding: '10px', borderRadius: 8, background: 'var(--admin-primary)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+          <button onClick={onSave} disabled={saving} style={{ flex: 1, padding: '10px', borderRadius: 8, background: 'var(--admin-primary)', border: 'none', color: 'var(--admin-primary-fg)', fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
             {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
@@ -148,7 +148,7 @@ export default function AdminCoupons() {
         </div>
         <button
           onClick={openCreate}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 10, background: 'var(--admin-primary)', border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 10, background: 'var(--admin-primary)', border: 'none', color: 'var(--admin-primary-fg)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
         >
           <Plus size={14} /> New coupon
         </button>
@@ -209,7 +209,7 @@ export default function AdminCoupons() {
                       </button>
                       <button onClick={() => openEdit(c)} title="Edit"
                         style={{ background: 'none', border: 'none', color: 'var(--admin-muted)', cursor: 'pointer', display: 'flex', padding: 4, transition: 'color 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--admin-muted)'}>
                         <Pencil size={14} />
                       </button>

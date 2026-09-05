@@ -112,7 +112,7 @@ export default function AdminHeroSlides() {
           onClick={openCreate}
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
-            background: 'var(--admin-primary)', color: '#fff',
+            background: 'var(--admin-primary)', color: 'var(--admin-primary-fg)',
             border: 'none', borderRadius: 10, padding: '10px 18px',
             fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
@@ -204,7 +204,7 @@ export default function AdminHeroSlides() {
               disabled={saving}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7,
-                background: 'var(--admin-primary)', color: '#fff',
+                background: 'var(--admin-primary)', color: 'var(--admin-primary-fg)',
                 border: 'none', borderRadius: 8, padding: '9px 18px',
                 fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 opacity: saving ? 0.6 : 1,
@@ -281,7 +281,7 @@ export default function AdminHeroSlides() {
                   onClick={() => handleToggleActive(slide)}
                   title={slide.isActive ? 'Hide slide' : 'Show slide'}
                   style={{ background: 'none', border: 'none', color: 'var(--admin-muted)', cursor: 'pointer', padding: 4, display: 'flex', borderRadius: 6, transition: 'color 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--admin-muted)'}
                 >
                   {slide.isActive ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -289,7 +289,7 @@ export default function AdminHeroSlides() {
                 <button
                   onClick={() => openEdit(slide)}
                   style={{ background: 'none', border: 'none', color: 'var(--admin-muted)', cursor: 'pointer', padding: 4, display: 'flex', borderRadius: 6, transition: 'color 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#fff'}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--admin-muted)'}
                 >
                   <Edit3 size={15} />

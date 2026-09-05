@@ -86,7 +86,7 @@ export default function AdminCategories() {
       <div className="surface" style={{ borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
+            <tr style={{ borderBottom: '1px solid var(--admin-border)' }}>
               {['Name', 'Description', 'Actions'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--muted-dark)', fontWeight: 600, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
               ))}
@@ -95,7 +95,7 @@ export default function AdminCategories() {
           <tbody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid #141414' }}>
+                <tr key={i} style={{ borderBottom: '1px solid var(--admin-border)' }}>
                   {[1, 2, 3].map(j => (
                     <td key={j} style={{ padding: '14px 16px' }}>
                       <div className="skeleton" style={{ height: 14, borderRadius: 4 }} />
@@ -138,7 +138,7 @@ export default function AdminCategories() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <h2 style={{ fontSize: 17, fontWeight: 700 }}>{modal === 'create' ? 'New Category' : 'Edit Category'}</h2>
               <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'var(--muted-dark)', cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.color = '#fff'} onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
+                onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
                 <X size={18} />
               </button>
             </div>
@@ -177,12 +177,12 @@ function IconBtn({ icon: Icon, onClick, title, danger, loading }) {
     <button onClick={onClick} disabled={loading} title={title}
       style={{
         width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'none', border: '1px solid #1e1e1e', borderRadius: 6,
+        background: 'none', border: '1px solid var(--admin-border)', borderRadius: 6,
         color: danger ? '#ef4444' : 'var(--muted-dark)', cursor: loading ? 'not-allowed' : 'pointer',
         transition: 'border-color 0.15s, color 0.15s', opacity: loading ? 0.4 : 1,
       }}
-      onMouseEnter={e => { if (!loading) { e.currentTarget.style.borderColor = danger ? '#ef4444' : 'var(--border-hover)'; e.currentTarget.style.color = danger ? '#ef4444' : '#fff' } }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--card)'; e.currentTarget.style.color = danger ? '#ef4444' : 'var(--muted-dark)' }}
+      onMouseEnter={e => { if (!loading) { e.currentTarget.style.borderColor = danger ? '#ef4444' : 'var(--border-hover)'; e.currentTarget.style.color = danger ? '#ef4444' : 'var(--text)' } }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--admin-border)'; e.currentTarget.style.color = danger ? '#ef4444' : 'var(--muted-dark)' }}
     >
       <Icon size={13} />
     </button>

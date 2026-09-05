@@ -11,6 +11,22 @@ import CouponInput from "../components/site/CouponInput";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
+// Paypack only accepts local-format Rwandan numbers (07XXXXXXXX). Mirror the backend
+// rule here so the customer is corrected before an order is even created.
+const normalizeRwandaPhone = (input) => {
+  const digits = String(input ?? "").replace(/\D/g, "");
+  let local = digits;
+  if (local.startsWith("250")) local = local.slice(3);
+  if (local.length === 9 && local.startsWith("7")) local = `0${local}`;
+  return /^07[2389]\d{7}$/.test(local) ? local : null;
+};
+
+const momoProviderFor = (localPhone) => (/^07[89]/.test(localPhone) ? "MOMO" : "AIRTEL_MONEY");
+
+// How long to keep polling before telling the customer to check their orders page.
+const MOMO_POLL_INTERVAL_MS = 4000;
+const MOMO_POLL_TIMEOUT_MS = 3 * 60 * 1000;
+
 const CARD_ELEMENT_OPTIONS = {
   style: {
     base: {
@@ -39,6 +55,8 @@ function CheckoutForm() {
   const [momoPhone, setMomoPhone] = useState("");
   const [shippingMethod, setShippingMethod] = useState("STANDARD");
   const [paymentMethod, setPaymentMethod] = useState("CARD");
+  const [pendingOrderId, setPendingOrderId] = useState(null);
+  const [momoOutcome, setMomoOutcome] = useState("waiting"); // "waiting" | "timeout"
 
   const [newAddress, setNewAddress] = useState({
     street: "", city: "", state: "", zipCode: "", country: "Rwanda", phone: "",
@@ -88,10 +106,67 @@ function CheckoutForm() {
     };
   };
 
+  // The mobile money prompt is approved on the handset, so nothing in this tab can tell
+  // us the outcome — poll the backend, which reconciles against Paypack when the webhook
+  // has not landed yet.
+  useEffect(() => {
+    if (step !== "momo-pending" || !pendingOrderId) return;
+
+    let cancelled = false;
+    let timer;
+    const startedAt = Date.now();
+
+    const tick = async () => {
+      if (cancelled) return;
+      try {
+        const { data } = await apiService.payments.getStatus(pendingOrderId);
+        if (cancelled) return;
+        if (data?.paymentStatus === "SUCCESS") {
+          setStep("success");
+          return;
+        }
+        if (data?.paymentStatus === "FAILED") {
+          toast.error("The mobile money payment was declined or cancelled.");
+          setStep("shipping");
+          return;
+        }
+      } catch {
+        // Transient failure — keep waiting rather than dropping the customer out.
+      }
+      if (Date.now() - startedAt >= MOMO_POLL_TIMEOUT_MS) {
+        setMomoOutcome("timeout");
+        return;
+      }
+      timer = setTimeout(tick, MOMO_POLL_INTERVAL_MS);
+    };
+
+    timer = setTimeout(tick, MOMO_POLL_INTERVAL_MS);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [step, pendingOrderId]);
+
   const handlePlaceOrder = async () => {
-    if ((paymentMethod === "MOMO" || paymentMethod === "AIRTEL_MONEY") && !momoPhone) {
-      toast.error("Please provide your mobile money number");
-      return;
+    const isMomo = paymentMethod === "MOMO" || paymentMethod === "AIRTEL_MONEY";
+    let normalizedPhone = null;
+
+    if (isMomo) {
+      if (!momoPhone) {
+        toast.error("Please provide your mobile money number");
+        return;
+      }
+      normalizedPhone = normalizeRwandaPhone(momoPhone);
+      if (!normalizedPhone) {
+        toast.error("Enter a valid Rwandan number, e.g. 0788123456 or +250788123456");
+        return;
+      }
+      // Paypack routes on the prefix alone, so a mismatch would charge the other network.
+      if (momoProviderFor(normalizedPhone) !== paymentMethod) {
+        toast.error(
+          paymentMethod === "MOMO"
+            ? "That is an Airtel number. Use an MTN number (078/079) or switch to Airtel Money."
+            : "That is an MTN number. Use an Airtel number (072/073) or switch to MTN Mobile Money."
+        );
+        return;
+      }
     }
 
     const payload = buildPayload();
@@ -120,13 +195,22 @@ function CheckoutForm() {
         });
 
         if (error) { toast.error(error.message || "Card payment failed"); return; }
-        if (paymentIntent.status === "succeeded") { clearCart(); setStep("success"); return; }
+        if (paymentIntent.status === "succeeded") {
+          clearCart();
+          setStep("success");
+          // Stripe told this tab the charge went through, but only the backend can mark
+          // the order paid. Nudge it so the order settles even if the webhook is delayed.
+          apiService.payments.getStatus(orderId).catch(() => {});
+          return;
+        }
       }
 
       // 3. MOMO / AIRTEL_MONEY: Paypack flow
-      if (paymentMethod === "MOMO" || paymentMethod === "AIRTEL_MONEY") {
-        await apiService.payments.initiateMomo(orderId, momoPhone);
+      if (isMomo) {
+        await apiService.payments.initiateMomo(orderId, normalizedPhone);
         clearCart();
+        setPendingOrderId(orderId);
+        setMomoOutcome("waiting");
         setStep("momo-pending");
         return;
       }
@@ -172,9 +256,20 @@ function CheckoutForm() {
           <p style={{ color: "var(--text-secondary)", fontSize: 15, lineHeight: 1.7, marginBottom: 12 }}>
             A payment prompt has been sent to <strong>{momoPhone}</strong>.
           </p>
-          <p style={{ color: "var(--text-secondary)", fontSize: 15, lineHeight: 1.7, marginBottom: 32 }}>
-            Please check your phone and <strong>approve the MoMo payment</strong> to complete your order. Your order is reserved and will be confirmed once payment is received.
-          </p>
+          {momoOutcome === "waiting" ? (
+            <>
+              <p style={{ color: "var(--text-secondary)", fontSize: 15, lineHeight: 1.7, marginBottom: 24 }}>
+                Please check your phone and <strong>approve the payment</strong> to complete your order. This page updates on its own — keep it open.
+              </p>
+              <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 32 }}>
+                Waiting for confirmation…
+              </p>
+            </>
+          ) : (
+            <p style={{ color: "var(--text-secondary)", fontSize: 15, lineHeight: 1.7, marginBottom: 32 }}>
+              We haven't received confirmation yet. If you approved the prompt, the payment may still be settling — your order is reserved and will update automatically. You can check its status on the orders page.
+            </p>
+          )}
           <Link to="/orders" className="noir-btn-primary" style={{ padding: "14px 32px" }}>
             View my orders
           </Link>
@@ -302,7 +397,7 @@ function CheckoutForm() {
                     {paymentMethod === "MOMO" ? "MTN MoMo Number" : "Airtel Money Number"}
                   </h3>
                   <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>MOBILE NUMBER</label>
-                  <input className="noir-input" value={momoPhone} onChange={(e) => setMomoPhone(e.target.value)} placeholder="078 XXX XXXX" />
+                  <input className="noir-input" value={momoPhone} onChange={(e) => setMomoPhone(e.target.value)} placeholder="0788123456" />
                   <p style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 8 }}>
                     A payment prompt will be sent to this number to authorize the transaction.
                   </p>

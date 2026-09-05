@@ -30,7 +30,7 @@ const tooltipStyle = {
     background: 'var(--admin-card)', border: '1px solid var(--admin-border)',
     borderRadius: 8, fontSize: 12,
   },
-  labelStyle: { color: 'rgba(255,255,255,0.55)', marginBottom: 4 },
+  labelStyle: { color: 'var(--admin-muted)', marginBottom: 4 },
 }
 
 export default function AdminDashboard() {

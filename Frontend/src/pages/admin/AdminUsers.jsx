@@ -168,7 +168,7 @@ const inputStyle = {
 const primaryBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5,
   background: 'var(--admin-primary)', border: 'none', borderRadius: 7,
-  color: '#fff', padding: '5px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
+  color: 'var(--admin-primary-fg)', padding: '5px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 const outlineBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5,
