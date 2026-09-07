@@ -1,7 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingBag, Check } from 'lucide-react'
+import { useCurrency } from '../../context/CurrencyContext'
 
 export default function StickyCartBar({ product, selectedVariant, onAdd, adding, added, visible }) {
+  const { formatPrice } = useCurrency()
   const price = (parseFloat(product?.price) || 0) + (parseFloat(selectedVariant?.priceAdjustment) || 0)
   const outOfStock = selectedVariant && selectedVariant.stockQuantity === 0
 
@@ -33,7 +35,7 @@ export default function StickyCartBar({ product, selectedVariant, onAdd, adding,
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
-              <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--price)' }}>${price.toFixed(2)}</span>
+              <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--price)' }}>{formatPrice(price)}</span>
               <button
                 onClick={onAdd}
                 disabled={adding || outOfStock || !selectedVariant}

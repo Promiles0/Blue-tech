@@ -13,12 +13,14 @@ import LensZoom from '../components/site/LensZoom'
 import StickyCartBar from '../components/site/StickyCartBar'
 import { handleProductImageError, productImageList } from '../lib/productImage'
 import { buildWhatsAppLink } from '../lib/helpLinks'
+import { useCurrency } from '../context/CurrencyContext'
 
 export default function ProductDetail() {
   const { id } = useParams()
   const { addToCart } = useCart()
   const { user } = useAuth()
   const { wishlistIds, toggle: toggleWishlist } = useWishlist()
+  const { formatPrice } = useCurrency()
   const navigate = useNavigate()
 
   const [product, setProduct] = useState(null)
@@ -108,7 +110,7 @@ export default function ProductDetail() {
   const whatsappHref = buildWhatsAppLink({
     productName: product.name ?? '',
     variantLabel,
-    price: price.toFixed(2),
+    price: formatPrice(price),
     qty,
     productUrl: `${window.location.origin}/products/${id}`,
   })
@@ -168,7 +170,7 @@ export default function ProductDetail() {
             )}
 
             <p style={{ fontSize: 34, fontWeight: 900, color: 'var(--price)', marginBottom: 24, letterSpacing: '-0.01em' }}>
-              ${price.toFixed(2)}
+              {formatPrice(price)}
             </p>
 
             {product.description && (
@@ -270,7 +272,7 @@ export default function ProductDetail() {
               }}
             >
               <MessageCircle size={16} />
-              Chat on WhatsApp
+              Quick WhatsApp Help – About This Product
             </a>
           </div>
         </div>

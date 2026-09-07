@@ -3,7 +3,7 @@ import { Toaster } from 'sonner'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Truck, Users, MessageSquare, BarChart3, ScrollText,
-  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText,
+  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -21,6 +21,7 @@ const NAV = [
   { to: '/admin/reviews',    label: 'Reviews',     icon: MessageSquare },
   { to: '/admin/coupons',      label: 'Coupons',      icon: Tag },
   { to: '/admin/hero-slides',  label: 'Hero Slides',  icon: Image },
+  { to: '/admin/settings',     label: 'Settings',     icon: Settings },
   { to: '/admin/analytics',    label: 'Analytics',    icon: BarChart3 },
   { to: '/admin/audit',          label: 'Audit Log',      icon: ScrollText },
   { to: '/admin/notifications',  label: 'Notifications',  icon: Bell },

@@ -6,8 +6,10 @@ import { useUI } from '../../context/UIContext'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
 import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { useCurrency } from '../../context/CurrencyContext'
 
 export default function CommandPalette() {
+  const { formatPrice } = useCurrency()
   const { paletteOpen, setPaletteOpen } = useUI()
   const [query, setQuery]     = useState('')
   const [results, setResults] = useState([])
@@ -221,7 +223,7 @@ export default function CommandPalette() {
                         <p style={{ fontSize: 14, fontWeight: 500, color: isActive ? 'var(--text)' : 'var(--text-secondary)', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</p>
                         <p style={{ fontSize: 12, color: 'var(--muted-dark)' }}>
                           {p.categoryName ?? ''}{p.categoryName ? ' · ' : ''}
-                          <span style={{ color: 'var(--price)', fontWeight: 600 }}>${price.toFixed(2)}</span>
+                          <span style={{ color: 'var(--price)', fontWeight: 600 }}>{formatPrice(price)}</span>
                         </p>
                       </div>
                       <ArrowRight size={13} style={{ color: isActive ? 'var(--accent)' : 'var(--muted)', flexShrink: 0, transition: 'color 0.1s' }} />

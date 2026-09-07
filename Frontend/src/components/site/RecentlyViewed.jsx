@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { Reveal } from '../../lib/motion'
 import { getRecentlyViewed } from '../../lib/recentlyViewed'
 import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { useCurrency } from '../../context/CurrencyContext'
 
 export default function RecentlyViewed() {
+  const { formatPrice } = useCurrency()
   const [items, setItems] = useState([])
 
   useEffect(() => { setItems(getRecentlyViewed()) }, [])
@@ -54,7 +56,7 @@ export default function RecentlyViewed() {
                   <p style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.name}
                   </p>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--price)' }}>${parseFloat(p.price ?? 0).toFixed(2)}</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--price)' }}>{formatPrice(p.price)}</p>
                 </div>
               </Link>
             ))}

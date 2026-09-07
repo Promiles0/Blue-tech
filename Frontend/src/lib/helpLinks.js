@@ -16,13 +16,15 @@ export const WHATSAPP_NUMBER = '250795593188'
 
 // Shared prefill-message builder for the "Chat on WhatsApp" buttons on the
 // product quick view and product detail page, so both stay in sync.
+// `price` arrives already formatted (via the currency context's formatPrice) so the
+// message quotes the same currency the shopper was looking at, symbol included.
 export function buildWhatsAppMessage({ productName, variantLabel, price, qty, productUrl }) {
   const nameLine = variantLabel ? `${productName} (${variantLabel})` : productName
   return [
     "Hi Blue-Tech! I'm interested in this product:",
     '',
     nameLine,
-    `Price: $${price}`,
+    `Price: ${price}`,
     `Quantity: ${qty}`,
     '',
     productUrl,

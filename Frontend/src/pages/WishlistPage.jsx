@@ -6,8 +6,10 @@ import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { toast } from 'sonner'
 import { getProductImage, handleProductImageError } from '../lib/productImage'
+import { useCurrency } from '../context/CurrencyContext'
 
 export default function Wishlist() {
+  const { formatPrice } = useCurrency()
   const { user } = useAuth()
   const { addToCart } = useCart()
   const [items, setItems] = useState([])
@@ -115,7 +117,7 @@ export default function Wishlist() {
                       {item.productName}
                     </h3>
                     <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--price-color)' }}>
-                      ${price.toFixed(2)}
+                      {formatPrice(price)}
                     </p>
                   </div>
 

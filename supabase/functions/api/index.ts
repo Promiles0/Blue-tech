@@ -252,9 +252,19 @@ function momoProviderFor(localPhone: string) {
   return /^07[89]/.test(localPhone) ? "MOMO" : "AIRTEL_MONEY";
 }
 
-function usdToRwfRate() {
-  const raw = Number(Deno.env.get("USD_TO_RWF_RATE"));
-  return Number.isFinite(raw) && raw > 0 ? raw : 1450;
+const RWF_RATE_KEY = "usd_to_rwf_rate";
+const RWF_RATE_FALLBACK = 1471;
+
+// One source of truth for the rate: the admin-editable `site_settings` row. The old
+// USD_TO_RWF_RATE secret is kept only as a fallback, so an admin editing the rate in the
+// dashboard also changes what mobile money customers are actually charged — otherwise the
+// storefront and the cashin conversion would silently drift apart.
+async function usdToRwfRate() {
+  const { data } = await adminClient.from("site_settings").select("value").eq("key", RWF_RATE_KEY).maybeSingle();
+  const stored = Number(data?.value);
+  if (Number.isFinite(stored) && stored > 0) return stored;
+  const fromEnv = Number(Deno.env.get("USD_TO_RWF_RATE"));
+  return Number.isFinite(fromEnv) && fromEnv > 0 ? fromEnv : RWF_RATE_FALLBACK;
 }
 
 function statusKey(value: unknown) {
@@ -1156,7 +1166,7 @@ async function getPaypackToken() {
 
 async function initiateMomoPayment(order: Record<string, unknown>, phone: string) {
   const { token, baseUrl } = await getPaypackToken();
-  const amountRwf = Math.round(toNumber(order.total_amount) * usdToRwfRate());
+  const amountRwf = Math.round(toNumber(order.total_amount) * (await usdToRwfRate()));
   if (amountRwf < 100) throw new Error("Order total is below the 100 RWF mobile money minimum");
   console.log(`[paypack] cashin order=${order.id} amount=${amountRwf} RWF number=${phone}`);
   const res = await fetch(`${baseUrl}/transactions/cashin`, {
@@ -1404,6 +1414,16 @@ async function handle(request: Request) {
     const { data, error } = await adminClient.from("hero_slides").select("*").eq("is_active", true).order("sort_order");
     if (error) return failure(error.message, 500);
     return success("Hero slides fetched successfully", (data ?? []).map(heroSlideResult));
+  }
+
+  // Public so the storefront can format prices for logged-out visitors too.
+  if (method === "GET" && path === "/settings") {
+    const { data, error } = await adminClient.from("site_settings").select("key,value").eq("is_public", true);
+    if (error) return failure(error.message, 500);
+    const settings = Object.fromEntries(((data ?? []) as Record<string, unknown>[]).map((row) => [row.key, row.value]));
+    return success("Settings fetched successfully", {
+      usdToRwfRate: Number(settings[RWF_RATE_KEY]) || RWF_RATE_FALLBACK,
+    });
   }
 
   if (method === "GET" && path === "/reviews/recent") {
@@ -2164,6 +2184,29 @@ async function handle(request: Request) {
     const { data, error } = await adminClient.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(limit);
     if (error) return failure(error.message, 500, request);
     return success("Audit logs fetched", ((data ?? []) as Record<string, unknown>[]).map(auditLogResult), request);
+  }
+
+  if (path === "/admin/settings" || path === "/admin/settings/exchange-rate") {
+    await requireAdmin(request, user);
+
+    if (method === "GET" && path === "/admin/settings") {
+      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate() }, request);
+    }
+
+    if (method === "PUT" && path === "/admin/settings/exchange-rate") {
+      const body = await readJson(request);
+      const rate = Number(body.usdToRwfRate);
+      // A zero/negative/absurd rate would silently mangle every displayed price and, worse,
+      // the real mobile money charge — so reject it here rather than storing it.
+      if (!Number.isFinite(rate) || rate <= 0) return failure("Exchange rate must be a positive number", 400, request);
+      if (rate > 100000) return failure("That exchange rate looks wrong — enter RWF per 1 USD (e.g. 1471)", 400, request);
+
+      const { error } = await adminClient.from("site_settings").upsert({
+        key: RWF_RATE_KEY, value: String(rate), is_public: true, updated_at: new Date().toISOString(),
+      }, { onConflict: "key" });
+      if (error) return failure(error.message, 400, request);
+      return success("Exchange rate updated", { usdToRwfRate: rate }, request);
+    }
   }
 
   if (path === "/admin/hero-slides" || /^\/admin\/hero-slides\/[^/]+$/.test(path)) {

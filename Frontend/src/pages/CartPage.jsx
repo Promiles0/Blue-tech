@@ -4,8 +4,10 @@ import { useCart } from '../context/CartContext'
 import CouponInput from '../components/site/CouponInput'
 import { useState } from 'react'
 import { getProductImage, handleProductImageError } from '../lib/productImage'
+import { useCurrency } from '../context/CurrencyContext'
 
 export default function Cart() {
+  const { formatPrice } = useCurrency()
   const { items, count, total, updateQuantity, removeFromCart, clearCart } = useCart()
   const navigate = useNavigate()
 
@@ -52,9 +54,9 @@ export default function Cart() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</p>
                     {opts && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{opts}</p>}
-                    <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--price-color)' }}>${(price * item.quantity).toFixed(2)}</p>
+                    <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--price-color)' }}>{formatPrice(price * item.quantity)}</p>
                     {item.quantity > 1 && (
-                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>${price.toFixed(2)} each</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{formatPrice(price)} each</p>
                     )}
                   </div>
 
@@ -94,10 +96,10 @@ export default function Cart() {
           {/* Summary */}
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--card-border)', borderRadius: 16, padding: 28, position: 'sticky', top: 80 }}>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 24 }}>Order summary</h2>
-            <SummaryRow label="Subtotal"  value={`$${total.toFixed(2)}`} />
+            <SummaryRow label="Subtotal"  value={formatPrice(total)} />
             <SummaryRow label="Shipping"  value="Free" />
             <div style={{ borderTop: '1px solid var(--border)', margin: '16px 0' }} />
-            <SummaryRow label="Total" value={`$${total.toFixed(2)}`} bold />
+            <SummaryRow label="Total" value={formatPrice(total)} bold />
 
             <button
               onClick={() => navigate('/checkout')}

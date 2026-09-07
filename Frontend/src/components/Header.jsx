@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, X, Moon, Sun } from 'lucide-react'
 import NotificationBell from './site/NotificationBell'
 import CategoriesMenu from './site/CategoriesMenu'
+import CurrencySwitcher from './site/CurrencySwitcher'
 import HelpMenu from './site/HelpMenu'
 import Logo from './site/Logo'
 import { motion, useScroll, useTransform, useSpring, useMotionTemplate, AnimatePresence } from 'framer-motion'
@@ -192,6 +193,8 @@ export default function Header() {
               {searchOpen ? <X size={18} /> : <Search size={18} />}
             </IconBtn>
           </div>
+
+          <CurrencySwitcher />
 
           <HelpMenu />
 

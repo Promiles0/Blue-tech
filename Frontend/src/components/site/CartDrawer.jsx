@@ -4,8 +4,10 @@ import { X, ShoppingBag, Plus, Minus, Trash2 } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useUI } from '../../context/UIContext'
 import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { useCurrency } from '../../context/CurrencyContext'
 
 export default function CartDrawer() {
+  const { formatPrice } = useCurrency()
   const { cartOpen, setCartOpen } = useUI()
   const { items, total, removeFromCart, updateQuantity } = useCart()
 
@@ -143,7 +145,7 @@ export default function CartDrawer() {
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--price)' }}>${lineTotal.toFixed(2)}</span>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--price)' }}>{formatPrice(lineTotal)}</span>
                               <button
                                 onClick={() => removeFromCart(iid)}
                                 style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', padding: 4, borderRadius: 6, transition: 'color 0.15s' }}
@@ -167,7 +169,7 @@ export default function CartDrawer() {
               <div style={{ padding: '20px 24px', borderTop: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
                   <span style={{ fontSize: 14, color: 'var(--muted)' }}>Subtotal</span>
-                  <span style={{ fontSize: 20, fontWeight: 800 }}>${total.toFixed(2)}</span>
+                  <span style={{ fontSize: 20, fontWeight: 800 }}>{formatPrice(total)}</span>
                 </div>
                 <Link
                   to="/checkout"

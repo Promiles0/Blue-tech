@@ -74,6 +74,11 @@ const apiService = {
     getOrderDetails: (id) => api.get(`/orders/${id}`),
   },
 
+  // --- SITE SETTINGS ---
+  settings: {
+    get: () => api.get('/settings'),
+  },
+
   // --- PAYMENTS ---
   payments: {
     createIntent: (orderId) => api.post(`/payments/initialize/${orderId}`),
@@ -142,6 +147,10 @@ const apiService = {
       create: (data) => api.post('/admin/hero-slides', data),
       update: (id, data) => api.put(`/admin/hero-slides/${id}`, data),
       delete: (id) => api.delete(`/admin/hero-slides/${id}`),
+    },
+    settings: {
+      get: () => api.get('/admin/settings'),
+      updateExchangeRate: (usdToRwfRate) => api.put('/admin/settings/exchange-rate', { usdToRwfRate }),
     },
   }
 };

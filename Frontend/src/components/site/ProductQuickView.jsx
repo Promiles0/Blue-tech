@@ -9,8 +9,10 @@ import { useWishlist } from '../../context/WishlistContext'
 import apiService from '../../api/service'
 import { handleProductImageError, productImageList } from '../../lib/productImage'
 import { buildWhatsAppLink } from '../../lib/helpLinks'
+import { useCurrency } from '../../context/CurrencyContext'
 
 export default function ProductQuickView() {
+  const { formatPrice } = useCurrency()
   const { quickViewProduct, setQuickViewProduct } = useUI()
   const { addToCart, isInCart } = useCart()
   const { user } = useAuth()
@@ -81,7 +83,7 @@ export default function ProductQuickView() {
   const whatsappHref = buildWhatsAppLink({
     productName: product?.name ?? '',
     variantLabel,
-    price: unitPrice.toFixed(2),
+    price: formatPrice(unitPrice),
     qty,
     productUrl: `${window.location.origin}/products/${pid}`,
   })
@@ -170,9 +172,9 @@ export default function ProductQuickView() {
                     </h2>
                     <div style={{ marginBottom: 18 }}>
                       <p style={{ fontSize: 28, fontWeight: 900, color: 'var(--price)' }}>
-                        ${price.toFixed(2)}
+                        {formatPrice(price)}
                       </p>
-                      {qty > 1 && <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 2 }}>${unitPrice.toFixed(2)} each</p>}
+                      {qty > 1 && <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 2 }}>{formatPrice(unitPrice)} each</p>}
                     </div>
 
                     {product.description && (

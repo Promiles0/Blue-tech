@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { LayoutDashboard } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider }         from './context/ThemeContext'
+import { CurrencyProvider }      from './context/CurrencyContext'
 import { AuthProvider }    from './context/AuthContext'
 import { CartProvider }    from './context/CartContext'
 import { UIProvider }      from './context/UIContext'
@@ -44,6 +45,7 @@ import AdminAudit          from './pages/admin/AdminAudit'
 import AdminNotifications  from './pages/admin/AdminNotifications'
 import AdminCoupons        from './pages/admin/AdminCoupons'
 import AdminHeroSlides     from './pages/admin/AdminHeroSlides'
+import AdminSettings       from './pages/admin/AdminSettings'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 2 } },
@@ -83,30 +85,32 @@ function SplashGate({ children }) {
 export default function App() {
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <SplashGate>
-              <CartProvider>
-                <WishlistProvider>
-                  <NotificationProvider>
-                    <UIProvider>
-                      <ScrollToTop />
-                      <Routes>
-                        {/* Admin section — no SiteLayout, ADMIN role required */}
-                        <Route path="/admin/*" element={<AdminSection />} />
+      <CurrencyProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <AuthProvider>
+              <SplashGate>
+                <CartProvider>
+                  <WishlistProvider>
+                    <NotificationProvider>
+                      <UIProvider>
+                        <ScrollToTop />
+                        <Routes>
+                          {/* Admin section — no SiteLayout, ADMIN role required */}
+                          <Route path="/admin/*" element={<AdminSection />} />
 
-                        {/* Customer site — wrapped in SiteLayout */}
-                        <Route path="*" element={<CustomerSite />} />
-                      </Routes>
-                    </UIProvider>
-                  </NotificationProvider>
-                </WishlistProvider>
-              </CartProvider>
-            </SplashGate>
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
+                          {/* Customer site — wrapped in SiteLayout */}
+                          <Route path="*" element={<CustomerSite />} />
+                        </Routes>
+                      </UIProvider>
+                    </NotificationProvider>
+                  </WishlistProvider>
+                </CartProvider>
+              </SplashGate>
+            </AuthProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </CurrencyProvider>
     </ThemeProvider>
   )
 }
@@ -138,6 +142,7 @@ function AdminSection() {
         <Route path="analytics"    element={<AdminAnalytics />} />
         <Route path="audit"          element={<AdminAudit />} />
         <Route path="notifications"  element={<AdminNotifications />} />
+        <Route path="settings"       element={<AdminSettings />} />
       </Route>
     </Routes>
   )

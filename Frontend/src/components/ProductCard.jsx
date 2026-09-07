@@ -5,6 +5,7 @@ import { useUI } from '../context/UIContext'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
 import { getProductImage, handleProductImageError, productImageList } from '../lib/productImage'
+import { useCurrency } from '../context/CurrencyContext'
 
 function getStatus(product) {
   if (product.isNew) return 'new'
@@ -19,6 +20,7 @@ const STATUS = {
 }
 
 export default function ProductCard({ product }) {
+  const { formatPrice } = useCurrency()
   const [hover, setHover] = useState(false)
   const { setQuickViewProduct } = useUI()
   const { wishlistIds, toggle } = useWishlist()
@@ -158,7 +160,7 @@ export default function ProductCard({ product }) {
             {product.name}
           </p>
           <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--price)' }}>
-            ${price.toFixed(2)}
+            {formatPrice(price)}
           </p>
         </div>
       </div>

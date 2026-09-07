@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 import CouponInput from "../components/site/CouponInput";
+import { useCurrency } from "../context/CurrencyContext";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -45,6 +46,7 @@ function CheckoutForm() {
   const navigate = useNavigate();
   const stripe = useStripe();
   const elements = useElements();
+  const { formatPrice, formatUsd, isConverted } = useCurrency();
 
   const [step, setStep] = useState("shipping"); // "shipping" | "success" | "momo-pending"
   const [loading, setLoading] = useState(false);
@@ -415,7 +417,7 @@ function CheckoutForm() {
                 {cart?.items?.map((item) => (
                   <div key={item.cartItemId ?? item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                     <span style={{ color: "var(--text-secondary)" }}>{item.productName} <small>x{item.quantity}</small></span>
-                    <span style={{ color: "var(--text-primary)" }}>${getItemTotal(item).toFixed(2)}</span>
+                    <span style={{ color: "var(--text-primary)" }}>{formatPrice(getItemTotal(item))}</span>
                   </div>
                 ))}
               </div>
@@ -427,7 +429,7 @@ function CheckoutForm() {
                 </div>
                 {coupon && (
                   <p className="text-[13px]" style={{ color: "var(--brand)" }}>
-                    Discount applied: {coupon.kind === "PERCENT" ? `${coupon.value}% off` : `$${parseFloat(coupon.value).toFixed(2)} off`}
+                    Discount applied: {coupon.kind === "PERCENT" ? `${coupon.value}% off` : `${formatPrice(coupon.value)} off`}
                   </p>
                 )}
               </div>
@@ -435,23 +437,37 @@ function CheckoutForm() {
               <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: 20, marginBottom: 28 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
                   <span style={{ color: "var(--text-secondary)" }}>Subtotal</span>
-                  <span style={{ color: "var(--text-primary)" }}>${subtotal.toFixed(2)}</span>
+                  <span style={{ color: "var(--text-primary)" }}>{formatPrice(subtotal)}</span>
                 </div>
                 {safeDiscount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
                     <span style={{ color: "var(--text-secondary)" }}>Discount</span>
-                    <span style={{ color: "var(--brand)" }}>-${safeDiscount.toFixed(2)}</span>
+                    <span style={{ color: "var(--brand)" }}>-{formatPrice(safeDiscount)}</span>
                   </div>
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 12 }}>
                   <span style={{ color: "var(--text-secondary)" }}>Shipping</span>
-                  <span style={{ color: "var(--text-primary)" }}>{shippingFee > 0 ? `$${shippingFee.toFixed(2)}` : "FREE"}</span>
+                  <span style={{ color: "var(--text-primary)" }}>{shippingFee > 0 ? formatPrice(shippingFee) : "FREE"}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, borderTop: "1px dashed var(--card-border)", paddingTop: 12 }}>
                   <span style={{ color: "var(--text-primary)" }}>Total</span>
-                  <span style={{ color: "var(--price-color)" }}>${total.toFixed(2)}</span>
+                  <span style={{ color: "var(--price-color)" }}>{formatPrice(total)}</span>
                 </div>
               </div>
+
+              {/* The charge is always in USD. When the shopper is browsing in RWF the totals
+                  above are a converted estimate, so the real amount has to be stated here —
+                  at the point of payment — not left to be discovered on their statement. */}
+              {isConverted && (
+                <p style={{
+                  fontSize: 12, lineHeight: 1.6, color: "var(--text-muted)",
+                  background: "var(--bg-elevated, rgba(127,127,127,0.08))",
+                  border: "1px solid var(--card-border)", borderRadius: 10,
+                  padding: "10px 12px", marginBottom: 16,
+                }}>
+                  Charged in USD (<strong style={{ color: "var(--text-primary)" }}>{formatUsd(total)}</strong>) — the amount shown in RWF is an estimate based on the current exchange rate.
+                </p>
+              )}
 
               <button onClick={handlePlaceOrder} disabled={loading || !cart?.items?.length || (paymentMethod === "CARD" && !stripe)}
                 className="noir-btn-cta shine"

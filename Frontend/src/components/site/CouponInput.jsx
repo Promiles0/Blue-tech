@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Tag, X, Loader2 } from 'lucide-react'
 import api from '../../api/axios'
+import { useCurrency } from '../../context/CurrencyContext'
 
 export default function CouponInput({ onApply, onRemove, applied, compact }) {
+  const { formatPrice } = useCurrency()
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -36,8 +38,8 @@ export default function CouponInput({ onApply, onRemove, applied, compact }) {
             {applied.code}
           </span>
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-            — {applied.kind === 'PERCENT' ? `${applied.value}% off` : `$${parseFloat(applied.value).toFixed(2)} off`}
-            {applied.minSubtotal ? ` (min $${parseFloat(applied.minSubtotal).toFixed(2)})` : ''}
+            — {applied.kind === 'PERCENT' ? `${applied.value}% off` : `${formatPrice(applied.value)} off`}
+            {applied.minSubtotal ? ` (min ${formatPrice(applied.minSubtotal)})` : ''}
           </span>
         </div>
         <button
