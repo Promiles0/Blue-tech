@@ -38,12 +38,12 @@ function Modal({ title, form, setForm, onSave, onClose, saving }) {
             style={{ width: '100%', padding: '9px 12px', borderRadius: 8, fontSize: 13, background: 'var(--admin-bg)', border: '1px solid var(--admin-border)', color: 'var(--text)', outline: 'none' }}
           >
             <option value="PERCENT">Percent (%)</option>
-            <option value="FIXED">Fixed ($)</option>
+            <option value="FIXED">Fixed (RWF)</option>
           </select>
         </div>
 
-        {field('Value', 'value', 'number', form.kind === 'PERCENT' ? '20' : '10')}
-        {field('Min subtotal ($)', 'minSubtotal', 'number', '50')}
+        {field('Value', 'value', 'number', form.kind === 'PERCENT' ? '20' : '10000')}
+        {field('Min subtotal (RWF)', 'minSubtotal', 'number', '50000')}
         {field('Max uses', 'maxUses', 'number', 'Unlimited')}
         {field('Starts at', 'startsAt', 'datetime-local')}
         {field('Ends at', 'endsAt', 'datetime-local')}

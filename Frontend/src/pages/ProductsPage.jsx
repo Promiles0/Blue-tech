@@ -25,6 +25,8 @@ export default function Products() {
 
   const searchQ  = searchParams.get('search') ?? ''
   const category = searchParams.get('category') ?? 'All'
+  // e.g. /products?category=Laptops&brand=HP from the Categories menu
+  const brand    = searchParams.get('brand') ?? ''
   const sort     = searchParams.get('sort') ?? 'productId,desc'
   const page     = parseInt(searchParams.get('page') ?? '0', 10)
 
@@ -50,7 +52,7 @@ export default function Products() {
     let cancelled = false
 
     const needsCategoryFilter = category && category !== 'All'
-    const hasFilter = !!searchQ || needsCategoryFilter
+    const hasFilter = !!searchQ || needsCategoryFilter || !!brand
 
     const [sortField, sortDir] = sort.split(',')
 
@@ -58,6 +60,7 @@ export default function Products() {
     if (hasFilter) {
       const params = new URLSearchParams()
       if (searchQ) params.set('name', searchQ)
+      if (brand) params.set('brand', brand)
       if (needsCategoryFilter) {
         const cat = categories.find(c => c.name === category || c.categoryName === category)
         if (cat) params.set('categoryId', cat.categoryId)
@@ -89,7 +92,7 @@ export default function Products() {
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [searchQ, category, sort, page, categoryIds]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchQ, category, brand, sort, page, categoryIds]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const displayProducts = products
   const currentSort     = SORT_OPTIONS.find(o => o.value === sort) ?? SORT_OPTIONS[0]
@@ -101,7 +104,7 @@ export default function Products() {
         {/* Header */}
         <div style={{ marginBottom: 36 }}>
           <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 6, letterSpacing: '-0.02em' }}>
-            {searchQ ? `Results for "${searchQ}"` : category !== 'All' ? category : 'All Products'}
+            {searchQ ? `Results for "${searchQ}"` : [brand, category !== 'All' ? category : (brand ? 'Products' : 'All Products')].filter(Boolean).join(' ')}
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>
             {totalItems === 0

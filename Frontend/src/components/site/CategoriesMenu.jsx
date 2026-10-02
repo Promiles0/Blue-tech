@@ -4,22 +4,25 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Laptop, Monitor, ArrowRight } from 'lucide-react'
 import apiService from '../../api/service'
 import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { useCurrency } from '../../context/CurrencyContext'
 import { useDropdownMenu, DROPDOWN_MOTION_PROPS } from '../../lib/useDropdownMenu'
 
 // Curated shortcut links, routed through the same ?category= param the rest
 // of the site uses. If a category name doesn't exist yet, ProductsPage
 // degrades gracefully to showing all products rather than an empty grid.
 const LAPTOPS = [
-  { label: 'Dell laptops',   category: 'Dell Laptops' },
-  { label: 'HP laptops',     category: 'HP Laptops' },
-  { label: 'Lenovo laptops', category: 'Lenovo Laptops' },
+  { label: 'All laptops',    category: 'Laptops' },
+  { label: 'HP laptops',     category: 'Laptops', brand: 'HP' },
+  { label: 'Lenovo laptops', category: 'Laptops', brand: 'Lenovo' },
 ]
 const DESKTOPS = [
-  { label: 'HP desktops',     category: 'HP Desktops' },
-  { label: 'Lenovo desktops', category: 'Lenovo Desktops' },
+  { label: 'All desktops',  category: 'Desktops' },
+  { label: 'Monitors',      category: 'Monitors' },
+  { label: 'Printers',      category: 'Printers & Photocopiers' },
 ]
 
 export default function CategoriesMenu() {
+  const { formatPrice } = useCurrency()
   const {
     open, setOpen, close, containerRef, triggerRef, setItemRef, onTriggerKeyDown, onMenuKeyDown,
   } = useDropdownMenu()
@@ -84,7 +87,7 @@ export default function CategoriesMenu() {
           >
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
               <MenuColumn title="Laptops" items={LAPTOPS} Icon={Laptop} slotOffset={0} setItemRef={setItemRef} onSelect={close} />
-              <MenuColumn title="Desktops" items={DESKTOPS} Icon={Monitor} slotOffset={LAPTOPS.length} setItemRef={setItemRef} onSelect={close} />
+              <MenuColumn title="Office & desktops" items={DESKTOPS} Icon={Monitor} slotOffset={LAPTOPS.length} setItemRef={setItemRef} onSelect={close} />
             </div>
 
             {/* Featured promo tile — real newest product */}
@@ -122,7 +125,7 @@ export default function CategoriesMenu() {
                       </p>
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--price)', flexShrink: 0 }}>
-                      ${price.toFixed(0)}
+                      {formatPrice(price)}
                     </span>
                   </Link>
                 )}
@@ -161,7 +164,7 @@ function MenuColumn({ title, items, Icon, slotOffset, setItemRef, onSelect }) {
         <Link
           key={item.label}
           ref={setItemRef(slotOffset + i)}
-          to={`/products?category=${encodeURIComponent(item.category)}`}
+          to={`/products?category=${encodeURIComponent(item.category)}${item.brand ? `&brand=${encodeURIComponent(item.brand)}` : ''}`}
           onClick={onSelect}
           style={{
             display: 'flex', alignItems: 'center', gap: 10,

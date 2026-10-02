@@ -90,7 +90,7 @@ export default function CurrencySwitcher() {
               )
             })}
             <p style={{ fontSize: 11, color: 'var(--muted-dark)', lineHeight: 1.5, marginTop: 10, padding: '0 4px' }}>
-              Payments are always charged in USD.
+              Prices are set in RWF. Card payments are charged in USD at the current rate.
             </p>
           </motion.div>
         )}

@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import CouponInput from "../components/site/CouponInput";
 import { useCurrency } from "../context/CurrencyContext";
 
+const EXPRESS_SHIPPING_FEE_RWF = 7500;
+
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 // Paypack only accepts local-format Rwandan numbers (07XXXXXXXX). Mirror the backend
@@ -46,7 +48,7 @@ function CheckoutForm() {
   const navigate = useNavigate();
   const stripe = useStripe();
   const elements = useElements();
-  const { formatPrice, formatUsd, isConverted } = useCurrency();
+  const { formatPrice, formatUsd } = useCurrency();
 
   const [step, setStep] = useState("shipping"); // "shipping" | "success" | "momo-pending"
   const [loading, setLoading] = useState(false);
@@ -87,7 +89,8 @@ function CheckoutForm() {
     ? coupon.kind === "PERCENT" ? subtotal * (Number(coupon.value) / 100) : Number(coupon.value)
     : 0;
   const safeDiscount = Math.min(discount, subtotal);
-  const shippingFee = shippingMethod === "EXPRESS" ? 5 : 0;
+  // RWF, like every price. Keep in sync with EXPRESS_SHIPPING_FEE_RWF in the API.
+  const shippingFee = shippingMethod === "EXPRESS" ? EXPRESS_SHIPPING_FEE_RWF : 0;
   const total = Math.max(0, subtotal - safeDiscount + shippingFee);
 
   const buildPayload = () => {
@@ -361,7 +364,7 @@ function CheckoutForm() {
                 className="noir-input"
                 style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", color: "var(--text-primary)", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none", width: "100%", cursor: "pointer", appearance: "none" }}>
                 <option value="STANDARD">Standard Delivery (FREE, 2-4 days)</option>
-                <option value="EXPRESS">Express Delivery (+$5.00, next day)</option>
+                <option value="EXPRESS">Express Delivery (+{formatPrice(EXPRESS_SHIPPING_FEE_RWF)}, next day)</option>
                 <option value="PICKUP">Store Pickup (FREE, collect in Kigali)</option>
               </select>
             </section>
@@ -455,17 +458,17 @@ function CheckoutForm() {
                 </div>
               </div>
 
-              {/* The charge is always in USD. When the shopper is browsing in RWF the totals
-                  above are a converted estimate, so the real amount has to be stated here —
-                  at the point of payment — not left to be discovered on their statement. */}
-              {isConverted && (
+              {/* Prices are RWF, but Stripe charges cards in USD — state the exact USD amount
+                  here, at the point of payment, not on the shopper's statement. Mobile money
+                  is charged the RWF total as shown. */}
+              {paymentMethod === "CARD" && (
                 <p style={{
                   fontSize: 12, lineHeight: 1.6, color: "var(--text-muted)",
                   background: "var(--bg-elevated, rgba(127,127,127,0.08))",
                   border: "1px solid var(--card-border)", borderRadius: 10,
                   padding: "10px 12px", marginBottom: 16,
                 }}>
-                  Charged in USD (<strong style={{ color: "var(--text-primary)" }}>{formatUsd(total)}</strong>) — the amount shown in RWF is an estimate based on the current exchange rate.
+                  Card payments are charged in USD: <strong style={{ color: "var(--text-primary)" }}>{formatUsd(total)}</strong>, converted from the RWF total at today's exchange rate.
                 </p>
               )}
 

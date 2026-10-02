@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import apiService from '../api/service'
 import api from '../api/axios'
 import { toast } from 'sonner'
+import { useCurrency } from '../context/CurrencyContext'
 import { StarInput } from '../components/site/StarRating'
 
 const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
@@ -67,6 +68,7 @@ function TimelineStep({ label, sublabel, done, active, last, icon: Icon }) {
 }
 
 export default function OrderDetailPage() {
+  const { formatPrice } = useCurrency()
   const { id } = useParams()
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -152,7 +154,7 @@ export default function OrderDetailPage() {
                   Confirm Delivery
                 </button>
               )}
-              <span style={{ fontSize: 24, fontWeight: 900, color: 'var(--price-color, #f59e0b)' }}>${parseFloat(order.totalAmount ?? 0).toFixed(2)}</span>
+              <span style={{ fontSize: 24, fontWeight: 900, color: 'var(--price-color, #f59e0b)' }}>{formatPrice(order.totalAmount)}</span>
               <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Items: {order.items?.length ?? 0}</p>
             </div>
           </div>
@@ -310,14 +312,14 @@ export default function OrderDetailPage() {
                     )}
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.quantity} × ${parseFloat(item.priceAtPurchase ?? 0).toFixed(2)}</p>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>${parseFloat(item.subtotal ?? 0).toFixed(2)}</p>
+                    <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.quantity} × {formatPrice(item.priceAtPurchase)}</p>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{formatPrice(item.subtotal)}</p>
                   </div>
                 </div>
               ))}
               <div style={{ padding: '18px 24px', borderTop: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', background: 'var(--glass-bg2)' }}>
                 <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Total</span>
-                <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--price-color, #f59e0b)' }}>${parseFloat(order.totalAmount ?? 0).toFixed(2)}</span>
+                <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--price-color, #f59e0b)' }}>{formatPrice(order.totalAmount)}</span>
               </div>
             </div>
           )}

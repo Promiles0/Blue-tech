@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import apiService from '../../api/service'
+import { useCurrency } from '../../context/CurrencyContext'
 import { PRODUCT_IMAGE_FALLBACK, getProductImage, handleProductImageError } from '../../lib/productImage'
 
 const slideVariants = {
@@ -32,6 +33,7 @@ const LIQUID_GLASS = {
 }
 
 export default function HeroCarousel() {
+  const { formatPrice } = useCurrency()
   const [slides, setSlides] = useState([])
   const [loading, setLoading] = useState(true)
   const [current, setCurrent] = useState(0)
@@ -202,7 +204,7 @@ export default function HeroCarousel() {
               {slide.name}
             </p>
             <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--price)' }}>
-              ${parseFloat(slide.price).toFixed(0)}
+              {formatPrice(slide.price)}
             </p>
           </motion.div>
         </motion.div>

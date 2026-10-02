@@ -8,10 +8,11 @@ import Logo from './Logo'
 const NAV_ITEMS = [
   { label: 'Shop',                to: '/products' },
   { label: 'Interactive Screens', to: '/interactive-screens' },
-  { label: 'Audio',               to: '/products?category=Audio' },
-  { label: 'Wearables',           to: '/products?category=Wearables' },
-  { label: 'Cameras',             to: '/products?category=Cameras' },
-  { label: 'Computing',           to: '/products?category=Computing' },
+  { label: 'Laptops',             to: '/products?category=Laptops' },
+  { label: 'Desktops',            to: '/products?category=Desktops' },
+  { label: 'Printers',            to: `/products?category=${encodeURIComponent('Printers & Photocopiers')}` },
+  { label: 'Network Devices',     to: `/products?category=${encodeURIComponent('Network Devices')}` },
+  { label: 'Accessories',         to: '/products?category=Accessories' },
 ]
 
 export default function MobileNav() {
