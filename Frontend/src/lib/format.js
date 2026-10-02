@@ -1,5 +1,6 @@
-export function money(amount, currency = 'USD') {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount ?? 0)
+// Every stored amount (prices, order totals, revenue) is RWF.
+export function money(amount, currency = 'RWF') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: currency === 'RWF' ? 0 : 2 }).format(amount ?? 0)
 }
 
 export function dateShort(d) {

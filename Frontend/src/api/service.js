@@ -23,6 +23,8 @@ const apiService = {
     getNewest: (limit = 5) => api.get(`/products?page=0&size=${limit}&sort=createdAt,desc`),
     search: (params) => api.get(`/products/search?${params}`),
     getOne: (id) => api.get(`/products/${id}`),
+    // Filter values (with counts) for the storefront filter rail.
+    facets: (categoryId) => api.get(`/products/facets${categoryId ? `?categoryId=${categoryId}` : ''}`),
   },
 
   // --- CATEGORIES ---
@@ -114,8 +116,9 @@ const apiService = {
       updateStatus: (id, status) => api.patch(`/admin/quote-requests/${id}`, { status }),
     },
     products: {
-      getAll: (page = 0, size = 12) => api.get(`/products?page=${page}&size=${size}`),
-      getOne: (id) => api.get(`/products/${id}`),
+      // includeHidden: admins also see products that aren't published yet.
+      getAll: (page = 0, size = 12, extra = '') => api.get(`/products?page=${page}&size=${size}&includeHidden=true${extra}`),
+      getOne: (id) => api.get(`/products/${id}?includeHidden=true`),
       create: (data) => api.post('/products', data),
       update: (id, data) => api.put(`/products/${id}`, data),
       delete: (id) => api.delete(`/products/${id}`),

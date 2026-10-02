@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import apiService from '../api/service'
 
-// DISPLAY currency only. Every price in the app is stored — and charged — in USD; this
-// context decides how that USD number is rendered. Nothing here should ever feed an
-// amount into a payment call.
+// DISPLAY currency only. Every price in the app is stored in RWF; this context decides
+// whether that RWF number is shown as-is or converted to USD at the admin's exchange
+// rate. Nothing here should ever feed an amount into a payment call — the server works
+// out the charge (RWF for mobile money, USD for cards) from the order total itself.
 const CurrencyContext = createContext()
 
 const STORAGE_KEY = 'noir-currency'
@@ -43,21 +44,27 @@ export function CurrencyProvider({ children }) {
 
   const value = useMemo(() => {
     // RWF has no minor unit in practice, so it renders as a whole number with separators.
-    const formatPrice = (usdAmount) => {
-      const usd = Number(usdAmount ?? 0)
-      const safe = Number.isFinite(usd) ? usd : 0
-      if (currency === 'USD') return `$${safe.toFixed(2)}`
-      return `${Math.round(safe * rate).toLocaleString('en-US')} RWF`
+    const toUsd = (rwfAmount) => {
+      const rwf = Number(rwfAmount ?? 0)
+      return Number.isFinite(rwf) && rate > 0 ? rwf / rate : 0
     }
+    const formatRwf = (rwfAmount) => {
+      const rwf = Number(rwfAmount ?? 0)
+      return `${Math.round(Number.isFinite(rwf) ? rwf : 0).toLocaleString('en-US')} RWF`
+    }
+    const formatPrice = (rwfAmount) => (
+      currency === 'USD' ? `$${toUsd(rwfAmount).toFixed(2)}` : formatRwf(rwfAmount)
+    )
 
     return {
       currency,
       setCurrency,
       rate,
       formatPrice,
-      // For the checkout disclaimer, which must always name the real USD charge.
-      formatUsd: (usdAmount) => `$${(Number(usdAmount) || 0).toFixed(2)}`,
-      isConverted: currency !== 'USD',
+      formatRwf,
+      // Card payments are charged in USD — the checkout names that exact amount.
+      formatUsd: (rwfAmount) => `$${toUsd(rwfAmount).toFixed(2)}`,
+      isConverted: currency !== 'RWF',
     }
   }, [currency, rate])
 

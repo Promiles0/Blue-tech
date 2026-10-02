@@ -252,13 +252,14 @@ function momoProviderFor(localPhone: string) {
   return /^07[89]/.test(localPhone) ? "MOMO" : "AIRTEL_MONEY";
 }
 
+const EXPRESS_SHIPPING_FEE_RWF = 7500;
 const RWF_RATE_KEY = "usd_to_rwf_rate";
 const RWF_RATE_FALLBACK = 1471;
 
-// One source of truth for the rate: the admin-editable `site_settings` row. The old
-// USD_TO_RWF_RATE secret is kept only as a fallback, so an admin editing the rate in the
-// dashboard also changes what mobile money customers are actually charged — otherwise the
-// storefront and the cashin conversion would silently drift apart.
+// Prices, order totals and coupons are all stored in RWF. The rate only matters for
+// shoppers browsing in USD and for card payments, which Stripe charges in USD.
+// One source of truth for it: the admin-editable `site_settings` row. The old
+// USD_TO_RWF_RATE secret is kept only as a fallback.
 async function usdToRwfRate() {
   const { data } = await adminClient.from("site_settings").select("value").eq("key", RWF_RATE_KEY).maybeSingle();
   const stored = Number(data?.value);
@@ -500,23 +501,68 @@ async function getAdminAnalytics() {
   };
 }
 
-async function productResult(product: Record<string, unknown>) {
+// Facets the storefront filter rail can narrow by. `brand` is a real column; the rest
+// are spec keys shared across categories (laptops, desktops, tablets, monitors).
+const SPEC_FILTER_KEYS = ["ram", "storage", "screen_size", "cpu_family"];
+
+function cleanSpecs(input: unknown) {
+  const specs: Record<string, string> = {};
+  if (!input || typeof input !== "object" || Array.isArray(input)) return specs;
+  for (const [rawKey, rawValue] of Object.entries(input as Record<string, unknown>)) {
+    const key = String(rawKey).trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60);
+    if (!key || rawValue == null) continue;
+    const value = String(rawValue).trim().slice(0, 2000);
+    if (value) specs[key] = value;
+  }
+  return specs;
+}
+
+// PostgREST `in` list with every value quoted — spec values like 15.6" contain quotes.
+function postgrestInList(values: string[]) {
+  return `(${values.map((v) => `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")})`;
+}
+
+function listParam(url: URL, name: string) {
+  return (url.searchParams.get(name) ?? "").split("|").map((v) => v.trim()).filter(Boolean).slice(0, 20);
+}
+
+async function isAdminRequest(request: Request) {
+  try {
+    await requireAdmin(request);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function productResult(product: Record<string, unknown>, options: { admin?: boolean } = {}) {
   const [{ data: variants }, { data: images }] = await Promise.all([
-    adminClient.from("product_variants").select("*").eq("product_id", product.id),
-    adminClient.from("product_images").select("*").eq("product_id", product.id),
+    adminClient.from("product_variants").select("*").eq("product_id", product.id).order("id"),
+    adminClient.from("product_images").select("*").eq("product_id", product.id).order("id"),
   ]);
   const imageRows = (images ?? []) as Record<string, unknown>[];
   const primaryImage = imageRows.find((image) => image.is_primary) ?? imageRows[0];
+  const { admin_notes: adminNotes, categories: categoryRow, ...publicFields } = product;
+  const specs = (product.specs && typeof product.specs === "object" ? product.specs : {}) as Record<string, unknown>;
   return {
-    ...product,
+    ...publicFields,
     productId: product.id,
     categoryId: product.category_id,
-    screenSize: product.screen_size,
-    resolution: product.resolution,
+    categoryName: (categoryRow as Record<string, unknown> | null)?.name ?? null,
+    brand: product.brand ?? null,
+    modelNumber: product.model_number ?? null,
+    condition: product.condition ?? null,
+    shortDescription: product.short_description ?? null,
+    inTheBox: product.in_the_box ?? null,
+    specs,
+    isActive: product.is_active !== false,
+    screenSize: product.screen_size ?? specs.screen_size ?? null,
+    resolution: product.resolution ?? specs.resolution ?? null,
     touchPoints: product.touch_points,
-    os: product.os,
-    connectivity: product.connectivity,
+    os: product.os ?? specs.os ?? null,
+    connectivity: product.connectivity ?? specs.connectivity ?? null,
     warranty: product.warranty,
+    ...(options.admin ? { adminNotes: adminNotes ?? null } : {}),
     variants: (variants ?? []).map(variantResult),
     images: imageRows.map(imageResult),
     imageUrl: primaryImage?.image_url ?? null,
@@ -647,7 +693,7 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
   const cartId = await getOrCreateCartId(user.id);
   const { data: cartItems, error: cartItemsError } = await adminClient
     .from("cart_items")
-    .select("id,variant_id,quantity,product_variants(id,stock_quantity,price_adjustment,size_or_color,products(id,name,price))")
+    .select("id,variant_id,quantity,product_variants(id,stock_quantity,price_adjustment,size_or_color,products(id,name,price,is_active))")
     .eq("cart_id", cartId);
   if (cartItemsError) throw cartItemsError;
   if (!cartItems || cartItems.length === 0) throw new Error("Cannot checkout with an empty cart");
@@ -671,7 +717,8 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
   const shippingMethod = ["STANDARD", "EXPRESS", "PICKUP"].includes(String(body.shippingMethod ?? "").toUpperCase())
     ? String(body.shippingMethod).toUpperCase()
     : "STANDARD";
-  const shippingFee = shippingMethod === "EXPRESS" ? 5 : 0;
+  // RWF, like every other amount (≈ the old $5). Keep in sync with CheckoutPage.jsx.
+  const shippingFee = shippingMethod === "EXPRESS" ? EXPRESS_SHIPPING_FEE_RWF : 0;
 
   const paymentMethod = ["CARD", "MOMO", "AIRTEL_MONEY", "CASH", "CHEQUE"].includes(String(body.paymentMethod ?? "").toUpperCase())
     ? String(body.paymentMethod).toUpperCase()
@@ -705,6 +752,7 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
       const product = (variant.products ?? {}) as Record<string, unknown>;
       const quantity = toNumber(cartItem.quantity);
       const variantId = variant.id as number;
+      if (product.is_active === false) throw new Error(`${product.name ?? "An item"} is no longer available — remove it from your cart`);
 
       const ok = await reduceVariantStock(variantId, quantity);
       if (!ok) throw new Error(`Out of stock: ${product.name ?? "item"} (${variant.size_or_color ?? ""})`);
@@ -762,7 +810,7 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
     const { error: clearCartError } = await adminClient.from("cart_items").delete().eq("cart_id", cartId);
     if (clearCartError) throw clearCartError;
 
-    await notifyUser(user.id, `Your order #${order.id} has been placed for $${totalAmount.toFixed(2)}.`);
+    await notifyUser(user.id, `Your order #${order.id} has been placed for ${Math.round(totalAmount).toLocaleString("en-US")} RWF.`);
 
     return { orderId: order.id, totalAmount, status: "PENDING" };
   } catch (error) {
@@ -1105,11 +1153,14 @@ function customerQuoteEmailHtml(fields: { name: string; screenSize: string; quan
   `;
 }
 
-async function createStripePaymentIntent(amountUsd: number, metadata: Record<string, string>) {
+async function createStripePaymentIntent(amountRwf: number, metadata: Record<string, string>) {
   const secretKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!secretKey) throw new Error("Stripe is not configured on the server");
+  // Order totals are RWF; card payments are charged in USD at the admin's current rate.
+  const amountCents = Math.round((amountRwf / (await usdToRwfRate())) * 100);
+  if (amountCents < 50) throw new Error("Order total is below the minimum card payment ($0.50)");
   const params = new URLSearchParams();
-  params.set("amount", String(Math.round(amountUsd * 100)));
+  params.set("amount", String(amountCents));
   params.set("currency", "usd");
   Object.entries(metadata).forEach(([key, value]) => params.set(`metadata[${key}]`, value));
   const res = await fetch("https://api.stripe.com/v1/payment_intents", {
@@ -1166,7 +1217,7 @@ async function getPaypackToken() {
 
 async function initiateMomoPayment(order: Record<string, unknown>, phone: string) {
   const { token, baseUrl } = await getPaypackToken();
-  const amountRwf = Math.round(toNumber(order.total_amount) * (await usdToRwfRate()));
+  const amountRwf = Math.round(toNumber(order.total_amount));
   if (amountRwf < 100) throw new Error("Order total is below the 100 RWF mobile money minimum");
   console.log(`[paypack] cashin order=${order.id} amount=${amountRwf} RWF number=${phone}`);
   const res = await fetch(`${baseUrl}/transactions/cashin`, {
@@ -1375,33 +1426,71 @@ async function handle(request: Request) {
   if (method === "GET" && (path === "/products" || path === "/products/search")) {
     const page = Number(url.searchParams.get("page") ?? 0);
     const size = Math.min(Number(url.searchParams.get("size") ?? 10), 100);
-    let query = adminClient.from("products").select("*", { count: "exact" });
-    const name = url.searchParams.get("name");
-    if (name) query = query.ilike("name", `%${name}%`);
+    // Hidden products (imported but not yet published) are only listed for admins.
+    const includeHidden = url.searchParams.get("includeHidden") === "true" && await isAdminRequest(request);
+    let query = adminClient.from("products").select("*, categories(name)", { count: "exact" });
+    if (!includeHidden) query = query.eq("is_active", true);
+    const name = (url.searchParams.get("name") ?? "").replace(/[,()%*\\]/g, " ").trim();
+    if (name) query = query.or(`name.ilike.%${name}%,brand.ilike.%${name}%,model_number.ilike.%${name}%`);
     const categoryId = url.searchParams.get("categoryId");
     if (categoryId) query = query.eq("category_id", categoryId);
     const minPrice = url.searchParams.get("minPrice");
     if (minPrice) query = query.gte("price", minPrice);
     const maxPrice = url.searchParams.get("maxPrice");
     if (maxPrice) query = query.lte("price", maxPrice);
+    // Multi-value filters use "|" as the separator, since spec values can contain commas.
+    const brands = listParam(url, "brand");
+    if (brands.length) query = query.filter("brand", "in", postgrestInList(brands));
+    for (const key of SPEC_FILTER_KEYS) {
+      const values = listParam(url, key);
+      if (values.length) query = query.filter(`specs->>${key}`, "in", postgrestInList(values));
+    }
 
     const sortColumns: Record<string, string> = { productId: "id", price: "price", name: "name", createdAt: "created_at" };
     const [sortField, sortDir] = (url.searchParams.get("sort") ?? "createdAt,desc").split(",");
     const orderColumn = sortColumns[sortField] ?? "created_at";
     const ascending = sortDir === "asc";
 
-    const { data, count, error } = await query.range(page * size, page * size + size - 1).order(orderColumn, { ascending });
+    const { data, count, error } = await query.range(page * size, page * size + size - 1).order(orderColumn, { ascending }).order("id", { ascending });
     if (error) return failure(error.message, 500, request);
-    const products = await Promise.all((data ?? []).map(productResult));
+    const products = await Promise.all((data ?? []).map((row) => productResult(row, { admin: includeHidden })));
     return success("Products fetched successfully", { content: products, totalElements: count ?? 0, number: page, size, totalPages: Math.ceil((count ?? 0) / size) });
+  }
+
+  // Values (with counts) the storefront filter rail offers, computed from published
+  // products only — so a filter never offers a value that would return nothing.
+  if (method === "GET" && path === "/products/facets") {
+    let query = adminClient.from("products").select("brand,specs").eq("is_active", true);
+    const categoryId = url.searchParams.get("categoryId");
+    if (categoryId) query = query.eq("category_id", categoryId);
+    const { data, error } = await query;
+    if (error) return failure(error.message, 500, request);
+    const tally = (values: unknown[]) => {
+      const counts = new Map<string, number>();
+      for (const v of values) {
+        const value = typeof v === "string" ? v.trim() : "";
+        if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+      }
+      // Numeric-aware order so "8GB" < "16GB" and "512GB SSD" < "1TB SSD".
+      const size = (value: string) => (parseFloat(value) || 0) * (/\d\s*TB/i.test(value) ? 1000 : 1);
+      return [...counts.entries()]
+        .map(([value, count]) => ({ value, count }))
+        .sort((a, b) => size(a.value) - size(b.value) || a.value.localeCompare(b.value));
+    };
+    const rows = (data ?? []) as Record<string, unknown>[];
+    const facets: Record<string, { value: string; count: number }[]> = { brand: tally(rows.map((r) => r.brand)) };
+    for (const key of SPEC_FILTER_KEYS) facets[key] = tally(rows.map((r) => (r.specs as Record<string, unknown> | null)?.[key]));
+    return success("Product facets fetched", facets, request);
   }
 
   if (method === "GET" && /^\/products\/[^/]+$/.test(path)) {
     const id = path.split("/").pop();
-    const { data, error } = await adminClient.from("products").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await adminClient.from("products").select("*, categories(name)").eq("id", id).maybeSingle();
     if (error) return failure(error.message, 500);
     if (!data) return failure("Product not found", 404);
-    return success("Product fetched successfully", await productResult(data));
+    const admin = url.searchParams.get("includeHidden") === "true" && await isAdminRequest(request);
+    if (data.is_active === false && !admin) return failure("Product not found", 404);
+    return success("Product fetched successfully", await productResult(data, { admin }));
   }
 
   if (method === "GET" && path === "/categories") {
@@ -1550,23 +1639,71 @@ async function handle(request: Request) {
     }
 
     const body = await readJson(request);
-    const variants = Array.isArray(body.variants) ? body.variants : [];
+    const variants = (Array.isArray(body.variants) ? body.variants : []) as Record<string, unknown>[];
     const images = Array.isArray(body.images) ? body.images : [];
-    const touchPointsInput = body.touchPoints ?? body.touch_points;
-    const productValues = {
-      name: body.name,
-      description: body.description ?? null,
+    const optionalText = (value: unknown) => {
+      if (value == null) return null;
+      const text = String(value).trim();
+      return text ? text : null;
+    };
+    const specs = cleanSpecs(body.specs);
+    // Legacy Interactive Screens columns: take the spec value when the form sent one,
+    // else whatever the caller passed directly (older clients).
+    const legacy = (column: string, camel: string) => specs[column] ?? optionalText(body[camel] ?? body[column]);
+    const touchPointsInput = legacy("touch_points", "touchPoints");
+    const touchPoints = touchPointsInput != null ? parseInt(String(touchPointsInput), 10) : null;
+    const productValues: Record<string, unknown> = {
+      name: optionalText(body.name),
+      description: optionalText(body.description),
+      short_description: optionalText(body.shortDescription ?? body.short_description),
       price: Number(body.price),
       category_id: body.categoryId ?? body.category_id ?? null,
-      stock: body.stock ?? variants.reduce((total: number, variant: Record<string, unknown>) => total + Number(variant.stockQuantity ?? variant.stock_quantity ?? 0), 0),
-      screen_size: body.screenSize ?? body.screen_size ?? null,
-      resolution: body.resolution ?? null,
-      touch_points: touchPointsInput != null && touchPointsInput !== "" ? Number(touchPointsInput) : null,
-      os: body.os ?? null,
-      connectivity: body.connectivity ?? null,
-      warranty: body.warranty ?? null,
+      stock: body.stock ?? variants.reduce((total: number, variant) => total + Number(variant.stockQuantity ?? variant.stock_quantity ?? 0), 0),
+      brand: optionalText(body.brand),
+      model_number: optionalText(body.modelNumber ?? body.model_number),
+      condition: optionalText(body.condition),
+      in_the_box: optionalText(body.inTheBox ?? body.in_the_box),
+      warranty: optionalText(body.warranty),
+      admin_notes: optionalText(body.adminNotes ?? body.admin_notes),
+      specs,
+      screen_size: legacy("screen_size", "screenSize"),
+      resolution: legacy("resolution", "resolution"),
+      touch_points: Number.isFinite(touchPoints) && (touchPoints as number) >= 0 ? touchPoints : null,
+      os: legacy("os", "os"),
+      connectivity: legacy("connectivity", "connectivity"),
+      updated_at: new Date().toISOString(),
     };
-    if (!productValues.name || !Number.isFinite(productValues.price)) return failure("Name and a valid price are required");
+    // Older clients don't send the flag — leave visibility untouched rather than flipping it.
+    if (typeof body.isActive === "boolean") productValues.is_active = body.isActive;
+    // On edit, only touch columns the client actually sent, so an older admin form that
+    // doesn't know about brand/specs/descriptions can't silently blank them.
+    if (method !== "POST") {
+      const sentBy: Record<string, string[]> = {
+        description: ["description"],
+        short_description: ["shortDescription", "short_description"],
+        brand: ["brand"],
+        model_number: ["modelNumber", "model_number"],
+        condition: ["condition"],
+        in_the_box: ["inTheBox", "in_the_box"],
+        warranty: ["warranty"],
+        admin_notes: ["adminNotes", "admin_notes"],
+        specs: ["specs"],
+        screen_size: ["specs", "screenSize", "screen_size"],
+        resolution: ["specs", "resolution"],
+        touch_points: ["specs", "touchPoints", "touch_points"],
+        os: ["specs", "os"],
+        connectivity: ["specs", "connectivity"],
+      };
+      for (const [column, keys] of Object.entries(sentBy)) {
+        if (keys.every((key) => body[key] === undefined)) delete productValues[column];
+      }
+    }
+    if (!productValues.name || !Number.isFinite(productValues.price) || (productValues.price as number) < 0) {
+      return failure("Name and a valid price are required");
+    }
+    if (variants.some((variant) => !optionalText(variant.skuCode ?? variant.sku_code))) {
+      return failure("Every variant needs a SKU code");
+    }
 
     let product: Record<string, unknown> | null = null;
     if (method === "POST") {
@@ -1580,19 +1717,45 @@ async function handle(request: Request) {
       product = data;
       const { error: removeImagesError } = await adminClient.from("product_images").delete().eq("product_id", id);
       if (removeImagesError) return failure(removeImagesError.message, 400);
-      const { error: removeVariantsError } = await adminClient.from("product_variants").delete().eq("product_id", id);
-      if (removeVariantsError) return failure(removeVariantsError.message, 400);
     }
 
+    if (!product) return failure("Product could not be saved", 500);
     const productId = product.id;
-    if (variants.length) {
-      const { error } = await adminClient.from("product_variants").insert(variants.map((variant: Record<string, unknown>) => ({
-        product_id: productId,
-        sku_code: variant.skuCode ?? variant.sku_code,
-        size_or_color: variant.sizeOrColor ?? variant.size_or_color ?? "Default",
-        price_adjustment: Number(variant.priceAdjustment ?? variant.price_adjustment ?? 0),
-        stock_quantity: Number(variant.stockQuantity ?? variant.stock_quantity ?? 0),
-      })));
+    const variantRow = (variant: Record<string, unknown>) => ({
+      product_id: productId,
+      sku_code: String(variant.skuCode ?? variant.sku_code).trim(),
+      size_or_color: optionalText(variant.sizeOrColor ?? variant.size_or_color) ?? "Default",
+      price_adjustment: Number(variant.priceAdjustment ?? variant.price_adjustment ?? 0) || 0,
+      stock_quantity: Math.max(0, Math.trunc(Number(variant.stockQuantity ?? variant.stock_quantity ?? 0) || 0)),
+    });
+
+    // Variants are updated in place rather than deleted and re-inserted: carts and past
+    // orders reference variant ids (on delete restrict), so a delete-all would make any
+    // product that has ever been ordered or carted impossible to edit.
+    const keptIds = variants
+      .map((variant) => Number(variant.variantId ?? variant.variant_id))
+      .filter((variantId) => Number.isFinite(variantId) && variantId > 0);
+    if (method !== "POST") {
+      let removeQuery = adminClient.from("product_variants").delete().eq("product_id", productId);
+      if (keptIds.length) removeQuery = removeQuery.not("id", "in", `(${keptIds.join(",")})`);
+      const { error: removeVariantsError } = await removeQuery;
+      if (removeVariantsError) {
+        const inUse = removeVariantsError.code === "23503";
+        return failure(inUse ? "A removed variant is in a cart or a past order, so it can't be deleted. Set its stock to 0 instead." : removeVariantsError.message, 400);
+      }
+      for (const variant of variants) {
+        const variantId = Number(variant.variantId ?? variant.variant_id);
+        if (!Number.isFinite(variantId) || variantId <= 0) continue;
+        const { error } = await adminClient.from("product_variants").update(variantRow(variant)).eq("id", variantId).eq("product_id", productId);
+        if (error) return failure(error.message, 400);
+      }
+    }
+    const newVariants = variants.filter((variant) => {
+      const variantId = Number(variant.variantId ?? variant.variant_id);
+      return method === "POST" || !Number.isFinite(variantId) || variantId <= 0;
+    });
+    if (newVariants.length) {
+      const { error } = await adminClient.from("product_variants").insert(newVariants.map(variantRow));
       if (error) return failure(error.message, 400);
     }
     if (images.length) {
@@ -1603,7 +1766,7 @@ async function handle(request: Request) {
       })));
       if (error) return failure(error.message, 400);
     }
-    return success(method === "POST" ? "Product created successfully" : "Product updated successfully", await productResult(product));
+    return success(method === "POST" ? "Product created successfully" : "Product updated successfully", await productResult(product, { admin: true }));
   }
 
   if (method === "POST" && path === "/products/images/upload") {
@@ -1664,6 +1827,9 @@ async function handle(request: Request) {
       const variantId = body.variantId ?? body.variant_id;
       const quantity = Math.max(1, Number(body.quantity ?? 1));
       if (!variantId) return failure("variantId is required", 400, request);
+      const { data: variantRow } = await adminClient.from("product_variants").select("id,products(is_active)").eq("id", variantId).maybeSingle();
+      const variantProduct = (variantRow?.products ?? null) as Record<string, unknown> | null;
+      if (!variantRow || variantProduct?.is_active === false) return failure("This product is not available", 404, request);
 
       const { data: existingItem, error: existingError } = await adminClient
         .from("cart_items")
@@ -2196,8 +2362,8 @@ async function handle(request: Request) {
     if (method === "PUT" && path === "/admin/settings/exchange-rate") {
       const body = await readJson(request);
       const rate = Number(body.usdToRwfRate);
-      // A zero/negative/absurd rate would silently mangle every displayed price and, worse,
-      // the real mobile money charge — so reject it here rather than storing it.
+      // A zero/negative/absurd rate would silently mangle USD prices and, worse, the real
+      // card charge (Stripe bills the RWF total converted at this rate) — so reject it here.
       if (!Number.isFinite(rate) || rate <= 0) return failure("Exchange rate must be a positive number", 400, request);
       if (rate > 100000) return failure("That exchange rate looks wrong — enter RWF per 1 USD (e.g. 1471)", 400, request);
 

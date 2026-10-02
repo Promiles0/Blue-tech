@@ -14,6 +14,7 @@ import StickyCartBar from '../components/site/StickyCartBar'
 import { handleProductImageError, productImageList } from '../lib/productImage'
 import { buildWhatsAppLink } from '../lib/helpLinks'
 import { useCurrency } from '../context/CurrencyContext'
+import ProductSpecs from '../components/site/ProductSpecs'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -160,6 +161,20 @@ export default function ProductDetail() {
               {product.name}
             </h1>
 
+            {(product.brand || product.modelNumber || product.condition) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 16, fontSize: 13, color: 'var(--muted)' }}>
+                {[product.brand, product.modelNumber].filter(Boolean).join(' · ')}
+                {product.condition && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
+                    padding: '3px 9px', borderRadius: 100, border: '1px solid var(--border)', color: 'var(--text-secondary)',
+                  }}>
+                    {product.condition}
+                  </span>
+                )}
+              </div>
+            )}
+
             {avgRating && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
                 <StarDisplay rating={Number(avgRating)} size={14} />
@@ -173,9 +188,9 @@ export default function ProductDetail() {
               {formatPrice(price)}
             </p>
 
-            {product.description && (
+            {(product.shortDescription || product.description) && (
               <p style={{ fontSize: 15, color: 'var(--muted)', lineHeight: 1.75, marginBottom: 28 }}>
-                {product.description}
+                {product.shortDescription || product.description}
               </p>
             )}
 
@@ -274,8 +289,31 @@ export default function ProductDetail() {
               <MessageCircle size={16} />
               Quick WhatsApp Help – About This Product
             </a>
+
+            {(product.warranty || product.inTheBox) && (
+              <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--muted)' }}>
+                {product.warranty && <span><strong style={{ color: 'var(--text)' }}>Warranty:</strong> {product.warranty}</span>}
+                {product.inTheBox && <span><strong style={{ color: 'var(--text)' }}>In the box:</strong> {product.inTheBox}</span>}
+              </div>
+            )}
           </div>
         </div>
+
+        {(product.description || product.specs) && (
+          <div style={{ marginTop: 72, display: 'flex', flexDirection: 'column', gap: 40, maxWidth: 860 }}>
+            {/* The short description already opens the page; repeat the full one only when it adds something. */}
+            {product.description && product.description !== product.shortDescription && (
+              <section>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 14 }}>Overview</h2>
+                <p style={{ fontSize: 15, color: 'var(--muted)', lineHeight: 1.75, whiteSpace: 'pre-line' }}>{product.description}</p>
+              </section>
+            )}
+            <section>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 14 }}>Specifications</h2>
+              <ProductSpecs product={product} />
+            </section>
+          </div>
+        )}
 
         <div style={{ marginTop: 72 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>

@@ -1,24 +1,52 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check, UploadCloud } from 'lucide-react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check, UploadCloud, Eye, EyeOff } from 'lucide-react'
 import apiService from '../../api/service'
 import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { money } from '../../lib/format'
+import { templateForCategory } from '../../lib/specTemplates'
 
-const EMPTY_VARIANT = { variantId: null, skuCode: '', sizeOrColor: '', priceAdjustment: '', stockQuantity: 0 }
+const EMPTY_VARIANT = { variantId: null, skuCode: '', sizeOrColor: '', priceAdjustment: '', stockQuantity: 10 }
 const EMPTY_IMAGE   = { imageUrl: '', isPrimary: false }
-const EMPTY_SPECS = { screenSize: '', resolution: '', touchPoints: '', os: '', connectivity: '', warranty: '' }
+const CONDITIONS = ['New', 'Refurbished', 'Used']
 const EMPTY_FORM = {
-  name: '', description: '', price: '', categoryId: '',
+  name: '', brand: '', modelNumber: '', condition: 'New', categoryId: '', price: '', warranty: '6 months',
+  isActive: true, shortDescription: '', description: '', inTheBox: '', adminNotes: '',
+  specs: {},        // values for the current category's template fields
+  extraSpecs: [],   // [{ key, value }] — anything outside the template
   variants: [{ ...EMPTY_VARIANT }],
   images:   [{ ...EMPTY_IMAGE }],
-  ...EMPTY_SPECS,
 }
 
-function formFromDetail(p) {
+const templateKeys = (categoryName) => new Set((templateForCategory(categoryName)?.fields ?? []).map(f => f.key))
+
+// Split a product's specs into the fields its category's template knows and the rest.
+function splitSpecs(specs, categoryName) {
+  const keys = templateKeys(categoryName)
+  const known = {}
+  const extra = []
+  for (const [key, value] of Object.entries(specs ?? {})) {
+    if (keys.has(key)) known[key] = String(value ?? '')
+    else extra.push({ key, value: String(value ?? '') })
+  }
+  return { specs: known, extraSpecs: extra }
+}
+
+function formFromDetail(p, categories) {
+  const categoryName = categories.find(c => String(c.categoryId) === String(p.categoryId))?.name ?? p.categoryName
   return {
-    name:        p.name ?? '',
-    description: p.description ?? '',
-    price:       p.price ?? '',
-    categoryId:  p.categoryId ?? '',
+    name:             p.name ?? '',
+    brand:            p.brand ?? '',
+    modelNumber:      p.modelNumber ?? '',
+    condition:        p.condition ?? '',
+    categoryId:       p.categoryId ?? '',
+    price:            p.price ?? '',
+    warranty:         p.warranty ?? '',
+    isActive:         p.isActive !== false,
+    shortDescription: p.shortDescription ?? '',
+    description:      p.description ?? '',
+    inTheBox:         p.inTheBox ?? '',
+    adminNotes:       p.adminNotes ?? '',
+    ...splitSpecs(p.specs, categoryName),
     variants:    p.variants?.length ? p.variants.map(v => ({
       variantId:       v.variantId ?? null,
       skuCode:         v.skuCode ?? '',
@@ -30,12 +58,6 @@ function formFromDetail(p) {
       imageUrl:  i.imageUrl ?? '',
       isPrimary: i.isPrimary ?? false,
     })) : [{ ...EMPTY_IMAGE }],
-    screenSize:   p.screenSize ?? '',
-    resolution:   p.resolution ?? '',
-    touchPoints:  p.touchPoints ?? '',
-    os:           p.os ?? '',
-    connectivity: p.connectivity ?? '',
-    warranty:     p.warranty ?? '',
   }
 }
 
@@ -92,7 +114,7 @@ export default function AdminProducts() {
     try {
       const { data } = await apiService.admin.products.getOne(product.productId ?? product.id)
       const p = data?.data ?? data
-      setForm(formFromDetail(p))
+      setForm(formFromDetail(p, categories))
       setEditing(p)
     } catch {
       setError('Failed to load product details.')
@@ -139,11 +161,14 @@ export default function AdminProducts() {
     setError(null)
 
     if (!form.name.trim())                          { setError('Product name is required.'); return }
-    if (!form.price || Number(form.price) <= 0)     { setError('A valid base price is required.'); return }
+    const price = Number(form.price)
+    if (form.price === '' || !Number.isFinite(price) || price < 0) { setError('A valid price (RWF) is required.'); return }
+    if (price === 0 && form.isActive)               { setError('A product with no price can only be saved as hidden.'); return }
     if (!form.categoryId)                           { setError('Please select a category.'); return }
     if (form.variants.some(v => !v.skuCode.trim())) { setError('All variants must have a SKU code.'); return }
     const skuList = form.variants.map(v => v.skuCode.trim().toLowerCase())
     if (new Set(skuList).size < skuList.length)     { setError('Two variants share the same SKU. Each variant must have a unique SKU.'); return }
+    if (form.extraSpecs.some(s => s.value.trim() && !s.key.trim())) { setError('Every extra spec needs a name.'); return }
 
     setSaving(true)
     try {
@@ -158,11 +183,24 @@ export default function AdminProducts() {
 
       setForm(f => ({ ...f, images }))
 
+      const specs = {}
+      for (const [key, value] of Object.entries(form.specs)) if (String(value).trim()) specs[key] = String(value).trim()
+      for (const { key, value } of form.extraSpecs) if (key.trim() && value.trim()) specs[key.trim()] = value.trim()
+
       const payload = {
-        name:        form.name.trim(),
-        description: form.description.trim() || undefined,
-        price:       Number(form.price),
-        categoryId:  Number(form.categoryId),
+        name:             form.name.trim(),
+        brand:            form.brand.trim(),
+        modelNumber:      form.modelNumber.trim(),
+        condition:        form.condition.trim(),
+        categoryId:       Number(form.categoryId),
+        price,
+        warranty:         form.warranty.trim(),
+        isActive:         form.isActive,
+        shortDescription: form.shortDescription.trim(),
+        description:      form.description.trim(),
+        inTheBox:         form.inTheBox.trim(),
+        adminNotes:       form.adminNotes.trim(),
+        specs,
         variants:    form.variants.map(v => ({
           ...(v.variantId != null ? { variantId: v.variantId } : {}),
           skuCode:         v.skuCode.trim(),
@@ -171,12 +209,6 @@ export default function AdminProducts() {
           stockQuantity:   Number(v.stockQuantity),
         })),
         images,
-        screenSize:   form.screenSize.trim() || undefined,
-        resolution:   form.resolution.trim() || undefined,
-        touchPoints:  form.touchPoints !== '' ? Number(form.touchPoints) : undefined,
-        os:           form.os.trim() || undefined,
-        connectivity: form.connectivity.trim() || undefined,
-        warranty:     form.warranty.trim() || undefined,
       }
       if (modal === 'create') {
         await apiService.admin.products.create(payload)
@@ -218,6 +250,28 @@ export default function AdminProducts() {
     }
   }
 
+  const setField = (field) => (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
+    setForm(f => ({ ...f, [field]: value }))
+  }
+  const categoryName = (id) => categories.find(c => String(c.categoryId) === String(id))?.name ?? ''
+  const template = useMemo(() => templateForCategory(categoryName(form.categoryId)), [categories, form.categoryId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Switching category re-sorts the specs: values the new template has a field for stay
+  // in their field, everything else moves to "Other specs" — nothing typed is lost.
+  const setCategory = (categoryId) => setForm(f => {
+    const all = { ...f.specs }
+    for (const { key, value } of f.extraSpecs) if (key.trim()) all[key.trim()] = value
+    return { ...f, categoryId, ...splitSpecs(all, categoryName(categoryId)) }
+  })
+  const setSpec = (key, value) => setForm(f => ({ ...f, specs: { ...f.specs, [key]: value } }))
+  const setExtraSpec = (i, field, value) => setForm(f => ({
+    ...f, extraSpecs: f.extraSpecs.map((row, idx) => idx === i ? { ...row, [field]: value } : row),
+  }))
+  const addExtraSpec = () => setForm(f => ({ ...f, extraSpecs: [...f.extraSpecs, { key: '', value: '' }] }))
+  const removeExtraSpec = (i) => setForm(f => ({ ...f, extraSpecs: f.extraSpecs.filter((_, idx) => idx !== i) }))
+  const hasImage = form.images.some(i => i.imageUrl.trim()) || fileUploads.length > 0
+
   const setVariant = (i, field, val) => setForm(f => ({
     ...f, variants: f.variants.map((v, idx) => idx === i ? { ...v, [field]: val } : v)
   }))
@@ -235,7 +289,7 @@ export default function AdminProducts() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em' }}>Products</h1>
-          <p style={{ color: 'var(--muted-dark)', fontSize: 13, marginTop: 3 }}>{products.length} shown — manage your catalog</p>
+          <p style={{ color: 'var(--muted-dark)', fontSize: 13, marginTop: 3 }}>{products.length} shown — hidden products are only visible here until you publish them</p>
         </div>
         <button onClick={openCreate} className="noir-btn-primary" style={{ gap: 7, fontSize: 13, padding: '10px 18px' }}>
           <Plus size={15} /> Add Product
@@ -253,7 +307,7 @@ export default function AdminProducts() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--admin-border)' }}>
-              {['Product', 'Category', 'Price', 'Variants', 'Actions'].map(h => (
+              {['Product', 'Category', 'Price', 'Status', 'Actions'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--muted-dark)', fontWeight: 600, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
               ))}
             </tr>
@@ -284,12 +338,29 @@ export default function AdminProducts() {
                       style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', background: 'var(--card)' }}
                       onError={handleProductImageError}
                     />
-                    <span style={{ fontWeight: 500, color: 'var(--text)' }}>{p.name}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontWeight: 500, color: 'var(--text)' }}>{p.name}</span>
+                      {(p.brand || p.variants?.[0]?.skuCode) && (
+                        <span style={{ fontSize: 11, color: 'var(--muted-dark)' }}>
+                          {[p.brand, p.variants?.[0]?.skuCode].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </td>
                 <td style={{ padding: '14px 16px', color: 'var(--muted-dark)' }}>{p.categoryName ?? p.category?.name ?? '—'}</td>
-                <td style={{ padding: '14px 16px', color: '#f59e0b', fontWeight: 600 }}>${Number(p.startingPrice ?? p.price ?? 0).toFixed(2)}</td>
-                <td style={{ padding: '14px 16px', color: 'var(--muted-dark)' }}>{p.variants?.length ?? 0}</td>
+                <td style={{ padding: '14px 16px', color: '#f59e0b', fontWeight: 600, whiteSpace: 'nowrap' }}>{money(p.startingPrice ?? p.price ?? 0)}</td>
+                <td style={{ padding: '14px 16px' }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600,
+                    padding: '3px 9px', borderRadius: 100, whiteSpace: 'nowrap',
+                    color: p.isActive === false ? 'var(--muted-dark)' : '#22c55e',
+                    background: p.isActive === false ? 'var(--overlay-hover)' : 'rgba(34,197,94,0.1)',
+                  }}>
+                    {p.isActive === false ? <EyeOff size={11} /> : <Eye size={11} />}
+                    {p.isActive === false ? 'Hidden' : 'Live'}
+                  </span>
+                </td>
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <IconBtn icon={Pencil} onClick={() => openEdit(p)} title="Edit" />
@@ -319,7 +390,7 @@ export default function AdminProducts() {
           padding: '40px 20px', zIndex: 100, overflowY: 'auto',
         }}>
           <div className="surface" style={{
-            width: '100%', maxWidth: 680, padding: '32px', borderRadius: 16,
+            width: '100%', maxWidth: 760, padding: '32px', borderRadius: 16,
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700 }}>{modal === 'create' ? 'Add Product' : 'Edit Product'}</h2>
@@ -343,14 +414,14 @@ export default function AdminProducts() {
 
             {/* Basic Info */}
             <SectionLabel>Basic Info</SectionLabel>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <label style={labelStyle}>
+            <div style={gridStyle}>
+              <label style={{ ...labelStyle, gridColumn: '1 / -1' }}>
                 <span>Name *</span>
-                <input className="noir-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Product name" />
+                <input className="noir-input" value={form.name} onChange={setField('name')} placeholder="e.g. HP PROBOOK 450G9 I5" />
               </label>
               <label style={labelStyle}>
                 <span>Category *</span>
-                <select className="noir-input" value={form.categoryId} onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                <select className="noir-input" value={form.categoryId} onChange={e => setCategory(e.target.value)}
                   style={{ background: 'var(--surface)', color: 'var(--text)' }}>
                   <option value="">— select —</option>
                   {categories.map(c => (
@@ -358,21 +429,105 @@ export default function AdminProducts() {
                   ))}
                 </select>
               </label>
+              <label style={labelStyle}>
+                <span>Price (RWF) *</span>
+                <input className="noir-input" type="number" min="0" step="1" value={form.price}
+                  onChange={setField('price')} placeholder="e.g. 1200000" />
+              </label>
+              <label style={labelStyle}>
+                <span>Brand</span>
+                <input className="noir-input" value={form.brand} onChange={setField('brand')} placeholder="e.g. HP" />
+              </label>
+              <label style={labelStyle}>
+                <span>Model number</span>
+                <input className="noir-input" value={form.modelNumber} onChange={setField('modelNumber')} placeholder="e.g. ProBook 450 G9" />
+              </label>
+              <label style={labelStyle}>
+                <span>Condition</span>
+                <select className="noir-input" value={form.condition} onChange={setField('condition')}
+                  style={{ background: 'var(--surface)', color: 'var(--text)' }}>
+                  <option value="">— not set —</option>
+                  {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  {form.condition && !CONDITIONS.includes(form.condition) && <option value={form.condition}>{form.condition}</option>}
+                </select>
+              </label>
+              <label style={labelStyle}>
+                <span>Warranty</span>
+                <input className="noir-input" value={form.warranty} onChange={setField('warranty')} placeholder="e.g. 6 months" />
+              </label>
             </div>
+
+            <label style={{
+              display: 'flex', alignItems: 'flex-start', gap: 10, margin: '4px 0 24px', padding: '12px 14px',
+              border: '1px solid var(--admin-border)', borderRadius: 8, cursor: 'pointer',
+            }}>
+              <input type="checkbox" checked={form.isActive} onChange={setField('isActive')} style={{ marginTop: 2 }} />
+              <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Visible in the shop</span>
+                <span style={{ fontSize: 12, color: 'var(--muted-dark)' }}>
+                  {form.isActive
+                    ? (hasImage ? 'Customers can see and buy this product.' : 'Customers will see this product without a photo — add one below first.')
+                    : 'Hidden: only admins can see it. Publish once photos and details are ready.'}
+                </span>
+              </span>
+            </label>
+
+            {/* Descriptions */}
+            <SectionLabel>Descriptions</SectionLabel>
             <label style={{ ...labelStyle, marginBottom: 12 }}>
-              <span>Description</span>
-              <textarea className="noir-input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Optional description" rows={3} style={{ resize: 'vertical' }} />
+              <span>Short description — shown at the top of the product page</span>
+              <textarea className="noir-input" value={form.shortDescription} onChange={setField('shortDescription')}
+                placeholder="One line, e.g. HP ProBook 450 G9 with Intel Core i5, 8GB RAM, 512GB SSD." rows={2} style={{ resize: 'vertical' }} />
             </label>
-            <label style={{ ...labelStyle, maxWidth: 200, marginBottom: 24 }}>
-              <span>Base Price ($) *</span>
-              <input className="noir-input" type="number" min="0" step="0.01" value={form.price}
-                onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0.00" />
+            <label style={{ ...labelStyle, marginBottom: 12 }}>
+              <span>Full description</span>
+              <textarea className="noir-input" value={form.description} onChange={setField('description')}
+                placeholder="What it is, who it's for, the key features." rows={4} style={{ resize: 'vertical' }} />
             </label>
+            <label style={{ ...labelStyle, marginBottom: 24 }}>
+              <span>What's in the box</span>
+              <input className="noir-input" value={form.inTheBox} onChange={setField('inTheBox')} placeholder="e.g. Laptop, AC adapter, power cord" />
+            </label>
+
+            {/* Specifications — fields depend on the category */}
+            <SectionLabel>
+              Specifications{template ? '' : ' — pick a category to see its fields'}
+              <button onClick={addExtraSpec} style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Plus size={12} /> Add other spec
+              </button>
+            </SectionLabel>
+            {template && (
+              <div style={gridStyle}>
+                {template.fields.map(field => (
+                  <label key={field.key} style={{ ...labelStyle, ...(field.wide ? { gridColumn: '1 / -1' } : {}) }}>
+                    <span>{field.label}</span>
+                    <input className="noir-input" value={form.specs[field.key] ?? ''} placeholder={field.placeholder}
+                      list={field.options ? `spec-options-${field.key}` : undefined}
+                      onChange={e => setSpec(field.key, e.target.value)} />
+                    {field.options && (
+                      <datalist id={`spec-options-${field.key}`}>
+                        {field.options.map(o => <option key={o} value={o} />)}
+                      </datalist>
+                    )}
+                  </label>
+                ))}
+              </div>
+            )}
+            {form.extraSpecs.map((row, i) => (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                <input className="noir-input" value={row.key} onChange={e => setExtraSpec(i, 'key', e.target.value)} placeholder="Spec name, e.g. colour" />
+                <input className="noir-input" value={row.value} onChange={e => setExtraSpec(i, 'value', e.target.value)} placeholder="Value" />
+                <button onClick={() => removeExtraSpec(i)}
+                  style={{ background: 'none', border: '1px solid var(--admin-border)', borderRadius: 6, color: 'var(--muted-dark)', cursor: 'pointer', padding: '9px', display: 'flex', alignItems: 'center' }}>
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            <div style={{ height: 16 }} />
 
             {/* Variants */}
             <SectionLabel>
-              Variants
+              SKU & stock
               <button onClick={addVariant} style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Plus size={12} /> Add variant
               </button>
@@ -384,12 +539,12 @@ export default function AdminProducts() {
                   <input className="noir-input" value={v.skuCode} onChange={e => setVariant(i, 'skuCode', e.target.value)} placeholder="SKU-001" />
                 </label>
                 <label style={labelStyle}>
-                  {i === 0 && <span>Size / Color</span>}
-                  <input className="noir-input" value={v.sizeOrColor} onChange={e => setVariant(i, 'sizeOrColor', e.target.value)} placeholder="e.g. Black, XL" />
+                  {i === 0 && <span>Variant</span>}
+                  <input className="noir-input" value={v.sizeOrColor} onChange={e => setVariant(i, 'sizeOrColor', e.target.value)} placeholder="e.g. Default, Black" />
                 </label>
                 <label style={labelStyle}>
-                  {i === 0 && <span>Price adj.</span>}
-                  <input className="noir-input" type="number" step="0.01" value={v.priceAdjustment} onChange={e => setVariant(i, 'priceAdjustment', e.target.value)} placeholder="0.00" />
+                  {i === 0 && <span>Price adj. (RWF)</span>}
+                  <input className="noir-input" type="number" step="1" value={v.priceAdjustment} onChange={e => setVariant(i, 'priceAdjustment', e.target.value)} placeholder="0" />
                 </label>
                 <label style={labelStyle}>
                   {i === 0 && <span>Stock</span>}
@@ -465,35 +620,13 @@ export default function AdminProducts() {
               </div>
             ))}
 
-            {/* Specs — only meaningful for some categories (e.g. Interactive Screens); left
-                blank/null for everything else. */}
-            <SectionLabel style={{ marginTop: 20 }}>Interactive Screens spec sheet (optional)</SectionLabel>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <label style={labelStyle}>
-                <span>Screen size</span>
-                <input className="noir-input" value={form.screenSize} onChange={e => setForm(f => ({ ...f, screenSize: e.target.value }))} placeholder='e.g. 86"' />
-              </label>
-              <label style={labelStyle}>
-                <span>Resolution</span>
-                <input className="noir-input" value={form.resolution} onChange={e => setForm(f => ({ ...f, resolution: e.target.value }))} placeholder="e.g. 4K UHD (3840×2160)" />
-              </label>
-              <label style={labelStyle}>
-                <span>Touch points</span>
-                <input className="noir-input" type="number" min="0" value={form.touchPoints} onChange={e => setForm(f => ({ ...f, touchPoints: e.target.value }))} placeholder="e.g. 20" />
-              </label>
-              <label style={labelStyle}>
-                <span>OS</span>
-                <input className="noir-input" value={form.os} onChange={e => setForm(f => ({ ...f, os: e.target.value }))} placeholder="e.g. Android 13 + OPS slot" />
-              </label>
-              <label style={labelStyle}>
-                <span>Connectivity</span>
-                <input className="noir-input" value={form.connectivity} onChange={e => setForm(f => ({ ...f, connectivity: e.target.value }))} placeholder="e.g. HDMI ×2, USB-C, RJ45, Wi-Fi 6" />
-              </label>
-              <label style={labelStyle}>
-                <span>Warranty</span>
-                <input className="noir-input" value={form.warranty} onChange={e => setForm(f => ({ ...f, warranty: e.target.value }))} placeholder="e.g. 3-year on-site" />
-              </label>
-            </div>
+            {/* Internal notes */}
+            <SectionLabel style={{ marginTop: 20 }}>Internal notes</SectionLabel>
+            <label style={{ ...labelStyle, marginBottom: 4 }}>
+              <span>Only admins see this — e.g. details still to confirm with the supplier</span>
+              <textarea className="noir-input" value={form.adminNotes} onChange={setField('adminNotes')}
+                rows={2} style={{ resize: 'vertical' }} />
+            </label>
 
             {/* Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 28 }}>
@@ -515,6 +648,10 @@ function SectionLabel({ children, style = {} }) {
       {children}
     </div>
   )
+}
+
+const gridStyle = {
+  display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12, marginBottom: 12,
 }
 
 const labelStyle = {

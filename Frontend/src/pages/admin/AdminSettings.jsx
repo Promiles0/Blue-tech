@@ -43,7 +43,7 @@ export default function AdminSettings() {
   }
 
   const dirty = savedRate != null && Number(rate) !== savedRate
-  const preview = Number(rate) > 0 ? Math.round(1000 * Number(rate)).toLocaleString('en-US') : '—'
+  const preview = Number(rate) > 0 ? (1000000 / Number(rate)).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '—'
 
   return (
     <div>
@@ -91,8 +91,8 @@ export default function AdminSettings() {
             </div>
 
             <p style={{ fontSize: 12.5, color: 'var(--admin-text-muted)', marginBottom: 20 }}>
-              At this rate a <strong style={{ color: 'var(--admin-text)' }}>$1,000.00</strong> product displays as{' '}
-              <strong style={{ color: 'var(--admin-text)' }}>{preview} RWF</strong>.
+              At this rate a <strong style={{ color: 'var(--admin-text)' }}>1,000,000 RWF</strong> product shows as{' '}
+              <strong style={{ color: 'var(--admin-text)' }}>{preview}</strong> to shoppers browsing in USD.
             </p>
 
             <div style={{
@@ -102,9 +102,9 @@ export default function AdminSettings() {
             }}>
               <AlertTriangle size={15} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 1 }} />
               <p style={{ fontSize: 12.5, lineHeight: 1.6, color: 'var(--admin-text-muted)', margin: 0 }}>
-                Card payments are always charged in USD, so this only changes what shoppers see.
-                Mobile money is different — the RWF amount is the amount actually collected, so an
-                inaccurate rate here means under- or over-charging real customers.
+                Prices are stored in RWF, and mobile money collects that RWF amount exactly.
+                Card payments are different — Stripe charges in USD, converted at this rate, so an
+                inaccurate rate here means under- or over-charging card customers.
               </p>
             </div>
 

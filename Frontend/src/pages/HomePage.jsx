@@ -10,13 +10,14 @@ import { Reveal } from '../lib/motion'
 import apiService from '../api/service'
 import { openLiveChat, useLiveChatReady } from '../lib/liveChat'
 
-const emptyFilters = { brands: [], minPrice: '', maxPrice: '' }
+const emptyFilters = { selected: {}, minPrice: '', maxPrice: '' }
 const PAGE_SIZE = 12
 
 export default function Home() {
   const [pool,    setPool]    = useState([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState(emptyFilters)
+  const [facets,  setFacets]  = useState({})
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   // Load-more pagination — page/hasMore track the server-side cursor,
@@ -36,12 +37,25 @@ export default function Home() {
     return () => clearTimeout(id)
   }, [filters.minPrice, filters.maxPrice])
 
+  useEffect(() => {
+    apiService.products.facets()
+      .then(({ data }) => setFacets(data && typeof data === 'object' ? data : {}))
+      .catch(() => setFacets({}))
+  }, [])
+
+  // Facet selections as API params: brand=HP|Lenovo&ram=8GB ("|" since values can hold commas).
+  const facetQuery = Object.entries(filters.selected)
+    .filter(([, values]) => values.length)
+    .map(([key, values]) => [key, values.join('|')])
+  const facetKey = JSON.stringify(facetQuery)
+
   const fetchProductsPage = (pageNum) => {
-    const hasPriceFilter = debouncedMin !== '' || debouncedMax !== ''
-    if (hasPriceFilter) {
+    const hasFilter = debouncedMin !== '' || debouncedMax !== '' || facetQuery.length > 0
+    if (hasFilter) {
       const params = new URLSearchParams()
       if (debouncedMin !== '') params.set('minPrice', debouncedMin)
       if (debouncedMax !== '') params.set('maxPrice', debouncedMax)
+      for (const [key, value] of facetQuery) params.set(key, value)
       params.set('sort', 'createdAt,desc')
       params.set('page', String(pageNum))
       params.set('size', String(PAGE_SIZE))
@@ -67,7 +81,7 @@ export default function Home() {
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [debouncedMin, debouncedMax])
+  }, [debouncedMin, debouncedMax, facetKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMore = () => {
     if (loadingMore || !hasMore) return
@@ -85,17 +99,16 @@ export default function Home() {
       .finally(() => setLoadingMore(false))
   }
 
-  // Brand isn't a real product attribute yet — best-effort match against the name
-  const displayProducts = filters.brands.length
-    ? pool.filter(p => filters.brands.some(b => (p.name ?? '').toLowerCase().includes(b.toLowerCase())))
-    : pool
+  const displayProducts = pool
 
-  const activeCount = filters.brands.length + (filters.minPrice ? 1 : 0) + (filters.maxPrice ? 1 : 0)
+  const activeCount = Object.values(filters.selected).reduce((n, values) => n + values.length, 0)
+    + (filters.minPrice ? 1 : 0) + (filters.maxPrice ? 1 : 0)
 
-  const toggleBrand = (b) => setFilters(f => ({
-    ...f,
-    brands: f.brands.includes(b) ? f.brands.filter(x => x !== b) : [...f.brands, b],
-  }))
+  const toggleFacet = (key, value) => setFilters(f => {
+    const current = f.selected[key] ?? []
+    const next = current.includes(value) ? current.filter(x => x !== value) : [...current, value]
+    return { ...f, selected: { ...f.selected, [key]: next } }
+  })
   const setMinPrice = (v) => setFilters(f => ({ ...f, minPrice: v }))
   const setMaxPrice = (v) => setFilters(f => ({ ...f, maxPrice: v }))
   const clearAll     = () => setFilters(emptyFilters)
@@ -111,7 +124,8 @@ export default function Home() {
       <div className="container-noir shop-layout" style={{ padding: '10px 0 64px' }}>
         <FilterRail
           filters={filters}
-          setters={{ toggleBrand, setMinPrice, setMaxPrice }}
+          setters={{ toggleFacet, setMinPrice, setMaxPrice }}
+          facets={facets}
           activeCount={activeCount}
           onClearAll={clearAll}
           mobileOpen={mobileFiltersOpen}
@@ -130,7 +144,7 @@ export default function Home() {
                 }}>
                   Considered objects.
                 </h1>
-                <p style={{ fontSize: 14, color: 'var(--muted)' }}>Built to last — laptops chosen with care, not just specs.</p>
+                <p style={{ fontSize: 14, color: 'var(--muted)' }}>Built to last — tech chosen with care, not just specs.</p>
               </div>
               <button
                 className="filter-mobile-btn noir-btn-outline"
@@ -246,8 +260,8 @@ export default function Home() {
         <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '36px 0' }}>
           <div className="container-noir grid-3" style={{ gap: 40 }}>
             {[
-              { icon: <Truck size={17} />, title: 'Free shipping', desc: 'On all orders over $200.' },
-              { icon: <Shield size={17} />, title: '2-year warranty', desc: 'Quietly confident craftsmanship.' },
+              { icon: <Truck size={17} />, title: 'Free standard delivery', desc: 'Express next-day delivery also available.' },
+              { icon: <Shield size={17} />, title: 'Warranty included', desc: 'Every product page shows its warranty.' },
               { icon: <RotateCcw size={17} />, title: '30-day returns', desc: "If it isn't right, send it back." },
             ].map(({ icon, title, desc }) => (
               <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>

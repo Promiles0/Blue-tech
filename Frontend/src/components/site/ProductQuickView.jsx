@@ -10,6 +10,7 @@ import apiService from '../../api/service'
 import { handleProductImageError, productImageList } from '../../lib/productImage'
 import { buildWhatsAppLink } from '../../lib/helpLinks'
 import { useCurrency } from '../../context/CurrencyContext'
+import ProductSpecs from './ProductSpecs'
 
 export default function ProductQuickView() {
   const { formatPrice } = useCurrency()
@@ -170,6 +171,11 @@ export default function ProductQuickView() {
                     <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 10, lineHeight: 1.2 }}>
                       {product.name}
                     </h2>
+                    {(product.brand || product.condition || product.warranty) && (
+                      <p style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 12 }}>
+                        {[product.brand, product.condition, product.warranty && `${product.warranty} warranty`].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                     <div style={{ marginBottom: 18 }}>
                       <p style={{ fontSize: 28, fontWeight: 900, color: 'var(--price)' }}>
                         {formatPrice(price)}
@@ -177,11 +183,19 @@ export default function ProductQuickView() {
                       {qty > 1 && <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 2 }}>{formatPrice(unitPrice)} each</p>}
                     </div>
 
-                    {product.description && (
-                      <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 22 }}>
-                        {product.description.length > 200 ? `${product.description.slice(0, 200)}…` : product.description}
-                      </p>
-                    )}
+                    {(product.shortDescription || product.description) && (() => {
+                      const text = product.shortDescription || product.description
+                      return (
+                        <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.7, marginBottom: 18 }}>
+                          {text.length > 200 ? `${text.slice(0, 200)}…` : text}
+                        </p>
+                      )
+                    })()}
+
+                    {/* Headline specs only — the product page has the full table. */}
+                    <div style={{ marginBottom: 20 }}>
+                      <ProductSpecs product={product} limit={6} compact />
+                    </div>
 
                     {product.variants?.length > 0 && (
                       <div style={{ marginBottom: 18 }}>

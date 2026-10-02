@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, SlidersHorizontal } from 'lucide-react'
-import { BRANDS, RAM_OPTIONS, SCREEN_OPTIONS } from '../../lib/filterOptions'
+import { FILTER_FACETS } from '../../lib/specTemplates'
 
 function SectionTitle({ children, hint }) {
   return (
@@ -43,68 +43,51 @@ function Checkbox({ label, checked, onChange }) {
   )
 }
 
-function FilterGroups({ filters, setters }) {
-  const { brands, minPrice, maxPrice } = filters
-  const { toggleBrand, setMinPrice, setMaxPrice } = setters
+// Facet values come from the API (/products/facets), so a group only appears when some
+// published product actually has a value for it — no dead "coming soon" options.
+function FilterGroups({ filters, setters, facets }) {
+  const { selected, minPrice, maxPrice } = filters
+  const { toggleFacet, setMinPrice, setMaxPrice } = setters
+  const groups = FILTER_FACETS.filter(f => facets?.[f.key]?.length)
+
+  const priceInput = {
+    width: '100%', background: 'none', border: '1px solid var(--border)',
+    borderRadius: 6, padding: '8px 10px', fontSize: 13, color: 'var(--text)',
+    outline: 'none', fontFamily: 'inherit',
+  }
 
   return (
     <>
-      <div style={{ paddingBottom: 28, borderBottom: '1px solid var(--border)' }}>
-        <SectionTitle>Brand</SectionTitle>
-        {BRANDS.map(b => (
-          <Checkbox key={b} label={b} checked={brands.includes(b)} onChange={() => toggleBrand(b)} />
-        ))}
-      </div>
-
-      <div style={{ padding: '28px 0', borderBottom: '1px solid var(--border)' }}>
-        <SectionTitle>Price</SectionTitle>
+      <div style={{ paddingBottom: 28, borderBottom: groups.length ? '1px solid var(--border)' : 'none' }}>
+        <SectionTitle hint="RWF">Price</SectionTitle>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input
-            type="number"
-            min="0"
-            placeholder="Min"
-            value={minPrice}
-            onChange={e => setMinPrice(e.target.value)}
-            style={{
-              width: '100%', background: 'none', border: '1px solid var(--border)',
-              borderRadius: 6, padding: '8px 10px', fontSize: 13, color: 'var(--text)',
-              outline: 'none', fontFamily: 'inherit',
-            }}
-          />
+          <input type="number" min="0" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)} style={priceInput} />
           <span style={{ color: 'var(--muted-dark)', fontSize: 13 }}>–</span>
-          <input
-            type="number"
-            min="0"
-            placeholder="Max"
-            value={maxPrice}
-            onChange={e => setMaxPrice(e.target.value)}
-            style={{
-              width: '100%', background: 'none', border: '1px solid var(--border)',
-              borderRadius: 6, padding: '8px 10px', fontSize: 13, color: 'var(--text)',
-              outline: 'none', fontFamily: 'inherit',
-            }}
-          />
+          <input type="number" min="0" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} style={priceInput} />
         </div>
       </div>
 
-      <div style={{ padding: '28px 0', borderBottom: '1px solid var(--border)' }}>
-        <SectionTitle hint="Soon">RAM</SectionTitle>
-        {RAM_OPTIONS.map(r => (
-          <Checkbox key={r} label={r} checked={false} />
-        ))}
-      </div>
-
-      <div style={{ paddingTop: 28 }}>
-        <SectionTitle hint="Soon">Screen size</SectionTitle>
-        {SCREEN_OPTIONS.map(s => (
-          <Checkbox key={s} label={s} checked={false} />
-        ))}
-      </div>
+      {groups.map((group, i) => (
+        <div key={group.key} style={{ padding: '28px 0', borderBottom: i < groups.length - 1 ? '1px solid var(--border)' : 'none' }}>
+          <SectionTitle>{group.label}</SectionTitle>
+          {facets[group.key].map(({ value, count }) => (
+            <Checkbox
+              key={value}
+              label={<span style={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 8 }}>
+                <span>{value}</span>
+                <span style={{ color: 'var(--muted-dark)', fontSize: 12 }}>{count}</span>
+              </span>}
+              checked={(selected[group.key] ?? []).includes(value)}
+              onChange={() => toggleFacet(group.key, value)}
+            />
+          ))}
+        </div>
+      ))}
     </>
   )
 }
 
-export default function FilterRail({ filters, setters, activeCount, onClearAll, mobileOpen, onMobileClose }) {
+export default function FilterRail({ filters, setters, facets, activeCount, onClearAll, mobileOpen, onMobileClose }) {
   return (
     <>
       {/* ── Desktop — persistent sidebar ─────────────────────── */}
@@ -123,7 +106,7 @@ export default function FilterRail({ filters, setters, activeCount, onClearAll, 
             </button>
           )}
         </div>
-        <FilterGroups filters={filters} setters={setters} />
+        <FilterGroups filters={filters} setters={setters} facets={facets} />
       </aside>
 
       {/* ── Mobile — drawer ───────────────────────────────────── */}
@@ -165,7 +148,7 @@ export default function FilterRail({ filters, setters, activeCount, onClearAll, 
               </div>
 
               <div style={{ flex: 1, overflowY: 'auto', padding: '4px 22px' }}>
-                <FilterGroups filters={filters} setters={setters} />
+                <FilterGroups filters={filters} setters={setters} facets={facets} />
               </div>
 
               <div style={{ padding: '18px 22px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10 }}>
