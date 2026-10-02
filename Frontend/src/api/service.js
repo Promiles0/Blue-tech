@@ -154,6 +154,7 @@ const apiService = {
     settings: {
       get: () => api.get('/admin/settings'),
       updateExchangeRate: (usdToRwfRate) => api.put('/admin/settings/exchange-rate', { usdToRwfRate }),
+      updateAnnouncements: (announcements) => api.put('/admin/settings/announcements', { announcements }),
     },
   }
 };

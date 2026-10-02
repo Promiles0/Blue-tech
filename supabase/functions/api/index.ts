@@ -256,6 +256,28 @@ const EXPRESS_SHIPPING_FEE_RWF = 7500;
 const RWF_RATE_KEY = "usd_to_rwf_rate";
 const RWF_RATE_FALLBACK = 1471;
 
+// Scrolling announcement bar at the top of the storefront, edited in Admin → Settings.
+// Stored as a JSON array of short strings; an empty array hides the bar.
+const ANNOUNCEMENTS_KEY = "announcement_bar";
+const ANNOUNCEMENTS_FALLBACK = ["Free standard delivery", "Secure checkout · SSL encrypted"];
+const MAX_ANNOUNCEMENTS = 10;
+const MAX_ANNOUNCEMENT_LENGTH = 80;
+
+function parseAnnouncements(value: unknown) {
+  if (value == null) return ANNOUNCEMENTS_FALLBACK;
+  try {
+    const parsed = JSON.parse(String(value));
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim()) : ANNOUNCEMENTS_FALLBACK;
+  } catch {
+    return ANNOUNCEMENTS_FALLBACK;
+  }
+}
+
+async function announcements() {
+  const { data } = await adminClient.from("site_settings").select("value").eq("key", ANNOUNCEMENTS_KEY).maybeSingle();
+  return parseAnnouncements(data?.value);
+}
+
 // Prices, order totals and coupons are all stored in RWF. The rate only matters for
 // shoppers browsing in USD and for card payments, which Stripe charges in USD.
 // One source of truth for it: the admin-editable `site_settings` row. The old
@@ -1512,6 +1534,7 @@ async function handle(request: Request) {
     const settings = Object.fromEntries(((data ?? []) as Record<string, unknown>[]).map((row) => [row.key, row.value]));
     return success("Settings fetched successfully", {
       usdToRwfRate: Number(settings[RWF_RATE_KEY]) || RWF_RATE_FALLBACK,
+      announcements: parseAnnouncements(settings[ANNOUNCEMENTS_KEY]),
     });
   }
 
@@ -2352,11 +2375,26 @@ async function handle(request: Request) {
     return success("Audit logs fetched", ((data ?? []) as Record<string, unknown>[]).map(auditLogResult), request);
   }
 
-  if (path === "/admin/settings" || path === "/admin/settings/exchange-rate") {
+  if (path === "/admin/settings" || path === "/admin/settings/exchange-rate" || path === "/admin/settings/announcements") {
     await requireAdmin(request, user);
 
     if (method === "GET" && path === "/admin/settings") {
-      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate() }, request);
+      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate(), announcements: await announcements() }, request);
+    }
+
+    if (method === "PUT" && path === "/admin/settings/announcements") {
+      const body = await readJson(request);
+      if (!Array.isArray(body.announcements)) return failure("announcements must be a list of messages", 400, request);
+      const items = (body.announcements as unknown[]).map((item) => String(item ?? "").trim()).filter(Boolean);
+      if (items.length > MAX_ANNOUNCEMENTS) return failure(`Keep it to ${MAX_ANNOUNCEMENTS} messages or fewer`, 400, request);
+      if (items.some((item) => item.length > MAX_ANNOUNCEMENT_LENGTH)) {
+        return failure(`Each message must be ${MAX_ANNOUNCEMENT_LENGTH} characters or fewer`, 400, request);
+      }
+      const { error } = await adminClient.from("site_settings").upsert({
+        key: ANNOUNCEMENTS_KEY, value: JSON.stringify(items), is_public: true, updated_at: new Date().toISOString(),
+      }, { onConflict: "key" });
+      if (error) return failure(error.message, 400, request);
+      return success("Announcement bar updated", { announcements: items }, request);
     }
 
     if (method === "PUT" && path === "/admin/settings/exchange-rate") {
