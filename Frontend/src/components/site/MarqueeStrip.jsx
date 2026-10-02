@@ -1,7 +1,7 @@
 import { useReducedMotion } from 'framer-motion'
 
 const ITEMS = [
-  'Free shipping over $200',
+  'Free standard delivery',
   'Members get 15% off',
   'Free returns within 30 days',
   'Secure checkout · SSL encrypted',

@@ -164,8 +164,14 @@ export default function Home() {
             </div>
           ) : displayProducts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 0', border: '1px solid var(--border)', borderRadius: 12 }}>
-              <p style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 16 }}>No products match your filters.</p>
-              <button onClick={clearAll} className="noir-btn-outline" style={{ fontSize: 13 }}>Clear filters</button>
+              {activeCount > 0 ? (
+                <>
+                  <p style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 16 }}>No products match your filters.</p>
+                  <button onClick={clearAll} className="noir-btn-outline" style={{ fontSize: 13 }}>Clear filters</button>
+                </>
+              ) : (
+                <p style={{ fontSize: 15, color: 'var(--muted)' }}>New products are on their way — check back soon.</p>
+              )}
             </div>
           ) : (
             <div className="grid-4">
