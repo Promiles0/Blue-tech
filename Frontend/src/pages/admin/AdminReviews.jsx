@@ -68,9 +68,9 @@ export default function AdminReviews() {
           </select>
         </div>
       </div>
-
+  
       {isLoading ? (
-        <div style={{ color: 'var(--admin-muted)', fontSize: 13 }}>Loading…</div>
+        <div style={{ color: 'var(--admin-muted)', fontSize: 13 }}>Wait its Loading…</div>
       ) : !filtered.length ? (
         <div style={{ color: 'var(--admin-muted)', fontSize: 13 }}>No reviews match.</div>
       ) : (

@@ -1,0 +1,2 @@
+Introducing Blue-tech: considered objects, priced in RWF, with a checkout that ends in a MoMo prompt on your phone.
+Built with React, Vite and Supabase.
