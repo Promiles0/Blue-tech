@@ -52,3 +52,8 @@ Frontend/dist/
 
 # Large local media (exceeds GitHub's 100MB limit) — host externally instead
 Frontend/public/videos/interactive-screens-demo.mp4
+# Product image fetcher outputs
+scripts/product-images/images/
+scripts/product-images/meta/
+scripts/product-images/*.zip
+scripts/product-images/download-log.txt

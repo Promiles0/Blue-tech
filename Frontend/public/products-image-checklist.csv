@@ -1,0 +1,66 @@
+sku,category,name,brand,model,search_query,filename,filename_2,filename_3
+BT-LAP-HP-001,Laptops,HP 15 CELERON,HP,HP 15,HP 15 CELERON laptop product photo,hp-15-celeron.jpg,hp-15-celeron_2.jpg,hp-15-celeron_3.jpg
+BT-LAP-LEN-002,Laptops,LENOVO V15 CELERON,Lenovo,V15,LENOVO V15 CELERON laptop product photo,lenovo-v15-celeron.jpg,lenovo-v15-celeron_2.jpg,lenovo-v15-celeron_3.jpg
+BT-LAP-HP-003,Laptops,HP 15 I3 LAPTOP,HP,HP 15,HP 15 I3 LAPTOP laptop product photo,hp-15-i3-laptop.jpg,hp-15-i3-laptop_2.jpg,hp-15-i3-laptop_3.jpg
+BT-LAP-LEN-004,Laptops,LENOVO V15 I3 IDEAPAD,Lenovo,V15 IdeaPad,LENOVO V15 I3 IDEAPAD laptop product photo,lenovo-v15-i3-ideapad.jpg,lenovo-v15-i3-ideapad_2.jpg,lenovo-v15-i3-ideapad_3.jpg
+BT-LAP-HP-005,Laptops,HP 15 I5 LAPTOP,HP,HP 15,HP 15 I5 LAPTOP laptop product photo,hp-15-i5-laptop.jpg,hp-15-i5-laptop_2.jpg,hp-15-i5-laptop_3.jpg
+BT-LAP-HP-006,Laptops,HP PROBOOK 450G9 I5,HP,ProBook 450 G9,HP PROBOOK 450G9 I5 laptop product photo,hp-probook-450g9-i5.jpg,hp-probook-450g9-i5_2.jpg,hp-probook-450g9-i5_3.jpg
+BT-LAP-HP-007,Laptops,HP PROBOOK 440G10 I5,HP,ProBook 440 G10,HP PROBOOK 440G10 I5 laptop product photo,hp-probook-440g10-i5.jpg,hp-probook-440g10-i5_2.jpg,hp-probook-440g10-i5_3.jpg
+BT-LAP-HP-008,Laptops,HP PROBOOK 440G11 U5,HP,ProBook 440 G11,HP PROBOOK 440G11 U5 laptop product photo,hp-probook-440g11-u5.jpg,hp-probook-440g11-u5_2.jpg,hp-probook-440g11-u5_3.jpg
+BT-LAP-HP-009,Laptops,HP 250G8 I7 NOTEBOOK,HP,250 G8,HP 250G8 I7 NOTEBOOK laptop product photo,hp-250g8-i7-notebook.jpg,hp-250g8-i7-notebook_2.jpg,hp-250g8-i7-notebook_3.jpg
+BT-LAP-HP-010,Laptops,HP PROBOOK 440G11 U7,HP,ProBook 440 G11,HP PROBOOK 440G11 U7 laptop product photo,hp-probook-440g11-u7.jpg,hp-probook-440g11-u7_2.jpg,hp-probook-440g11-u7_3.jpg
+BT-LAP-HP-011,Laptops,HP PROBOOK 460G11 U7,HP,ProBook 460 G11,HP PROBOOK 460G11 U7 laptop product photo,hp-probook-460g11-u7.jpg,hp-probook-460g11-u7_2.jpg,hp-probook-460g11-u7_3.jpg
+BT-LAP-HP-012,Laptops,HP OMNIBOOK 5 FLIP,HP,OmniBook 5 Flip 14,HP OMNIBOOK 5 FLIP laptop product photo,hp-omnibook-5-flip.jpg,hp-omnibook-5-flip_2.jpg,hp-omnibook-5-flip_3.jpg
+BT-LAP-HP-013,Laptops,HP OMNIBOOK XFLIP,HP,OmniBook X Flip 14,HP OMNIBOOK XFLIP laptop product photo,hp-omnibook-xflip.jpg,hp-omnibook-xflip_2.jpg,hp-omnibook-xflip_3.jpg
+BT-LAP-HP-014,Laptops,HP PROBOOK 4G1IR14,HP,ProBook 4 G1iR 14,HP PROBOOK 4G1IR14 laptop product photo,hp-probook-4g1ir14.jpg,hp-probook-4g1ir14_2.jpg,hp-probook-4g1ir14_3.jpg
+BT-LAP-HP-015,Laptops,HP ELITEBOOK 8 G1I 14'',HP,EliteBook 8 G1i 14,HP ELITEBOOK 8 G1I 14'' laptop product photo,hp-elitebook-8-g1i-14-inch.jpg,hp-elitebook-8-g1i-14-inch_2.jpg,hp-elitebook-8-g1i-14-inch_3.jpg
+BT-DSK-HP-001,Desktops,HP 290G9 I3 DESKTOP+MONITOR,HP,Pro SFF 290 G9,HP 290G9 I3 DESKTOP+MONITOR desktop product photo,hp-290g9-i3-desktop-monitor.jpg,hp-290g9-i3-desktop-monitor_2.jpg,hp-290g9-i3-desktop-monitor_3.jpg
+BT-DSK-HP-002,Desktops,HP 290G9 I5 DESKTOP+MONITOR,HP,Pro SFF 290 G9,HP 290G9 I5 DESKTOP+MONITOR desktop product photo,hp-290g9-i5-desktop-monitor.jpg,hp-290g9-i5-desktop-monitor_2.jpg,hp-290g9-i5-desktop-monitor_3.jpg
+BT-DSK-HP-003,Desktops,HP 290G9 I7 DESKTOP+MONITOR,HP,Pro SFF 290 G9,HP 290G9 I7 DESKTOP+MONITOR desktop product photo,hp-290g9-i7-desktop-monitor.jpg,hp-290g9-i7-desktop-monitor_2.jpg,hp-290g9-i7-desktop-monitor_3.jpg
+BT-DSK-HP-004,Desktops,HP ALL IN ONE I5 24'',HP,All-in-One 24,HP ALL IN ONE I5 24'' desktop product photo,hp-all-in-one-i5-24-inch.jpg,hp-all-in-one-i5-24-inch_2.jpg,hp-all-in-one-i5-24-inch_3.jpg
+BT-MON-HP-001,Monitors,HP 24 INCHES FHD 5524SF,HP,524sf,HP Series 5 524sf monitor product photo,hp-24-inches-fhd-5524sf.jpg,hp-24-inches-fhd-5524sf_2.jpg,hp-24-inches-fhd-5524sf_3.jpg
+BT-MON-HP-002,Monitors,HP 27 INCHES FHD 5527SF,HP,527sf,HP Series 5 527sf monitor product photo,hp-27-inches-fhd-5527sf.jpg,hp-27-inches-fhd-5527sf_2.jpg,hp-27-inches-fhd-5527sf_3.jpg
+BT-MON-HP-003,Monitors,HP 32 INCHES 5532SF,HP,532sf,HP Series 5 532sf monitor product photo,hp-32-inches-5532sf.jpg,hp-32-inches-5532sf_2.jpg,hp-32-inches-5532sf_3.jpg
+BT-PRN-EPS-001,Printers & Photocopiers,EPSON PRINTER L3250,Epson,L3250,Epson L3250 printer product photo,epson-printer-l3250.jpg,epson-printer-l3250_2.jpg,epson-printer-l3250_3.jpg
+BT-PRN-EPS-002,Printers & Photocopiers,EPSON PRINTER L3210,Epson,L3210,Epson L3210 printer product photo,epson-printer-l3210.jpg,epson-printer-l3210_2.jpg,epson-printer-l3210_3.jpg
+BT-PRN-EPS-003,Printers & Photocopiers,EPSON PRINTER L3218,Epson,L3218,Epson L3218 printer product photo,epson-printer-l3218.jpg,epson-printer-l3218_2.jpg,epson-printer-l3218_3.jpg
+BT-PRN-EPS-004,Printers & Photocopiers,EPSON PRINTER LQ590,Epson,LQ-590,Epson LQ-590 printer product photo,epson-printer-lq590.jpg,epson-printer-lq590_2.jpg,epson-printer-lq590_3.jpg
+BT-PRN-HP-005,Printers & Photocopiers,HP LASERJET PRINTER 141A,HP,M141a (7MD73A),HP M141a (7MD73A) printer product photo,hp-laserjet-printer-141a.jpg,hp-laserjet-printer-141a_2.jpg,hp-laserjet-printer-141a_3.jpg
+BT-PRN-HP-006,Printers & Photocopiers,HP LASERJET PRINTER 137FNW,HP,137fnw (4ZB84A),HP 137fnw (4ZB84A) printer product photo,hp-laserjet-printer-137fnw.jpg,hp-laserjet-printer-137fnw_2.jpg,hp-laserjet-printer-137fnw_3.jpg
+BT-PRN-HP-007,Printers & Photocopiers,HP LASERJET PRINTER 4303DW,HP,4303dw (5HH65A),HP 4303dw (5HH65A) printer product photo,hp-laserjet-printer-4303dw.jpg,hp-laserjet-printer-4303dw_2.jpg,hp-laserjet-printer-4303dw_3.jpg
+BT-PRN-HP-008,Printers & Photocopiers,HP LASERJET PRINTER 442DN,HP,M442dn (8AF71A),HP M442dn (8AF71A) printer product photo,hp-laserjet-printer-442dn.jpg,hp-laserjet-printer-442dn_2.jpg,hp-laserjet-printer-442dn_3.jpg
+BT-PRN-CAN-009,Printers & Photocopiers,CANON PHOTOPIER 2224,Canon,imageRUNNER 2224,Canon imageRUNNER 2224 photocopier product photo,canon-photopier-2224.jpg,canon-photopier-2224_2.jpg,canon-photopier-2224_3.jpg
+BT-PRN-CAN-010,Printers & Photocopiers,CANON PHOTOPIER 2224N,Canon,imageRUNNER 2224N,Canon imageRUNNER 2224N photocopier product photo,canon-photopier-2224n.jpg,canon-photopier-2224n_2.jpg,canon-photopier-2224n_3.jpg
+BT-PRN-CAN-011,Printers & Photocopiers,CANON PHOTOCOPIER 2425I,Canon,imageRUNNER 2425i,Canon imageRUNNER 2425i photocopier product photo,canon-photocopier-2425i.jpg,canon-photocopier-2425i_2.jpg,canon-photocopier-2425i_3.jpg
+BT-NET-TPL-001,Network Devices,TPLINK ROUTER AC 1900,TP-Link,Archer C86,TPLINK ROUTER AC 1900 product photo,tplink-router-ac-1900.jpg,tplink-router-ac-1900_2.jpg,tplink-router-ac-1900_3.jpg
+BT-NET-TPL-002,Network Devices,TPLINK WIRELESS CARD 300MBPS,TP-Link,,TPLINK WIRELESS CARD 300MBPS product photo,tplink-wireless-card-300mbps.jpg,tplink-wireless-card-300mbps_2.jpg,tplink-wireless-card-300mbps_3.jpg
+BT-NET-TPL-003,Network Devices,TPLINK SWITCH 5 PORTS,TP-Link,,TPLINK SWITCH 5 PORTS product photo,tplink-switch-5-ports.jpg,tplink-switch-5-ports_2.jpg,tplink-switch-5-ports_3.jpg
+BT-NET-TPL-004,Network Devices,TP LINK SWITCH 16 PORTS,TP-Link,,TP LINK SWITCH 16 PORTS product photo,tp-link-switch-16-ports.jpg,tp-link-switch-16-ports_2.jpg,tp-link-switch-16-ports_3.jpg
+BT-NET-TPL-005,Network Devices,TPLINK SWITCH 8 PORTS,TP-Link,,TPLINK SWITCH 8 PORTS product photo,tplink-switch-8-ports.jpg,tplink-switch-8-ports_2.jpg,tplink-switch-8-ports_3.jpg
+BT-NET-TPL-006,Network Devices,TP LINK SWITCH 16 PORTS,TP-Link,,TP LINK SWITCH 16 PORTS product photo,tp-link-switch-16-ports-b.jpg,tp-link-switch-16-ports-b_2.jpg,tp-link-switch-16-ports-b_3.jpg
+BT-NET-TPL-007,Network Devices,TPLINK RANGE EXTENDER 850RE,TP-Link,TL-WA850RE,TPLINK RANGE EXTENDER 850RE product photo,tplink-range-extender-850re.jpg,tplink-range-extender-850re_2.jpg,tplink-range-extender-850re_3.jpg
+BT-NET-DLK-008,Network Devices,DLINK SWITCH 24 PORTS POE GIGABIT,D-Link,,DLINK SWITCH 24 PORTS POE GIGABIT product photo,dlink-switch-24-ports-poe-gigabit.jpg,dlink-switch-24-ports-poe-gigabit_2.jpg,dlink-switch-24-ports-poe-gigabit_3.jpg
+BT-NET-DLK-009,Network Devices,DLINK SWITCH 48PORTS GIGABIT MANAG,D-Link,,DLINK SWITCH 48PORTS GIGABIT MANAG product photo,dlink-switch-48ports-gigabit-manag.jpg,dlink-switch-48ports-gigabit-manag_2.jpg,dlink-switch-48ports-gigabit-manag_3.jpg
+BT-NET-AIC-010,Network Devices,CAT 6 UTP CABLE AICO,AICO,,CAT 6 UTP CABLE AICO product photo,cat-6-utp-cable-aico.jpg,cat-6-utp-cable-aico_2.jpg,cat-6-utp-cable-aico_3.jpg
+BT-NET-AIC-011,Network Devices,CAT 6 SFTP CABLE AICO,AICO,,CAT 6 SFTP CABLE AICO product photo,cat-6-sftp-cable-aico.jpg,cat-6-sftp-cable-aico_2.jpg,cat-6-sftp-cable-aico_3.jpg
+BT-NET-GEN-012,Network Devices,NETWORK CABLE TESTER,,,NETWORK CABLE TESTER product photo,network-cable-tester.jpg,network-cable-tester_2.jpg,network-cable-tester_3.jpg
+BT-TAB-SAM-001,Tablets,SAMSUNG TAB A11 8.7 INCHES,Samsung,SM-X130 (Wi-Fi),SAMSUNG TAB A11 8.7 INCHES tablet product photo,samsung-tab-a11-8-7-inches.jpg,samsung-tab-a11-8-7-inches_2.jpg,samsung-tab-a11-8-7-inches_3.jpg
+BT-TAB-SAM-002,Tablets,SAMSUNG TAB A9 5G + 10.4 INCHES,Samsung,SM-X216 (Galaxy Tab A9+ 5G),SAMSUNG TAB A9 5G + 10.4 INCHES tablet product photo,samsung-tab-a9-5g-10-4-inches.jpg,samsung-tab-a9-5g-10-4-inches_2.jpg,samsung-tab-a9-5g-10-4-inches_3.jpg
+BT-ACC-LOG-001,Accessories,logitech wireless mouse,Logitech,,logitech wireless mouse product photo,logitech-wireless-mouse.jpg,logitech-wireless-mouse_2.jpg,logitech-wireless-mouse_3.jpg
+BT-ACC-GEN-002,Accessories,type c 8 in 1 adapter,,,type c 8 in 1 adapter product photo,type-c-8-in-1-adapter.jpg,type-c-8-in-1-adapter_2.jpg,type-c-8-in-1-adapter_3.jpg
+BT-ACC-LOG-003,Accessories,logitech laserpointer,Logitech,,logitech laserpointer product photo,logitech-laserpointer.jpg,logitech-laserpointer_2.jpg,logitech-laserpointer_3.jpg
+BT-ACC-LOG-004,Accessories,logitech headset h390,Logitech,H390,logitech headset h390 product photo,logitech-headset-h390.jpg,logitech-headset-h390_2.jpg,logitech-headset-h390_3.jpg
+BT-ACC-LOG-005,Accessories,logitech headset h 340,Logitech,H340,logitech headset h 340 product photo,logitech-headset-h-340.jpg,logitech-headset-h-340_2.jpg,logitech-headset-h-340_3.jpg
+BT-ACC-LOG-006,Accessories,logitech headset h111,Logitech,H111,logitech headset h111 product photo,logitech-headset-h111.jpg,logitech-headset-h111_2.jpg,logitech-headset-h111_3.jpg
+BT-ACC-GEN-007,Accessories,laptop stand,,,laptop stand product photo,laptop-stand.jpg,laptop-stand_2.jpg,laptop-stand_3.jpg
+BT-ACC-SEA-008,Accessories,external hdd 1tb seagate,Seagate,,external hdd 1tb seagate product photo,external-hdd-1tb-seagate.jpg,external-hdd-1tb-seagate_2.jpg,external-hdd-1tb-seagate_3.jpg
+BT-ACC-WD-009,Accessories,external hdd wd 2tb,WD,,external hdd wd 2tb product photo,external-hdd-wd-2tb.jpg,external-hdd-wd-2tb_2.jpg,external-hdd-wd-2tb_3.jpg
+BT-ACC-WD-010,Accessories,external hdd 5tb wd,WD,,external hdd 5tb wd product photo,external-hdd-5tb-wd.jpg,external-hdd-5tb-wd_2.jpg,external-hdd-5tb-wd_3.jpg
+BT-ACC-KAS-011,Accessories,kaspersky antivirus 3 users,Kaspersky,,kaspersky antivirus 3 users product photo,kaspersky-antivirus-3-users.jpg,kaspersky-antivirus-3-users_2.jpg,kaspersky-antivirus-3-users_3.jpg
+BT-ACC-KAS-012,Accessories,kaspersky antivirus 5 users,Kaspersky,,kaspersky antivirus 5 users product photo,kaspersky-antivirus-5-users.jpg,kaspersky-antivirus-5-users_2.jpg,kaspersky-antivirus-5-users_3.jpg
+BT-ACC-GEN-013,Accessories,foam cleaner,,,foam cleaner product photo,foam-cleaner.jpg,foam-cleaner_2.jpg,foam-cleaner_3.jpg
+BT-ACC-GEN-014,Accessories,laptop lock,,,laptop lock product photo,laptop-lock.jpg,laptop-lock_2.jpg,laptop-lock_3.jpg
+BT-UPS-APC-001,UPS,ups apc 650va,APC,,ups apc 650va UPS product photo,ups-apc-650va.jpg,ups-apc-650va_2.jpg,ups-apc-650va_3.jpg
+BT-UPS-APC-002,UPS,ups apc 1000va,APC,,ups apc 1000va UPS product photo,ups-apc-1000va.jpg,ups-apc-1000va_2.jpg,ups-apc-1000va_3.jpg
+BT-UPS-APC-003,UPS,ups apc 1500va,APC,,ups apc 1500va UPS product photo,ups-apc-1500va.jpg,ups-apc-1500va_2.jpg,ups-apc-1500va_3.jpg
+BT-UPS-APC-004,UPS,ups apc 3kva,APC,,ups apc 3kva UPS product photo,ups-apc-3kva.jpg,ups-apc-3kva_2.jpg,ups-apc-3kva_3.jpg
