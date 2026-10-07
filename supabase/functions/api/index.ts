@@ -1446,9 +1446,10 @@ async function handle(request: Request) {
       if (values.length) query = query.filter(`specs->>${key}`, "in", postgrestInList(values));
     }
 
-    const sortColumns: Record<string, string> = { productId: "id", price: "price", name: "name", createdAt: "created_at" };
-    const [sortField, sortDir] = (url.searchParams.get("sort") ?? "createdAt,desc").split(",");
-    const orderColumn = sortColumns[sortField] ?? "created_at";
+    // "Newest" = most recently added or edited; the catalogue was bulk-imported, so created_at ties.
+    const sortColumns: Record<string, string> = { productId: "id", price: "price", name: "name", createdAt: "created_at", updatedAt: "updated_at" };
+    const [sortField, sortDir] = (url.searchParams.get("sort") ?? "updatedAt,desc").split(",");
+    const orderColumn = sortColumns[sortField] ?? "updated_at";
     const ascending = sortDir === "asc";
 
     const { data, count, error } = await query.range(page * size, page * size + size - 1).order(orderColumn, { ascending }).order("id", { ascending });

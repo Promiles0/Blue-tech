@@ -20,7 +20,7 @@ const apiService = {
   products: {
     getAll: () => api.get('/products'),
     getAllPaginated: (params) => api.get(`/products?${params}`),
-    getNewest: (limit = 5) => api.get(`/products?page=0&size=${limit}&sort=createdAt,desc`),
+    getNewest: (limit = 5) => api.get(`/products?page=0&size=${limit}&sort=updatedAt,desc`),
     search: (params) => api.get(`/products/search?${params}`),
     getOne: (id) => api.get(`/products/${id}`),
     // Filter values (with counts) for the storefront filter rail.

@@ -25,7 +25,7 @@ export function useInteractiveScreensProducts({ size = 12 } = {}) {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['interactive-screens-models', category?.categoryId, size],
     queryFn: async () => {
-      const params = new URLSearchParams({ categoryId: String(category.categoryId), size: String(size), sort: 'createdAt,desc' })
+      const params = new URLSearchParams({ categoryId: String(category.categoryId), size: String(size), sort: 'updatedAt,desc' })
       const res = await apiService.products.search(params)
       return res.data?.content ?? (Array.isArray(res.data) ? res.data : [])
     },

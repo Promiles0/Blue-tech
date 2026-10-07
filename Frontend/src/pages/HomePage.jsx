@@ -56,7 +56,7 @@ export default function Home() {
       if (debouncedMin !== '') params.set('minPrice', debouncedMin)
       if (debouncedMax !== '') params.set('maxPrice', debouncedMax)
       for (const [key, value] of facetQuery) params.set(key, value)
-      params.set('sort', 'createdAt,desc')
+      params.set('sort', 'updatedAt,desc')
       params.set('page', String(pageNum))
       params.set('size', String(PAGE_SIZE))
       return apiService.products.search(params)

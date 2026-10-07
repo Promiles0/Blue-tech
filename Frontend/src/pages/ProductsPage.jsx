@@ -9,7 +9,7 @@ import apiService from '../api/service'
 
 const PRODUCTS_PER_PAGE = 8
 const SORT_OPTIONS = [
-  { label: 'Newest',          value: 'productId,desc' },
+  { label: 'Newest',          value: 'updatedAt,desc' },
   { label: 'Price: Low–High', value: 'price,asc' },
   { label: 'Price: High–Low', value: 'price,desc' },
   { label: 'Name A–Z',        value: 'name,asc' },
@@ -27,7 +27,7 @@ export default function Products() {
   const category = searchParams.get('category') ?? 'All'
   // e.g. /products?category=Laptops&brand=HP from the Categories menu
   const brand    = searchParams.get('brand') ?? ''
-  const sort     = searchParams.get('sort') ?? 'productId,desc'
+  const sort     = searchParams.get('sort') ?? 'updatedAt,desc'
   const page     = parseInt(searchParams.get('page') ?? '0', 10)
 
   const { data: categories = [] } = useQuery({
