@@ -1,45 +1,54 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, SlidersHorizontal } from 'lucide-react'
+import { useState } from 'react'
+import { X, SlidersHorizontal, ChevronDown, Check } from 'lucide-react'
 import { FILTER_FACETS } from '../../lib/specTemplates'
 
-function SectionTitle({ children, hint }) {
+const VISIBLE_OPTIONS = 6   // longer lists fold behind "Show all"
+
+function Group({ id, title, hint, selectedCount = 0, children }) {
+  const [open, setOpen] = useState(true)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted-dark)' }}>
-        {children}
-      </p>
-      {hint && (
-        <span style={{
-          fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-          color: 'var(--muted-dark)', border: '1px solid var(--border)', borderRadius: 100,
-          padding: '2px 7px',
-        }}>
-          {hint}
+    <div className="filter-group">
+      <button type="button" className="filter-group-btn" aria-expanded={open} aria-controls={`filter-${id}`} onClick={() => setOpen(o => !o)}>
+        <span>
+          {title}
+          {hint && <span className="filter-hint">{hint}</span>}
+          {selectedCount > 0 && <span className="filter-sel">{selectedCount} selected</span>}
         </span>
-      )}
+        <ChevronDown size={15} className="chev" />
+      </button>
+      {open && <div className="filter-group-body" id={`filter-${id}`}>{children}</div>}
     </div>
   )
 }
 
-function Checkbox({ label, checked, onChange }) {
-  const disabled = !onChange
+function Option({ label, count, checked, onChange }) {
   return (
-    <label style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '6px 0', cursor: disabled ? 'not-allowed' : 'pointer',
-      opacity: disabled ? 0.45 : 1,
-      fontSize: 13.5, color: 'var(--text)',
-      userSelect: 'none',
-    }}>
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={onChange}
-        style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: disabled ? 'not-allowed' : 'pointer' }}
-      />
-      {label}
+    <label className={`filter-option${checked ? ' on' : ''}`}>
+      <input type="checkbox" checked={checked} onChange={onChange} />
+      <span className="filter-box" aria-hidden><Check size={12} strokeWidth={3} color="#fff" /></span>
+      <span className="filter-label">{label}</span>
+      <span className="filter-num">{count}</span>
     </label>
+  )
+}
+
+function FacetGroup({ group, values, selected, onToggle }) {
+  const [expanded, setExpanded] = useState(false)
+  // Keep ticked values visible even when the list is folded.
+  const shown = expanded ? values : values.filter((v, i) => i < VISIBLE_OPTIONS || selected.includes(v.value))
+  const hidden = values.length - shown.length
+  return (
+    <Group id={group.key} title={group.label} selectedCount={selected.length}>
+      {shown.map(({ value, count }) => (
+        <Option key={value} label={value} count={count} checked={selected.includes(value)} onChange={() => onToggle(group.key, value)} />
+      ))}
+      {(hidden > 0 || expanded) && values.length > VISIBLE_OPTIONS && (
+        <button type="button" className="filter-more" onClick={() => setExpanded(e => !e)}>
+          {expanded ? 'Show less' : `Show all ${values.length}`}
+        </button>
+      )}
+    </Group>
   )
 }
 
@@ -50,38 +59,18 @@ function FilterGroups({ filters, setters, facets }) {
   const { toggleFacet, setMinPrice, setMaxPrice } = setters
   const groups = FILTER_FACETS.filter(f => facets?.[f.key]?.length)
 
-  const priceInput = {
-    width: '100%', background: 'none', border: '1px solid var(--border)',
-    borderRadius: 6, padding: '8px 10px', fontSize: 13, color: 'var(--text)',
-    outline: 'none', fontFamily: 'inherit',
-  }
-
   return (
     <>
-      <div style={{ paddingBottom: 28, borderBottom: groups.length ? '1px solid var(--border)' : 'none' }}>
-        <SectionTitle hint="RWF">Price</SectionTitle>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input type="number" min="0" placeholder="Min" value={minPrice} onChange={e => setMinPrice(e.target.value)} style={priceInput} />
+      <Group id="price" title="Price" hint="RWF" selectedCount={(minPrice ? 1 : 0) + (maxPrice ? 1 : 0)}>
+        <div className="filter-price">
+          <input type="number" min="0" placeholder="Min" aria-label="Minimum price" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
           <span style={{ color: 'var(--muted-dark)', fontSize: 13 }}>–</span>
-          <input type="number" min="0" placeholder="Max" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} style={priceInput} />
+          <input type="number" min="0" placeholder="Max" aria-label="Maximum price" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
         </div>
-      </div>
+      </Group>
 
-      {groups.map((group, i) => (
-        <div key={group.key} style={{ padding: '28px 0', borderBottom: i < groups.length - 1 ? '1px solid var(--border)' : 'none' }}>
-          <SectionTitle>{group.label}</SectionTitle>
-          {facets[group.key].map(({ value, count }) => (
-            <Checkbox
-              key={value}
-              label={<span style={{ display: 'flex', justifyContent: 'space-between', width: '100%', gap: 8 }}>
-                <span>{value}</span>
-                <span style={{ color: 'var(--muted-dark)', fontSize: 12 }}>{count}</span>
-              </span>}
-              checked={(selected[group.key] ?? []).includes(value)}
-              onChange={() => toggleFacet(group.key, value)}
-            />
-          ))}
-        </div>
+      {groups.map(group => (
+        <FacetGroup key={group.key} group={group} values={facets[group.key]} selected={selected[group.key] ?? []} onToggle={toggleFacet} />
       ))}
     </>
   )
@@ -91,22 +80,17 @@ export default function FilterRail({ filters, setters, facets, activeCount, onCl
   return (
     <>
       {/* ── Desktop — persistent sidebar ─────────────────────── */}
-      <aside
-        className="filter-rail-desktop"
-        style={{ position: 'sticky', top: 90, alignSelf: 'start', paddingRight: 8 }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Filters</span>
-          {activeCount > 0 && (
-            <button
-              onClick={onClearAll}
-              style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
-            >
-              Clear all
-            </button>
-          )}
+      <aside className="filter-rail-desktop" aria-label="Product filters">
+        <div className="filter-rail-head">
+          <b>
+            <SlidersHorizontal size={15} style={{ color: 'var(--accent-light)' }} /> Filters
+            {activeCount > 0 && <span className="filter-count">{activeCount}</span>}
+          </b>
+          {activeCount > 0 && <button type="button" className="filter-clear" onClick={onClearAll}>Clear all</button>}
         </div>
-        <FilterGroups filters={filters} setters={setters} facets={facets} />
+        <div className="filter-scroll">
+          <FilterGroups filters={filters} setters={setters} facets={facets} />
+        </div>
       </aside>
 
       {/* ── Mobile — drawer ───────────────────────────────────── */}

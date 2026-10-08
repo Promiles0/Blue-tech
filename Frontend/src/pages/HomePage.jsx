@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Truck, Shield, RotateCcw, SlidersHorizontal, Loader2, MessageCircle } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
@@ -6,6 +6,7 @@ import Testimonials from '../components/site/Testimonials'
 import RecentlyViewed from '../components/site/RecentlyViewed'
 import FilterRail from '../components/site/FilterRail'
 import PromoCarousel from '../components/site/PromoCarousel'
+import DepartmentShelves from '../components/site/DepartmentShelves'
 import { Reveal } from '../lib/motion'
 import apiService from '../api/service'
 import { openLiveChat, useLiveChatReady } from '../lib/liveChat'
@@ -99,6 +100,22 @@ export default function Home() {
       .finally(() => setLoadingMore(false))
   }
 
+  // Auto-load the next batch when the shopper scrolls near the end of the grid.
+  // The button stays as a fallback (and for keyboard users).
+  const sentinelRef = useRef(null)
+  const loadMoreRef = useRef(loadMore)
+  useEffect(() => { loadMoreRef.current = loadMore })
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasMore || loading) return
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) loadMoreRef.current() },
+      { rootMargin: '600px 0px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, loading, page])
+
   const displayProducts = pool
 
   const activeCount = Object.values(filters.selected).reduce((n, values) => n + values.length, 0)
@@ -120,8 +137,11 @@ export default function Home() {
 
       <PromoCarousel />
 
-      {/* ── Filter rail + product grid — the top of the page ─── */}
-      <div className="container-noir shop-layout" style={{ padding: '10px 0 64px' }}>
+      {/* ── Department tiles + one shelf per big department ─── */}
+      <DepartmentShelves />
+
+      {/* ── Filter rail + full product grid ──────────────────── */}
+      <div id="all-products" className="container-noir shop-layout" style={{ padding: '24px 0 64px' }}>
         <FilterRail
           filters={filters}
           setters={{ toggleFacet, setMinPrice, setMaxPrice }}
@@ -142,9 +162,9 @@ export default function Home() {
                   letterSpacing: '-0.02em', lineHeight: 1.1,
                   color: 'var(--text)', marginBottom: 6,
                 }}>
-                  Considered objects.
+                  All products
                 </h1>
-                <p style={{ fontSize: 14, color: 'var(--muted)' }}>Built to last — tech chosen with care, not just specs.</p>
+                <p style={{ fontSize: 14, color: 'var(--muted)' }}>Newest first. Filter by brand, price and specs.</p>
               </div>
               <button
                 className="filter-mobile-btn noir-btn-outline"
@@ -178,7 +198,7 @@ export default function Home() {
           )}
 
           {!loading && displayProducts.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 40 }}>
+            <div ref={sentinelRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 40 }}>
               {hasMore ? (
                 <button
                   onClick={loadMore}

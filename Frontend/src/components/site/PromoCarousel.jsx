@@ -5,7 +5,8 @@ import { PROMO_SLIDES } from '../../lib/promoSlides'
 
 const PEEK = 32   // px of the next slide visible at the right edge
 const GAP  = 10   // px gap between slides
-const SLIDE_HEIGHT = 304  // ~2x the old 152px so it reads as a real display screen
+// Short, wide banner so the department tiles below still show on the first screen.
+const slideHeightFor = (w) => Math.round(Math.min(Math.max(w * 0.24, 168), 236))
 const AUTO_ADVANCE_MS = 3000
 
 export default function PromoCarousel() {
@@ -32,6 +33,7 @@ export default function PromoCarousel() {
 
   const slideWidth = Math.max(width - PEEK - GAP, 0)
   const step = slideWidth + GAP
+  const SLIDE_HEIGHT = slideHeightFor(slideWidth || 900)
   const maxIndex = PROMO_SLIDES.length - 1
 
   // Auto-advance — paused on hover, mid-drag, or reduced motion
