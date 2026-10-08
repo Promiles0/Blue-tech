@@ -6,6 +6,13 @@ import { getProductImage, handleProductImageError } from '../../lib/productImage
 const COVER_SIZE = 3   // a few newest products, to pick a cover photo for the tile
 
 const categoryName = (c) => c.name ?? c.categoryName
+// Short labels for the compact tile row; links and filters keep the real category name.
+const SHORT_NAMES = {
+  'Network Devices': 'Networking',
+  'Printers & Photocopiers': 'Printers',
+  'UPS & Projectors': 'UPS',
+}
+const tileLabel = (c) => SHORT_NAMES[categoryName(c)] ?? categoryName(c)
 const categoryLink = (c) => `/products?category=${encodeURIComponent(categoryName(c))}`
 
 // One request per category: a cover photo and the product total for its tile.
@@ -34,7 +41,7 @@ function DepartmentTile({ department }) {
         {cover && <img src={getProductImage(cover)} alt="" loading="lazy" onError={handleProductImageError} />}
       </div>
       <div className="dept-tile-text">
-        <span className="dept-tile-name">{categoryName(category)}</span>
+        <span className="dept-tile-name" title={categoryName(category)}>{tileLabel(category)}</span>
         <span className="dept-tile-count">{total} {total === 1 ? 'product' : 'products'}</span>
       </div>
     </Link>
