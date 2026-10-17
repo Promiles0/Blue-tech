@@ -9,7 +9,7 @@ import PromoCarousel from '../components/site/PromoCarousel'
 import DepartmentShelves from '../components/site/DepartmentShelves'
 import { Reveal } from '../lib/motion'
 import apiService from '../api/service'
-import { openLiveChat, useLiveChatReady } from '../lib/liveChat'
+import { openLiveChat } from '../lib/liveChat'
 
 const emptyFilters = { selected: {}, minPrice: '', maxPrice: '' }
 const PAGE_SIZE = 12
@@ -130,7 +130,6 @@ export default function Home() {
   const setMaxPrice = (v) => setFilters(f => ({ ...f, maxPrice: v }))
   const clearAll     = () => setFilters(emptyFilters)
 
-  const chatReady = useLiveChatReady()
 
   return (
     <div>
@@ -254,20 +253,16 @@ export default function Home() {
                   Tell us what you'll use it for and your budget — we'll point you to the right machine, no pressure.
                 </p>
                 <button
-                  onClick={openLiveChat}
-                  disabled={!chatReady}
+                  onClick={() => openLiveChat()}
                   className="noir-btn-primary shine"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '12px 24px',
-                    opacity: chatReady ? 1 : 0.6, cursor: chatReady ? 'pointer' : 'default',
                   }}
                 >
-                  {chatReady
-                    ? <><MessageCircle size={16} /> Chat with us</>
-                    : <><Loader2 size={16} className="animate-spin" /> Loading chat…</>}
+                  <MessageCircle size={16} /> Ask our AI assistant
                 </button>
                 <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 14 }}>
-                  Usually replies within a few hours.
+                  Instant answers 24/7. A real person is one tap away.
                 </p>
               </div>
             </div>

@@ -12,6 +12,7 @@ import CartDrawer       from './CartDrawer'
 import CommandPalette   from './CommandPalette'
 import MobileNav        from './MobileNav'
 import ProductQuickView from './ProductQuickView'
+import ChatWidget       from './ChatWidget'
 
 export default function SiteLayout({ children }) {
   const location = useLocation()
@@ -54,6 +55,7 @@ export default function SiteLayout({ children }) {
       <CommandPalette />
       <MobileNav />
       <ProductQuickView />
+      <ChatWidget />
 
       <Toaster
         theme={theme}

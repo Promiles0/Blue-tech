@@ -81,6 +81,11 @@ const apiService = {
     get: () => api.get('/settings'),
   },
 
+  // --- AI ASSISTANT ---
+  chat: {
+    send: (messages) => api.post('/chat', { messages }, { skipAuthRedirect: true }),
+  },
+
   // --- PAYMENTS ---
   payments: {
     createIntent: (orderId) => api.post(`/payments/initialize/${orderId}`),

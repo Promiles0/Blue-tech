@@ -25,7 +25,8 @@ api.interceptors.response.use(
 
     // Only logout on 401 from our own API, or explicit token-related 400s
     const isOwnApi = error.config?.baseURL?.includes('/functions/v1') || error.config?.baseURL?.includes('functions.supabase.co')
-    const authFailure = isOwnApi && (
+    // Public endpoints (the AI chat) must never sign the shopper out on an error.
+    const authFailure = isOwnApi && !error.config?.skipAuthRedirect && (
       status === 401 ||
       (status === 400 && (
         message.includes('not found in database') ||

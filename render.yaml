@@ -14,7 +14,7 @@ services:
         destination: /index.html
     headers:
       # Safe on any site regardless of script/connect sources in use — no risk of breaking
-      # Google Sign-In, Stripe Elements, or the Tawk.to widget.
+      # Google Sign-In, Stripe Elements widgets.
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
@@ -31,9 +31,9 @@ services:
         name: Strict-Transport-Security
         value: max-age=63072000; includeSubDomains; preload
       # frame-ancestors/object-src/base-uri don't touch script-src or connect-src, so this can't
-      # break Google Sign-In, Stripe Elements, or Tawk.to — a stricter policy that also locks down
+      # break Google Sign-In, or Stripe Elements — a stricter policy that also locks down
       # script-src/style-src/connect-src is drafted separately and needs a deliberate test pass
-      # against login, checkout, and chat before it ships (see the security audit notes).
+      # against login, and checkout before it ships (see the security audit notes).
       - path: /*
         name: Content-Security-Policy
         value: "frame-ancestors 'self'; object-src 'none'; base-uri 'self'; upgrade-insecure-requests"

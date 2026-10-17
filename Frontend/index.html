@@ -27,31 +27,5 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
-    <!--Start of Tawk.to Script-->
-    <script type="text/javascript">
-      var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-      // autoStart:false means the widget never renders or connects on page load at all — no
-      // bubble, no flash. It only starts when our own "Chat with us" button calls
-      // Tawk_API.start() (see Frontend/src/lib/liveChat.js). This replaces an earlier attempt
-      // that CSS-hid Tawk's container by guessing its class names — Tawk doesn't publicly
-      // document those, so that hide never actually matched anything.
-      Tawk_API.autoStart = false;
-      Tawk_API.onLoad = function () {
-        window.dispatchEvent(new Event('tawk:ready'));
-      };
-      // Once the visitor closes the chat, hide it again rather than leaving a bubble behind —
-      // it should only reappear via our own button.
-      Tawk_API.onChatMinimized = function () { Tawk_API.hideWidget(); };
-      Tawk_API.onChatHidden = function () { Tawk_API.hideWidget(); };
-      (function(){
-      var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-      s1.async=true;
-      s1.src='https://embed.tawk.to/6a9200d55d251c344563f80c/1k1556h29';
-      s1.charset='UTF-8';
-      s1.setAttribute('crossorigin','*');
-      s0.parentNode.insertBefore(s1,s0);
-      })();
-    </script>
-    <!--End of Tawk.to Script-->
   </body>
 </html>
