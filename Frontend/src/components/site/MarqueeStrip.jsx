@@ -1,11 +1,11 @@
 import { useReducedMotion } from 'framer-motion'
 
 const ITEMS = [
-  'Free shipping over $200',
-  'Members get 15% off',
+  'Free delivery across Rwanda',
+  'Warranty on every product',
   'Free returns within 30 days',
-  'Secure checkout · SSL encrypted',
-  'New arrivals added weekly',
+  'Pay with MoMo or card',
+  'Questions? Ask Blue, our AI assistant',
 ]
 
 export default function MarqueeStrip() {

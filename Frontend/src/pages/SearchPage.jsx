@@ -4,6 +4,7 @@ import { Search, Clock, X, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Reveal } from '../lib/motion'
 import ProductCard from '../components/ProductCard'
+import NoResultsHelp from '../components/site/NoResultsHelp'
 import api from '../api/axios'
 
 const STORAGE_KEY = 'noir_recent_searches'
@@ -215,7 +216,7 @@ export default function SearchPage() {
                 <p style={{ fontSize: 16, color: 'var(--muted-dark)', marginBottom: 6 }}>
                   No results for <span style={{ color: 'var(--text)' }}>"{query}"</span>
                 </p>
-                <p style={{ fontSize: 13, color: '#333', marginBottom: 24 }}>
+                <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
                   Try a different keyword or browse the full catalogue
                 </p>
                 <Link
@@ -232,6 +233,7 @@ export default function SearchPage() {
                 >
                   Browse all products <ArrowRight size={14} />
                 </Link>
+                <NoResultsHelp query={query} />
               </div>
             ) : (
               <div className="grid-4">

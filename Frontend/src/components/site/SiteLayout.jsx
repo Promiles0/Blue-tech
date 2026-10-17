@@ -13,6 +13,7 @@ import CommandPalette   from './CommandPalette'
 import MobileNav        from './MobileNav'
 import ProductQuickView from './ProductQuickView'
 import ChatWidget       from './ChatWidget'
+import CompareTray      from './CompareTray'
 
 export default function SiteLayout({ children }) {
   const location = useLocation()
@@ -56,6 +57,7 @@ export default function SiteLayout({ children }) {
       <MobileNav />
       <ProductQuickView />
       <ChatWidget />
+      <CompareTray />
 
       <Toaster
         theme={theme}

@@ -26,6 +26,7 @@ import CheckoutPage        from './pages/CheckoutPage'
 import OrderHistoryPage    from './pages/OrderHistoryPage'
 import OrderDetailPage     from './pages/OrderDetailPage'
 import SearchPage         from './pages/SearchPage'
+import ComparePage        from './pages/ComparePage'
 import CategoryPage       from './pages/CategoryPage'
 import NotFoundPage           from './pages/NotFoundPage'
 import NotificationsPage      from './pages/NotificationsPage'
@@ -162,6 +163,7 @@ function CustomerSite() {
         <Route path="/products/:id"      element={<ProductDetailPage />} />
         <Route path="/interactive-screens" element={<InteractiveScreensPage />} />
         <Route path="/search"            element={<SearchPage />} />
+        <Route path="/compare"           element={<ComparePage />} />
         <Route path="/category/:slug"    element={<CategoryPage />} />
 
         <Route path="/cart"     element={<ProtectedRoute><CartPage /></ProtectedRoute>} />

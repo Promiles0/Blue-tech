@@ -1051,3 +1051,30 @@ input, textarea, select { font-family: inherit; }
   padding: 9px 10px; font-size: 13px; color: var(--text); outline: none; font-family: inherit;
 }
 .filter-price input:focus { border-color: var(--accent-light); }
+
+/* ── Home: budget chips, interactive-screens banner, Ask Blue examples ── */
+.budget-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.budget-chip {
+  font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--text);
+  transition: border-color .15s, background .15s;
+}
+.budget-chip:hover { border-color: var(--accent); }
+.budget-chip.on { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-light, var(--text)); }
+.screens-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+  padding: clamp(28px, 4vw, 44px); border-radius: 20px; text-decoration: none;
+  background: linear-gradient(150deg, #12142a 0%, #22284a 55%, #354380 100%);
+  border: 1px solid var(--border); transition: transform .2s, box-shadow .2s;
+}
+.screens-banner:hover { transform: translateY(-2px); box-shadow: 0 24px 60px -24px rgba(53, 67, 128, .8); }
+.screens-banner-cta {
+  display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 999px;
+  background: #f59e0b; color: #241a06; font-size: 14px; font-weight: 700; white-space: nowrap;
+}
+.blue-example {
+  font-size: 12.5px; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--muted);
+  transition: border-color .15s, color .15s;
+}
+.blue-example:hover { border-color: var(--accent); color: var(--text); }

@@ -12,6 +12,20 @@ import apiService from '../api/service'
 import { openLiveChat } from '../lib/liveChat'
 
 const emptyFilters = { selected: {}, minPrice: '', maxPrice: '' }
+
+// One-tap price bands (RWF) above the grid; they just fill the filter rail's min/max.
+const BUDGETS = [
+  { label: 'Under 500k',  min: '',        max: '500000' },
+  { label: '500k – 1M',   min: '500000',  max: '1000000' },
+  { label: '1M – 2M',     min: '1000000', max: '2000000' },
+  { label: '2M+',         min: '2000000', max: '' },
+]
+
+const BLUE_EXAMPLES = [
+  'Which laptop is best for a university student?',
+  'I need a printer for a small office',
+  'What can I get for under 1,000,000 RWF?',
+]
 const PAGE_SIZE = 12
 
 export default function Home() {
@@ -164,6 +178,18 @@ export default function Home() {
                   All products
                 </h1>
                 <p style={{ fontSize: 14, color: 'var(--muted)' }}>Newest first. Filter by brand, price and specs.</p>
+                <div className="budget-chips" role="group" aria-label="Shop by budget">
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted-dark)', marginRight: 2 }}>Budget:</span>
+                  {BUDGETS.map(b => {
+                    const on = filters.minPrice === b.min && filters.maxPrice === b.max
+                    return (
+                      <button key={b.label} aria-pressed={on} className={`budget-chip ${on ? 'on' : ''}`}
+                        onClick={() => setFilters(f => on ? { ...f, minPrice: '', maxPrice: '' } : { ...f, minPrice: b.min, maxPrice: b.max })}>
+                        {b.label}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
               <button
                 className="filter-mobile-btn noir-btn-outline"
@@ -224,7 +250,29 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Talk to someone — pre-purchase help prompt ───────── */}
+      {/* ── Interactive screens — route schools and offices to the quote flow ── */}
+      <Reveal>
+        <section style={{ padding: '0 0 40px' }}>
+          <div className="container-noir">
+            <Link to="/interactive-screens" className="screens-banner">
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#f59e0b', marginBottom: 8 }}>
+                  For schools &amp; offices
+                </p>
+                <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(22px, 2.6vw, 30px)', fontWeight: 900, letterSpacing: '-0.02em', color: '#fff', marginBottom: 8 }}>
+                  Interactive screens, 65" to 110".
+                </h2>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, maxWidth: 520 }}>
+                  Touch, stylus, camera and screen mirroring in one display. Find your size and get a quote for one room or the whole building.
+                </p>
+              </div>
+              <span className="screens-banner-cta">Explore screens <ArrowRight size={15} /></span>
+            </Link>
+          </div>
+        </section>
+      </Reveal>
+
+      {/* ── Ask Blue — pre-purchase help prompt ───────── */}
       <Reveal>
         <section style={{ padding: '0 0 72px' }}>
           <div className="container-noir">
@@ -247,10 +295,10 @@ export default function Home() {
                   fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(24px, 3vw, 32px)',
                   fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 12,
                 }}>
-                  Talk to someone before you buy.
+                  Ask Blue before you buy.
                 </h2>
                 <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.65, maxWidth: 460, margin: '0 auto 28px' }}>
-                  Tell us what you'll use it for and your budget — we'll point you to the right machine, no pressure.
+                  Blue knows the whole catalogue. Say what you'll use it for and your budget, and get real products with prices in seconds.
                 </p>
                 <button
                   onClick={() => openLiveChat()}
@@ -259,8 +307,13 @@ export default function Home() {
                     display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '12px 24px',
                   }}
                 >
-                  <MessageCircle size={16} /> Ask our AI assistant
+                  <MessageCircle size={16} /> Ask Blue
                 </button>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 18 }}>
+                  {BLUE_EXAMPLES.map(q => (
+                    <button key={q} className="blue-example" onClick={() => openLiveChat(q, { send: true })}>“{q}”</button>
+                  ))}
+                </div>
                 <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 14 }}>
                   Instant answers 24/7. A real person is one tap away.
                 </p>

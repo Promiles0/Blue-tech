@@ -88,9 +88,13 @@ export default function ChatWidget() {
   const scrollRef = useRef(null)
   const inputRef = useRef(null)
 
-  useEffect(() => onLiveChatOpen(({ prefill }) => {
+  // Latest send(), so an "ask this now" event never calls a stale closure.
+  const sendRef = useRef(null)
+
+  useEffect(() => onLiveChatOpen(({ prefill, send }) => {
     setOpen(true)
-    if (prefill) setInput(prefill)
+    if (prefill && send) setTimeout(() => sendRef.current?.(prefill), 0)
+    else if (prefill) setInput(prefill)
   }), [])
 
   useEffect(() => {
@@ -131,6 +135,8 @@ export default function ChatWidget() {
       setSending(false)
     }
   }
+
+  sendRef.current = send
 
   const reset = () => { setMessages([GREETING]); setInput('') }
   const close = () => setOpen(false)

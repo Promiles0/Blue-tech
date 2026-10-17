@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ShoppingBag, Heart, ArrowLeft, Check, BadgeCheck, Plus, Minus, MessageCircle } from 'lucide-react'
+import { ShoppingBag, Heart, Check, BadgeCheck, Plus, Minus, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import api from '../api/axios'
 import apiService from '../api/service'
@@ -15,6 +15,9 @@ import { handleProductImageError, productImageList } from '../lib/productImage'
 import { buildWhatsAppLink } from '../lib/helpLinks'
 import { useCurrency } from '../context/CurrencyContext'
 import ProductSpecs from '../components/site/ProductSpecs'
+import RelatedProducts from '../components/site/RelatedProducts'
+import { Breadcrumb, ProductActions, BuyInfo } from '../components/site/ProductExtras'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -85,6 +88,13 @@ export default function ProductDetail() {
     }
   }
 
+  // Per-product title/description/image for search results and WhatsApp link previews.
+  usePageMeta({
+    title: product ? `${product.name} — ${formatPrice(product.price)} | Blue-Tech` : undefined,
+    description: product ? (product.shortDescription || product.description || '').slice(0, 160) : undefined,
+    ogImage: product ? (productImageList(product)[0] ?? undefined) : undefined,
+  })
+
   if (loading) return (
     <div style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64 }}>
@@ -119,14 +129,7 @@ export default function ProductDetail() {
   return (
     <div style={{ padding: '48px 0 80px' }}>
       <div className="container-noir">
-        <Link
-          to="/products"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--muted)', marginBottom: 36, transition: 'color 0.2s' }}
-          onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
-        >
-          <ArrowLeft size={14} /> Back to products
-        </Link>
+        <Breadcrumb product={product} />
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'start' }}>
           <div>
@@ -290,11 +293,13 @@ export default function ProductDetail() {
               Quick WhatsApp Help – About This Product
             </a>
 
-            {(product.warranty || product.inTheBox) && (
-              <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: 'var(--muted)' }}>
-                {product.warranty && <span><strong style={{ color: 'var(--text)' }}>Warranty:</strong> {product.warranty}</span>}
-                {product.inTheBox && <span><strong style={{ color: 'var(--text)' }}>In the box:</strong> {product.inTheBox}</span>}
-              </div>
+            <ProductActions product={product} />
+            <BuyInfo product={product} />
+
+            {product.inTheBox && (
+              <p style={{ marginTop: 14, fontSize: 13, color: 'var(--muted)' }}>
+                <strong style={{ color: 'var(--text)' }}>In the box:</strong> {product.inTheBox}
+              </p>
             )}
           </div>
         </div>
@@ -325,7 +330,11 @@ export default function ProductDetail() {
 
 
           {reviews.length === 0 ? (
-            <p style={{ fontSize: 14, color: 'var(--muted-dark)' }}>No reviews yet. Be the first!</p>
+            <p style={{ fontSize: 14, color: 'var(--muted-dark)' }}>
+              No reviews yet. Bought this?{' '}
+              <Link to="/orders" style={{ color: 'var(--accent-light, var(--accent))', fontWeight: 600 }}>Review it from your orders</Link>
+              {' '}once it's delivered.
+            </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {reviews.map(review => (
@@ -352,6 +361,10 @@ export default function ProductDetail() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="container-noir">
+        <RelatedProducts product={product} />
       </div>
 
       <StickyCartBar

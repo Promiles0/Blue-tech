@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { Heart } from 'lucide-react'
+import { Heart, GitCompare } from 'lucide-react'
+import { toast } from 'sonner'
+import { toggleCompare, useCompare, COMPARE_MAX } from '../lib/compare'
 import { Tilt } from '../lib/motion'
 import { useUI } from '../context/UIContext'
 import { useWishlist } from '../context/WishlistContext'
@@ -25,9 +27,11 @@ export default function ProductCard({ product }) {
   const { setQuickViewProduct } = useUI()
   const { wishlistIds, toggle } = useWishlist()
   const { user } = useAuth()
+  const compareList = useCompare()
 
   const pid        = product.productId ?? product.id
   const wishlisted = wishlistIds.has(pid)
+  const comparing  = compareList.some(p => p.id === pid)
   const price      = parseFloat(product.startingPrice ?? product.price) || 0
 
   const productImages = productImageList(product)
@@ -159,9 +163,29 @@ export default function ProductCard({ product }) {
           }}>
             {product.name}
           </p>
-          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--price)' }}>
-            {formatPrice(price)}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--price)' }}>
+              {formatPrice(price)}
+            </p>
+            <button
+              onClick={e => {
+                e.stopPropagation()
+                const result = toggleCompare(product)
+                if (result === 'full') toast.info(`You can compare up to ${COMPARE_MAX} products — remove one first.`)
+              }}
+              aria-pressed={comparing}
+              title={comparing ? 'Remove from compare' : 'Add to compare'}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600,
+                padding: '5px 9px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
+                border: `1px solid ${comparing ? 'var(--accent)' : 'var(--border)'}`,
+                background: comparing ? 'var(--accent-dim)' : 'transparent',
+                color: comparing ? 'var(--accent-light)' : 'var(--muted)',
+              }}
+            >
+              <GitCompare size={12} /> {comparing ? 'Added' : 'Compare'}
+            </button>
+          </div>
         </div>
       </div>
     </Tilt>

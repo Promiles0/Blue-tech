@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import NoResultsHelp from '../components/site/NoResultsHelp'
 import { useQuery } from '@tanstack/react-query'
 import { Search, SlidersHorizontal, ChevronDown, X } from 'lucide-react'
 import { motion, LayoutGroup } from 'framer-motion'
@@ -206,7 +207,8 @@ export default function Products() {
           </div>
         ) : displayProducts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <p style={{ fontSize: 16, color: 'var(--muted)' }}>No products found.</p>
+            <p style={{ fontSize: 16, color: 'var(--muted)' }}>No products found{searchQ ? <> for <span style={{ color: 'var(--text)' }}>"{searchQ}"</span></> : ''}.</p>
+            <NoResultsHelp query={searchQ} />
           </div>
         ) : (
           <div className="grid-4">
