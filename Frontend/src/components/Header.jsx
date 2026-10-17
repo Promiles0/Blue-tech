@@ -196,15 +196,18 @@ export default function Header() {
 
           <CurrencySwitcher />
 
-          <HelpMenu />
+          {/* Help, theme and wishlist move into the mobile menu on phones so the header fits. */}
+          <span className="hdr-hide-sm"><HelpMenu /></span>
 
-          <IconBtn onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
-            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-          </IconBtn>
+          <span className="hdr-hide-sm">
+            <IconBtn onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+              {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+            </IconBtn>
+          </span>
 
           {/* Only show customer icons if not admin */}
           {!isAdmin && (
-            <Link to="/wishlist">
+            <Link to="/wishlist" className="hdr-hide-sm">
               <IconBtn><Heart size={18} /></IconBtn>
             </Link>
           )}

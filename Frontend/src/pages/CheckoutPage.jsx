@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import RwandaAddressFields from "../components/site/RwandaAddressFields";
+import { EMPTY_RW_ADDRESS, addressStreet } from "../lib/rwandaAddress";
 import { useNavigate, Link } from "react-router-dom";
 import { CheckCircle, Clock, ArrowLeft, MapPin, Truck, Wallet } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
@@ -62,9 +64,7 @@ function CheckoutForm() {
   const [pendingOrderId, setPendingOrderId] = useState(null);
   const [momoOutcome, setMomoOutcome] = useState("waiting"); // "waiting" | "timeout"
 
-  const [newAddress, setNewAddress] = useState({
-    street: "", city: "", state: "", zipCode: "", country: "Rwanda", phone: "",
-  });
+  const [newAddress, setNewAddress] = useState(EMPTY_RW_ADDRESS);
 
   useEffect(() => {
     if (!user) {
@@ -95,16 +95,17 @@ function CheckoutForm() {
 
   const buildPayload = () => {
     if (showNewAddressForm) {
-      if (!newAddress.street || !newAddress.city || !newAddress.phone) {
-        toast.error("Please fill in required shipping details");
+      if (!newAddress.city || !newAddress.street.trim() || !newAddress.phone.trim()) {
+        toast.error("Please choose your district and add your street and phone number");
         return null;
       }
-      return { ...newAddress, shippingMethod, paymentMethod, couponCode: coupon?.code ?? null };
+      const { landmark, ...rest } = newAddress; // eslint-disable-line no-unused-vars
+      return { ...rest, street: addressStreet(newAddress), shippingMethod, paymentMethod, couponCode: coupon?.code ?? null };
     }
     const addr = addresses.find((a) => a.addressId === selectedAddressId);
     if (!addr) { toast.error("Select a shipping address"); return null; }
     return {
-      street: addr.streetAddress, city: addr.city,
+      street: addressStreet({ street: addr.streetAddress, landmark: addr.landmarks }), city: addr.city,
       state: addr.state ?? "", zipCode: addr.zipCode ?? "",
       country: addr.country, phone: addr.phoneNumber,
       shippingMethod, paymentMethod, couponCode: coupon?.code ?? null,
@@ -310,32 +311,7 @@ function CheckoutForm() {
 
               {showNewAddressForm ? (
                 <div className="fade-in" style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", borderRadius: 16, padding: 32 }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                    <div style={{ gridColumn: "span 2" }}>
-                      <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginBottom: 8, fontWeight: 600 }}>STREET ADDRESS</label>
-                      <input className="noir-input" value={newAddress.street} onChange={(e) => setNewAddress({ ...newAddress, street: e.target.value })} placeholder="e.g. 123 Designer Row" />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginBottom: 8, fontWeight: 600 }}>CITY</label>
-                      <input className="noir-input" value={newAddress.city} onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })} placeholder="e.g. Kigali" />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginBottom: 8, fontWeight: 600 }}>POSTAL CODE</label>
-                      <input className="noir-input" value={newAddress.zipCode} onChange={(e) => setNewAddress({ ...newAddress, zipCode: e.target.value })} placeholder="00000" />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginBottom: 8, fontWeight: 600 }}>STATE / PROVINCE</label>
-                      <input className="noir-input" value={newAddress.state} onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })} placeholder="Gasabo" />
-                    </div>
-                    <div>
-                      <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginBottom: 8, fontWeight: 600 }}>COUNTRY</label>
-                      <input className="noir-input" value={newAddress.country} onChange={(e) => setNewAddress({ ...newAddress, country: e.target.value })} placeholder="Rwanda" />
-                    </div>
-                    <div style={{ gridColumn: "span 2" }}>
-                      <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)", marginBottom: 8, fontWeight: 600 }}>PHONE NUMBER</label>
-                      <input className="noir-input" value={newAddress.phone} onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })} placeholder="+250 XXX XXX XXX" />
-                    </div>
-                  </div>
+                  <RwandaAddressFields value={newAddress} onChange={setNewAddress} />
                 </div>
               ) : (
                 <select value={selectedAddressId || ""} onChange={(e) => setSelectedAddressId(Number(e.target.value))}
@@ -343,7 +319,7 @@ function CheckoutForm() {
                   style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", color: "var(--text-primary)", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none", width: "100%", cursor: "pointer", appearance: "none" }}>
                   {addresses.map((a) => (
                     <option key={a.addressId} value={a.addressId} style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>
-                      {a.streetAddress}, {a.city}, {a.country}
+                      {a.streetAddress}, {a.city}{a.state ? `, ${a.state}` : ''}
                     </option>
                   ))}
                 </select>

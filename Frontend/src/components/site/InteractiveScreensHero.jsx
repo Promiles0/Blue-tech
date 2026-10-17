@@ -9,6 +9,8 @@ import { Reveal } from '../../lib/motion'
 // (see the README in that folder for specs). Until it exists this section falls back to a
 // static gradient with a notice instead of a broken video element.
 const HERO_VIDEO_SRC = '/videos/interactive-screens-hero.mp4'
+// Still frame shown while the (2 MB) video loads, so slow connections see the screen at once.
+const HERO_POSTER_SRC = '/videos/interactive-screens-hero-poster.jpg'
 
 // Fixed (not theme-driven) — the title sits on this backdrop before the video frame grows
 // up to meet it, and inside the video frame's own scrim once it does, so it needs to stay
@@ -211,12 +213,12 @@ function ReducedMotionHero() {
       {showVideo && (
         <video
           ref={videoRef}
-          muted loop playsInline preload="auto"
+          muted loop playsInline preload="auto" poster={HERO_POSTER_SRC}
           onCanPlay={() => setVideoReady(true)}
           onError={() => setVideoFailed(true)}
           style={{
             position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-            opacity: videoReady ? 1 : 0, transition: 'opacity 0.7s ease',
+            opacity: videoReady ? 1 : 0.85, transition: 'opacity 0.7s ease', // poster shows while loading
           }}
         >
           <source src={HERO_VIDEO_SRC} type="video/mp4" />
@@ -309,12 +311,12 @@ function GrowingHero() {
           {showVideo && (
             <video
               ref={videoRef}
-              muted loop playsInline preload="auto"
+              muted loop playsInline preload="auto" poster={HERO_POSTER_SRC}
               onCanPlay={() => setVideoReady(true)}
               onError={() => setVideoFailed(true)}
               style={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-                opacity: videoReady ? 1 : 0, transition: 'opacity 0.7s ease',
+                opacity: videoReady ? 1 : 0.85, transition: 'opacity 0.7s ease', // poster shows while loading
               }}
             >
               <source src={HERO_VIDEO_SRC} type="video/mp4" />

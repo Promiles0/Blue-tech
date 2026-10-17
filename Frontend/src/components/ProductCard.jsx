@@ -163,7 +163,7 @@ export default function ProductCard({ product }) {
           }}>
             {product.name}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
             <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--price)' }}>
               {formatPrice(price)}
             </p>

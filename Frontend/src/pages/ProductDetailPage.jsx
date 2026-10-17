@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import api from '../api/axios'
 import apiService from '../api/service'
 import { useCart } from '../context/CartContext'
+import { cartSnapshot } from '../lib/cartSnapshot'
 import { useAuth } from '../context/AuthContext'
 import { useWishlist } from '../context/WishlistContext'
 import { trackRecentlyViewed } from '../lib/recentlyViewed'
@@ -72,15 +73,11 @@ export default function ProductDetail() {
   const wishlisted = wishlistIds.has(pid)
 
   const handleAddToCart = async () => {
-    if (!user) {
-      navigate('/login', { state: { from: `/products/${id}` } })
-      return
-    }
     const variantId = selectedVariant?.variantId ?? selectedVariant?.id
     if (!variantId) return
     setAdding(true)
     try {
-      await addToCart(variantId, qty)
+      await addToCart(variantId, qty, cartSnapshot(product, selectedVariant))
       setAdded(true)
       setTimeout(() => setAdded(false), 2000)
     } finally {
@@ -97,7 +94,7 @@ export default function ProductDetail() {
 
   if (loading) return (
     <div style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64 }}>
+      <div className="pdp-grid">
         <div className="skeleton" style={{ height: 480, borderRadius: 16 }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {[80, 32, 48, 120, 56, 56].map((h, i) => (
@@ -131,7 +128,7 @@ export default function ProductDetail() {
       <div className="container-noir">
         <Breadcrumb product={product} />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'start' }}>
+        <div className="pdp-grid">
           <div>
             <div style={{ borderRadius: 16, overflow: 'hidden', background: 'var(--surface)', marginBottom: 12, aspectRatio: '4/3' }}>
               {images[activeImage]?.imageUrl && (

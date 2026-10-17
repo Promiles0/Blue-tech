@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react'
+import { openLiveChat } from '../lib/liveChat'
+import { WHATSAPP_NUMBER } from '../lib/helpLinks'
+import RwandaAddressFields from '../components/site/RwandaAddressFields'
+import { EMPTY_RW_ADDRESS } from '../lib/rwandaAddress'
 import { useNavigate } from 'react-router-dom'
 import { Edit3, Save, X, Lock, MapPin, Plus, Trash2, CreditCard, MessageCircle, HelpCircle, ChevronRight, Languages, DollarSign, Palette, Phone, Mail } from 'lucide-react'
 import { toast } from 'sonner'
@@ -72,7 +76,7 @@ export default function Account() {
   // ── Addresses ─────────────────────────────────────────────────
   const [addresses, setAddresses] = useState([])
   const [showAddrForm, setShowAddrForm] = useState(false)
-  const [addrForm, setAddrForm] = useState({ street: '', city: '', state: '', zipCode: '', country: 'Rwanda' })
+  const [addrForm, setAddrForm] = useState(EMPTY_RW_ADDRESS)
   const [addrSaving, setAddrSaving] = useState(false)
 
   useEffect(() => {
@@ -84,13 +88,14 @@ export default function Account() {
   }, [user])
 
   const saveAddress = async () => {
-    if (!addrForm.street || !addrForm.city) return toast.error('Street and city are required')
+    if (!addrForm.city || !addrForm.street.trim()) return toast.error('Choose a district and add your street')
     setAddrSaving(true)
     try {
-      const { data } = await apiService.addresses.add(addrForm)
+      const { landmark, ...rest } = addrForm // eslint-disable-line no-unused-vars
+      const { data } = await apiService.addresses.add({ ...rest, street: addrForm.street.trim(), landmarks: addrForm.landmark?.trim() || null, phoneNumber: addrForm.phone })
       setAddresses(prev => [...prev, data.data])
       setShowAddrForm(false)
-      setAddrForm({ street: '', city: '', state: '', zipCode: '', country: 'Rwanda' })
+      setAddrForm(EMPTY_RW_ADDRESS)
       toast.success('Address added')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to add address')
@@ -210,21 +215,15 @@ export default function Account() {
 
         {/* ── Section 2: Payment Methods ── */}
         <Section title="Payment Methods" delay={0.1}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 0', borderBottom: '1px solid var(--glass-bg2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 0' }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CreditCard size={20} style={{ color: 'var(--muted)' }} />
             </div>
             <div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--muted)' }}>No payment methods saved</p>
-              <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 3 }}>Add a card to speed up checkout</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>MTN MoMo, Airtel Money or card</p>
+              <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 3 }}>You choose at checkout. For your safety we never store card numbers.</p>
             </div>
           </div>
-          <button
-            style={{ marginTop: 20, display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.7 }}
-            onClick={() => toast.info('Payment methods coming soon')}
-          >
-            <Plus size={15} /> Add payment method
-          </button>
         </Section>
 
         {/* ── Section 3: Shopping Addresses ── */}
@@ -263,13 +262,7 @@ export default function Account() {
           {showAddrForm ? (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '24px', borderRadius: 16, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}>
               <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 20 }}>New Address</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Field label="Street"><input className="noir-input" value={addrForm.street} onChange={e => setAddrForm(f => ({ ...f, street: e.target.value }))} placeholder="123 Main St" style={{ borderRadius: 10 }} /></Field>
-                <Field label="City"><input className="noir-input" value={addrForm.city} onChange={e => setAddrForm(f => ({ ...f, city: e.target.value }))} placeholder="Kigali" style={{ borderRadius: 10 }} /></Field>
-                <Field label="State"><input className="noir-input" value={addrForm.state} onChange={e => setAddrForm(f => ({ ...f, state: e.target.value }))} placeholder="Gasabo" style={{ borderRadius: 10 }} /></Field>
-                <Field label="Postal Code"><input className="noir-input" value={addrForm.zipCode} onChange={e => setAddrForm(f => ({ ...f, zipCode: e.target.value }))} placeholder="00000" style={{ borderRadius: 10 }} /></Field>
-                <Field label="Country" style={{ gridColumn: 'span 2' }}><input className="noir-input" value={addrForm.country} onChange={e => setAddrForm(f => ({ ...f, country: e.target.value }))} style={{ borderRadius: 10 }} /></Field>
-              </div>
+              <RwandaAddressFields value={addrForm} onChange={setAddrForm} />
               <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
                 <button onClick={saveAddress} disabled={addrSaving} className="noir-btn-primary shine" style={{ borderRadius: 10, padding: '10px 22px', fontSize: 13 }}>
                   {addrSaving ? 'Saving…' : 'Save Address'}
@@ -314,9 +307,9 @@ export default function Account() {
 
         {/* ── Section 5: Support & Help ── */}
         <Section title="Support & Help" delay={0.25}>
-          <SettingRow icon={<HelpCircle size={16} />} label="FAQ" value="Browse common questions" onClick={() => toast.info('FAQ coming soon')} />
-          <SettingRow icon={<Mail size={16} />} label="Contact Support" value="Get help from our team" onClick={() => toast.info('Support coming soon')} />
-          <SettingRow icon={<Phone size={16} />} label="Live Chat" value="Chat with us in real time" onClick={() => toast.info('Live chat coming soon')} last />
+          <SettingRow icon={<HelpCircle size={16} />} label="FAQ" value="Browse common questions" onClick={() => navigate('/help?v=faq')} />
+          <SettingRow icon={<Mail size={16} />} label="WhatsApp Support" value="Message the Blue-Tech team" onClick={() => window.open(`https://wa.me/${WHATSAPP_NUMBER}`, '_blank', 'noopener')} />
+          <SettingRow icon={<Phone size={16} />} label="Ask Blue" value="Instant answers from our AI assistant" onClick={() => openLiveChat()} last />
         </Section>
 
         {/* Sign out */}

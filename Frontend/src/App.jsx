@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { LayoutDashboard } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider }         from './context/ThemeContext'
@@ -13,41 +13,52 @@ import { useAuth }               from './context/AuthContext'
 import SiteLayout          from './components/site/SiteLayout'
 import SplashScreen        from './components/site/SplashScreen'
 import ProtectedRoute      from './components/ProtectedRoute'
+
+// Loaded only when first visited, so shoppers don't download the admin dashboard and
+// checkout code just to browse the store.
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/RegisterPage'))
+const InteractiveScreensPage = lazy(() => import('./pages/InteractiveScreensPage'))
+const CartPage = lazy(() => import('./pages/CartPage'))
+const WishlistPage = lazy(() => import('./pages/WishlistPage'))
+const AccountPage = lazy(() => import('./pages/AccountPage'))
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'))
+const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage'))
+const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'))
+const SearchPage = lazy(() => import('./pages/SearchPage'))
+const ComparePage = lazy(() => import('./pages/ComparePage'))
+const CategoryPage = lazy(() => import('./pages/CategoryPage'))
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
+const HelpPage = lazy(() => import('./pages/HelpPage'))
+const PromotionPage = lazy(() => import('./pages/PromotionPage'))
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'))
+const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'))
+const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'))
+const AdminShipments = lazy(() => import('./pages/admin/AdminShipments'))
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'))
+const AdminReviews = lazy(() => import('./pages/admin/AdminReviews'))
+const AdminQuoteRequests = lazy(() => import('./pages/admin/AdminQuoteRequests'))
+const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'))
+const AdminAudit = lazy(() => import('./pages/admin/AdminAudit'))
+const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
+const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'))
+const AdminHeroSlides = lazy(() => import('./pages/admin/AdminHeroSlides'))
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
+const AdminBlue = lazy(() => import('./pages/admin/AdminBlue'))
+
+function PageFallback() {
+  return (
+    <div style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="skeleton" style={{ width: 160, height: 10, borderRadius: 6 }} />
+    </div>
+  )
+}
 import HomePage            from './pages/HomePage'
-import LoginPage           from './pages/LoginPage'
-import RegisterPage        from './pages/RegisterPage'
 import ProductsPage        from './pages/ProductsPage'
-import InteractiveScreensPage from './pages/InteractiveScreensPage'
 import ProductDetailPage   from './pages/ProductDetailPage'
-import CartPage            from './pages/CartPage'
-import WishlistPage        from './pages/WishlistPage'
-import AccountPage         from './pages/AccountPage'
-import CheckoutPage        from './pages/CheckoutPage'
-import OrderHistoryPage    from './pages/OrderHistoryPage'
-import OrderDetailPage     from './pages/OrderDetailPage'
-import SearchPage         from './pages/SearchPage'
-import ComparePage        from './pages/ComparePage'
-import CategoryPage       from './pages/CategoryPage'
 import NotFoundPage           from './pages/NotFoundPage'
-import NotificationsPage      from './pages/NotificationsPage'
-import HelpPage               from './pages/HelpPage'
-import PromotionPage          from './pages/PromotionPage'
-import AdminLayout            from './pages/admin/AdminLayout'
-import AdminDashboard      from './pages/admin/AdminDashboard'
-import AdminProducts       from './pages/admin/AdminProducts'
-import AdminCategories     from './pages/admin/AdminCategories'
-import AdminOrders         from './pages/admin/AdminOrders'
-import AdminShipments      from './pages/admin/AdminShipments'
-import AdminUsers          from './pages/admin/AdminUsers'
-import AdminReviews        from './pages/admin/AdminReviews'
-import AdminQuoteRequests  from './pages/admin/AdminQuoteRequests'
-import AdminAnalytics      from './pages/admin/AdminAnalytics'
-import AdminAudit          from './pages/admin/AdminAudit'
-import AdminNotifications  from './pages/admin/AdminNotifications'
-import AdminCoupons        from './pages/admin/AdminCoupons'
-import AdminHeroSlides     from './pages/admin/AdminHeroSlides'
-import AdminSettings       from './pages/admin/AdminSettings'
-import AdminBlue           from './pages/admin/AdminBlue'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 1000 * 60 * 2 } },
@@ -64,10 +75,20 @@ function ScrollToTop() {
 // underneath (real data-fetching starts in parallel). Once both conditions are met, `exiting`
 // tells the splash to start its fade-out; it only actually stops being rendered once the splash
 // reports the fade has finished (onExited), so the transition can't get cut short.
+// The animated splash is a first-visit welcome; returning shoppers go straight to the store.
+const SPLASH_KEY = 'bt-splash-seen'
+function splashAlreadySeen() {
+  try {
+    const seen = localStorage.getItem(SPLASH_KEY) === '1'
+    if (!seen) localStorage.setItem(SPLASH_KEY, '1')
+    return seen
+  } catch { return false }
+}
+
 function SplashGate({ children }) {
   const { loading } = useAuth()
   const [typingDone, setTypingDone] = useState(false)
-  const [splashGone, setSplashGone] = useState(false)
+  const [splashGone, setSplashGone] = useState(splashAlreadySeen)
   const exiting = typingDone && !loading
 
   return (
@@ -97,13 +118,13 @@ export default function App() {
                     <NotificationProvider>
                       <UIProvider>
                         <ScrollToTop />
-                        <Routes>
+                        <Suspense fallback={<PageFallback />}><Routes>
                           {/* Admin section — no SiteLayout, ADMIN role required */}
                           <Route path="/admin/*" element={<AdminSection />} />
 
                           {/* Customer site — wrapped in SiteLayout */}
                           <Route path="*" element={<CustomerSite />} />
-                        </Routes>
+                        </Routes></Suspense>
                       </UIProvider>
                     </NotificationProvider>
                   </WishlistProvider>
@@ -129,7 +150,7 @@ function AdminSection() {
   if (!isAdmin) return null
 
   return (
-    <Routes>
+    <Suspense fallback={<PageFallback />}><Routes>
       <Route element={<AdminLayout />}>
         <Route index             element={<AdminDashboard />} />
         <Route path="products"   element={<AdminProducts />} />
@@ -147,7 +168,7 @@ function AdminSection() {
         <Route path="settings"       element={<AdminSettings />} />
         <Route path="blue"           element={<AdminBlue />} />
       </Route>
-    </Routes>
+    </Routes></Suspense>
   )
 }
 
@@ -157,7 +178,7 @@ function CustomerSite() {
   return (
     <SiteLayout>
       {isAdmin && <AdminBar />}
-      <Routes>
+      <Suspense fallback={<PageFallback />}><Routes>
         <Route path="/"             element={<HomePage />} />
         <Route path="/login"        element={<LoginPage />} />
         <Route path="/register"     element={<RegisterPage />} />
@@ -168,7 +189,7 @@ function CustomerSite() {
         <Route path="/compare"           element={<ComparePage />} />
         <Route path="/category/:slug"    element={<CategoryPage />} />
 
-        <Route path="/cart"     element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
+        <Route path="/cart"     element={<CartPage />} />
         <Route path="/wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />
         <Route path="/account"  element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
         <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
@@ -179,7 +200,7 @@ function CustomerSite() {
         <Route path="/promotions/:slug" element={<PromotionPage />} />
 
         <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+      </Routes></Suspense>
     </SiteLayout>
   )
 }

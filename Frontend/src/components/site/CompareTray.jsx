@@ -46,7 +46,7 @@ export default function CompareTray() {
             .ct-go{display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-radius:10px;background:var(--accent);color:#fff;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
             .ct-go.dim{opacity:.7}
             .ct-clear{width:30px;height:30px;border-radius:8px;border:0;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
-            @media (max-width:520px){.compare-tray{left:12px;bottom:84px}}
+            @media (max-width:520px){.compare-tray{left:12px;bottom:16px;padding:6px;gap:4px}.compare-tray > div:first-child{display:none}.ct-go{padding:10px 12px}}
           `}</style>
         </motion.div>
       )}

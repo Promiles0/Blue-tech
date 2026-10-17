@@ -36,10 +36,10 @@ export default function NewsletterBand() {
           fontWeight: 800, letterSpacing: '-0.02em',
           marginBottom: 12, lineHeight: 1.15,
         }}>
-          The quieter kind of newsletter
+          Deals and new arrivals, first
         </h2>
         <p style={{ color: 'var(--muted)', fontSize: 16, lineHeight: 1.7, marginBottom: 36 }}>
-          New arrivals, behind-the-scenes, and occasional notes on craft. Infrequent by design.
+          New laptops, restocks and offers from Blue-Tech. A few emails a month, no spam — unsubscribe any time.
         </p>
 
         {subscribed ? (

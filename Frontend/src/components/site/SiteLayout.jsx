@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Toaster } from 'sonner'
 import { useTheme } from '../../context/ThemeContext'
 import ScrollProgress   from './ScrollProgress'
@@ -30,19 +30,18 @@ export default function SiteLayout({ children }) {
         <MarqueeStrip />
 
 
-        <AnimatePresence mode="wait" initial={false}>
-          
+        {/* The page lives inside <main> so search engines and screen readers find it. Keyed by
+            path so each page fades in; no exit animation, since the routes inside would already
+            show the next page while the old one faded out. */}
           <motion.main
             key={location.pathname}
             style={{ flex: 1 }}
             initial={reduce ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={reduce ? {} : { opacity: 0, y: -6 }}
             transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
           >
-          </motion.main>
             {children}
-        </AnimatePresence>
+          </motion.main>
         {/* Hide newsletter on utility/auth pages */}
         {!['/login', '/register', '/account', '/checkout'].some(path => location.pathname.startsWith(path)) && (
           <NewsletterBand />

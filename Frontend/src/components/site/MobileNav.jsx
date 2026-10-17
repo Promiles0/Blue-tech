@@ -1,6 +1,9 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
-import { X, Search, User, LogOut } from 'lucide-react'
+import { X, Search, User, LogOut, Heart, GitCompare, HelpCircle, Sparkles, Moon, Sun } from 'lucide-react'
+import { useTheme } from '../../context/ThemeContext'
+import { openLiveChat } from '../../lib/liveChat'
+import CurrencySwitcher from './CurrencySwitcher'
 import { useUI } from '../../context/UIContext'
 import { useAuth } from '../../context/AuthContext'
 import Logo from './Logo'
@@ -19,6 +22,7 @@ export default function MobileNav() {
   const { mobileNavOpen, setMobileNavOpen, setPaletteOpen } = useUI()
   const { user, logout, isAdmin } = useAuth()
   const navigate         = useNavigate()
+  const { theme, toggleTheme } = useTheme()
 
   const close = () => setMobileNavOpen(false)
 
@@ -92,6 +96,18 @@ export default function MobileNav() {
                 </motion.div>
               ))}
             </nav>
+
+            {/* Things the phone header hides to fit: wishlist, compare, help, Blue, theme, currency. */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '16px 0', borderTop: '1px solid var(--border)' }}>
+              {!isAdmin && <Link to="/wishlist" onClick={close} className="mnav-chip"><Heart size={15} /> Wishlist</Link>}
+              <Link to="/compare" onClick={close} className="mnav-chip"><GitCompare size={15} /> Compare</Link>
+              <Link to="/help?v=faq" onClick={close} className="mnav-chip"><HelpCircle size={15} /> Help</Link>
+              <button onClick={() => { close(); openLiveChat() }} className="mnav-chip"><Sparkles size={15} /> Ask Blue</button>
+              <button onClick={toggleTheme} className="mnav-chip">
+                {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />} {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              </button>
+              <div className="mnav-chip" style={{ justifyContent: 'space-between' }}>Currency <CurrencySwitcher /></div>
+            </div>
 
             {/* Bottom actions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '1px solid var(--border)', paddingTop: 24 }}>

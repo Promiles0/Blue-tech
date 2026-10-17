@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ShoppingBag, Heart, Truck, Plus, Minus, ArrowRight, Check, MessageCircle } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
+import { cartSnapshot } from '../../lib/cartSnapshot'
 import { useAuth } from '../../context/AuthContext'
 import { useUI } from '../../context/UIContext'
 import { useWishlist } from '../../context/WishlistContext'
@@ -54,16 +55,11 @@ export default function ProductQuickView() {
   }, [quickViewProduct, pid])
 
   const handleAddToCart = async () => {
-    if (!user) {
-      close()
-      navigate('/login')
-      return
-    }
     const variantId = selectedVariant?.variantId ?? selectedVariant?.id
     if (!variantId) return
     setAdding(true)
     try {
-      await addToCart(variantId, qty)
+      await addToCart(variantId, qty, cartSnapshot(product, selectedVariant))
     } finally {
       setAdding(false)
     }

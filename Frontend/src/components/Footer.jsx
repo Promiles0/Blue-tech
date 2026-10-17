@@ -37,7 +37,7 @@ export default function Footer() {
               <Logo height={17} />
             </div>
             <p style={{ color: 'var(--muted-dark)', fontSize: 14, lineHeight: 1.7, maxWidth: 220, marginBottom: 20 }}>
-              Considered objects for a quieter, more deliberate digital life.
+              Laptops, computers, printers and interactive screens — delivered across Rwanda.
             </p>
             {/* Contact — collapsed */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: 'var(--muted-dark)', fontSize: 13 }}>
@@ -170,7 +170,7 @@ export default function Footer() {
         }}>
           <p style={{ color: 'var(--muted-dark)', fontSize: 13 }}>© 2026 Blue-Tech. All rights reserved.</p>
           <div style={{ display: 'flex', gap: 20 }}>
-            {[['Privacy', '#'], ['Terms', '#'], ['Cookies', '#']].map(([label, href]) => (
+            {[['Privacy', '/help?v=privacy'], ['Terms', '/help?v=terms'], ['Cookies', '/help?v=cookies']].map(([label, href]) => (
               <a
                 key={label}
                 href={href}
