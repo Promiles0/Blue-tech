@@ -1,16 +1,22 @@
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Sparkles, MessageCircle } from 'lucide-react'
 import { Reveal } from '../../lib/motion'
-import { MODELS_SECTION_ID } from './InteractiveScreensModels'
+import { openQuote } from '../../lib/quote'
+import { openLiveChat } from '../../lib/liveChat'
+import { WHATSAPP_NUMBER } from '../../lib/helpLinks'
+
+export const CTA_SECTION_ID = 'interactive-screens-cta'
+
+const ghostBtn = {
+  display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, padding: '12px 22px',
+  borderRadius: 999, border: '1px solid rgba(255,255,255,0.28)', background: 'rgba(255,255,255,0.06)',
+  color: '#fff', cursor: 'pointer', textDecoration: 'none',
+}
 
 export default function InteractiveScreensCTA() {
-  const scrollToModels = (e) => {
-    e.preventDefault()
-    document.getElementById(MODELS_SECTION_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
+  const waText = encodeURIComponent("Hi Blue-Tech! I'd like to talk about interactive screens for our school/office.")
   return (
     <Reveal>
-      <section style={{ padding: '0 0 88px' }}>
+      <section id={CTA_SECTION_ID} style={{ padding: '0 0 88px' }}>
         <div className="container-noir">
           <div style={{
             position: 'relative', overflow: 'hidden', textAlign: 'center',
@@ -29,17 +35,21 @@ export default function InteractiveScreensCTA() {
               }}>
                 Ready to bring one into your room?
               </h2>
-              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', maxWidth: 460, margin: '0 auto 28px', lineHeight: 1.6 }}>
-                From single-classroom setups to multi-room office rollouts — see what's available now.
+              <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', maxWidth: 480, margin: '0 auto 28px', lineHeight: 1.6 }}>
+                From a single classroom to a whole-school or multi-office rollout — tell us what you need and we'll send pricing.
               </p>
-              <a
-                href={`#${MODELS_SECTION_ID}`}
-                onClick={scrollToModels}
-                className="noir-btn-primary shine"
-                style={{ display: 'inline-flex', fontSize: 14, padding: '13px 26px' }}
-              >
-                Shop interactive screens <ArrowRight size={15} />
-              </a>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button onClick={() => openQuote()} className="noir-btn-primary shine"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '13px 26px' }}>
+                  Request a quote <ArrowRight size={15} />
+                </button>
+                <button onClick={() => openLiveChat('Which interactive screen size do I need for ')} style={ghostBtn}>
+                  <Sparkles size={15} /> Ask Blue
+                </button>
+                <a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`} target="_blank" rel="noreferrer" style={ghostBtn}>
+                  <MessageCircle size={15} /> WhatsApp
+                </a>
+              </div>
             </div>
           </div>
         </div>

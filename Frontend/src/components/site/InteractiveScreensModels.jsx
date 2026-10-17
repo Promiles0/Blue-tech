@@ -1,4 +1,5 @@
-import { Monitor } from 'lucide-react'
+import { Monitor, ArrowRight } from 'lucide-react'
+import { openQuote } from '../../lib/quote'
 import ProductCard from '../ProductCard'
 import { Reveal } from '../../lib/motion'
 import { useInteractiveScreensProducts } from '../../hooks/useInteractiveScreensProducts'
@@ -26,9 +27,16 @@ export default function InteractiveScreensModels() {
         ) : products.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 24px', border: '1px dashed var(--border)', borderRadius: 16 }}>
             <Monitor size={26} style={{ color: 'var(--muted-dark)', marginBottom: 12 }} />
-            <p style={{ fontSize: 14, color: 'var(--muted)' }}>
-              Models are being added to the catalog — check back soon.
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>
+              Every size from 65" to 110" is available to order.
             </p>
+            <p style={{ fontSize: 14, color: 'var(--muted)', maxWidth: 420, margin: '0 auto 20px', lineHeight: 1.6 }}>
+              Pricing depends on size, quantity and mounting, so we quote each order directly.
+            </p>
+            <button onClick={() => openQuote()} className="noir-btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '11px 22px' }}>
+              Request pricing <ArrowRight size={15} />
+            </button>
           </div>
         ) : (
           <div className="grid-4">

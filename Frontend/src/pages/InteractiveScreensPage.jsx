@@ -8,7 +8,11 @@ import InteractiveScreensModels    from '../components/site/InteractiveScreensMo
 import InteractiveScreensComparison from '../components/site/InteractiveScreensComparison'
 import InteractiveScreensFAQ       from '../components/site/InteractiveScreensFAQ'
 import Testimonials                from '../components/site/Testimonials'
-import InteractiveScreensCTA       from '../components/site/InteractiveScreensCTA'
+import InteractiveScreensCTA, { CTA_SECTION_ID } from '../components/site/InteractiveScreensCTA'
+import InteractiveScreensSizeHelper from '../components/site/InteractiveScreensSizeHelper'
+import InteractiveScreensServices  from '../components/site/InteractiveScreensServices'
+import InteractiveScreensStickyBar from '../components/site/InteractiveScreensStickyBar'
+import InteractiveScreensQuote     from '../components/site/InteractiveScreensQuote'
 import { usePageMeta } from '../hooks/usePageMeta'
 
 // Picked up automatically once dropped into assets/promos/ (see promoSlides.js) — falls
@@ -26,16 +30,20 @@ export default function InteractiveScreensPage() {
   return (
     <div>
       <InteractiveScreensHero />
+      <InteractiveScreensServices />
       <InteractiveScreensFeatures />
       <InteractiveScreensUseCases />
       <InteractiveScreensDemo />
       <InteractiveScreensSpecs />
       <InteractiveScreensConfigurations />
+      <InteractiveScreensSizeHelper />
       <InteractiveScreensModels />
       <InteractiveScreensComparison />
       <InteractiveScreensFAQ />
       <Testimonials />
       <InteractiveScreensCTA />
+      <InteractiveScreensStickyBar ctaId={CTA_SECTION_ID} />
+      <InteractiveScreensQuote />
     </div>
   )
 }

@@ -9,7 +9,7 @@ const emptyForm = {
   intendedUse: 'classroom', screenSize: '', quantity: 1, notes: '',
 }
 
-export default function QuoteRequestModal({ open, onClose, initialSize, sizes = [] }) {
+export default function QuoteRequestModal({ open, onClose, initialSize, prefill, sizes = [] }) {
   const [form, setForm] = useState(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -23,7 +23,13 @@ export default function QuoteRequestModal({ open, onClose, initialSize, sizes = 
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
-      setForm({ ...emptyForm, screenSize: initialSize })
+      setForm({
+        ...emptyForm,
+        screenSize: prefill?.screenSize ?? initialSize ?? '',
+        quantity: prefill?.quantity ?? 1,
+        intendedUse: prefill?.intendedUse ?? emptyForm.intendedUse,
+        notes: prefill?.notes ?? '',
+      })
       setSubmitted(false)
       setError(null)
     }

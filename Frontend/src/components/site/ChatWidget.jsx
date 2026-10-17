@@ -65,7 +65,7 @@ function Handoff({ kind, lastQuestion, onNavigate }) {
   if (kind === 'quote') {
     return (
       <div className="bluechat-actions">
-        <Link to="/interactive-screens" onClick={onNavigate} className="bluechat-action primary"><FileText size={13} /> Request a quote</Link>
+        <Link to="/interactive-screens?quote=1" onClick={onNavigate} className="bluechat-action primary"><FileText size={13} /> Request a quote</Link>
       </div>
     )
   }

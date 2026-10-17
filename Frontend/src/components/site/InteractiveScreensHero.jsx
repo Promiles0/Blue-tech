@@ -1,6 +1,8 @@
 import { useRef, useState, useEffect, useLayoutEffect } from 'react'
 import { motion, cubicBezier, useScroll, useTransform, useReducedMotion, useInView } from 'framer-motion'
-import { Play, VideoOff } from 'lucide-react'
+import { Play, VideoOff, ArrowRight, Sparkles } from 'lucide-react'
+import { openQuote } from '../../lib/quote'
+import { openLiveChat } from '../../lib/liveChat'
 import { Reveal } from '../../lib/motion'
 
 // TODO: drop the real hero footage in Frontend/public/videos/interactive-screens-hero.mp4
@@ -167,6 +169,13 @@ function useAutoScrollGrowth(trackRef) {
 // (so the text finishes fading out at exactly the moment the frame reaches full-bleed), or
 // a plain 1 for a static, always-visible title — the heading stays in the DOM either way
 // for accessibility/SEO; only the animation is conditional on prefers-reduced-motion.
+const heroBtnBase = {
+  display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 22px', borderRadius: 999,
+  fontSize: 14, fontWeight: 700, cursor: 'pointer',
+}
+const heroPrimaryBtn = { ...heroBtnBase, border: 0, background: '#f59e0b', color: '#241a06', boxShadow: '0 14px 30px rgba(245,158,11,0.3)' }
+const heroGhostBtn = { ...heroBtnBase, border: '1px solid rgba(255,255,255,0.28)', background: 'rgba(255,255,255,0.06)', color: '#fff', backdropFilter: 'blur(8px)' }
+
 function TitleBlock({ opacity }) {
   return (
     <motion.div style={{
@@ -177,6 +186,10 @@ function TitleBlock({ opacity }) {
       <Reveal>
         <h1 style={titleStyle}>Interactive Screens</h1>
         <p style={taglineStyle}>Built for classrooms and boardrooms alike.</p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 22, pointerEvents: 'auto' }}>
+          <button onClick={() => openQuote()} style={heroPrimaryBtn}>Get a quote <ArrowRight size={15} /></button>
+          <button onClick={() => openLiveChat('Which interactive screen size do I need for ')} style={heroGhostBtn}><Sparkles size={15} /> Ask Blue which size</button>
+        </div>
       </Reveal>
     </motion.div>
   )

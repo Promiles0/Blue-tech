@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Reveal } from '../../lib/motion'
-import QuoteRequestModal from './QuoteRequestModal'
+import { openQuote } from '../../lib/quote'
 
-const CONFIGS = [
+export const CONFIGS = [
   { size: '65"',  ratio: 0.55, room: 'Small meeting rooms, clinics, offices', dims: '1.44 × 0.83 m', seats: 'Up to 10 people' },
   { size: '75"',  ratio: 0.64, room: 'Classrooms, mid-size boardrooms',       dims: '1.65 × 0.95 m', seats: 'Up to 20 people' },
   { size: '86"',  ratio: 0.73, room: 'Lecture rooms, executive suites',       dims: '1.90 × 1.09 m', seats: 'Up to 40 people' },
@@ -33,7 +33,6 @@ const heading = { fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(26p
 
 export default function InteractiveScreensConfigurations() {
   const [activeIndex, setActiveIndex] = useState(2)
-  const [quoteOpen, setQuoteOpen] = useState(false)
   const active = CONFIGS[activeIndex]
 
   const specRows = [
@@ -64,12 +63,12 @@ export default function InteractiveScreensConfigurations() {
       <div className="container-noir" style={{ position: 'relative' }}>
         <Reveal>
           <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto' }}>
-            <p style={eyebrow}>07 — Configurations</p>
-            <h2 style={heading}>Choose the Right Display for Every Customer.</h2>
+            <p style={eyebrow}>Sizes</p>
+            <h2 style={heading}>Pick the right size for your room.</h2>
             <p style={{ fontSize: 15, lineHeight: 1.75, color: INK_MUTED, marginTop: 16 }}>
-              From compact meeting rooms to large lecture and presentation environments, our range gives
-              resellers the flexibility to match the right display to every project — one platform, one
-              accessory set, one support programme.
+              From a small meeting room to a full lecture hall, every size runs the same software and
+              accessories, so a school or office can mix sizes across rooms and still teach and present the
+              same way everywhere.
             </p>
           </div>
         </Reveal>
@@ -199,7 +198,7 @@ export default function InteractiveScreensConfigurations() {
               </div>
 
               <button
-                onClick={() => setQuoteOpen(true)}
+                onClick={() => openQuote({ screenSize: active.size })}
                 className="config-cta"
                 style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -209,7 +208,7 @@ export default function InteractiveScreensConfigurations() {
                   alignSelf: 'flex-start',
                 }}
               >
-                Discuss the {active.size} Model
+                Get a quote for the {active.size}
                 <ArrowRight size={16} className="config-cta-arrow" />
               </button>
             </div>
@@ -217,12 +216,6 @@ export default function InteractiveScreensConfigurations() {
         </div>
       </div>
 
-      <QuoteRequestModal
-        open={quoteOpen}
-        onClose={() => setQuoteOpen(false)}
-        initialSize={active.size}
-        sizes={CONFIGS.map(c => c.size)}
-      />
     </section>
   )
 }
