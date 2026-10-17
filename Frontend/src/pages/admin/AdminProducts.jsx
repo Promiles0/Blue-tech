@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check, UploadCloud, Eye, EyeOff } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check, UploadCloud, Eye, EyeOff, Search } from 'lucide-react'
 import apiService from '../../api/service'
 import { getProductImage, handleProductImageError } from '../../lib/productImage'
 import { money } from '../../lib/format'
@@ -67,7 +67,8 @@ export default function AdminProducts() {
   const [page, setPage]             = useState(0)
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading]       = useState(true)
-  const [modal, setModal]           = useState(null)   // null | 'create' | 'edit'
+  // Dashboard quick action: /admin/products?new=1 opens straight into the create form.
+  const [modal, setModal]           = useState(() => new URLSearchParams(window.location.search).get('new') === '1' ? 'create' : null)   // null | 'create' | 'edit'
   const [editing, setEditing]       = useState(null)   // product being edited
   const [form, setForm]             = useState(EMPTY_FORM)
   const [saving, setSaving]         = useState(false)
@@ -77,10 +78,37 @@ export default function AdminProducts() {
   const [fileUploads, setFileUploads] = useState([]) // [{file, isPrimary}]
   const [dragActive, setDragActive] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
+  // List filters + bulk selection
+  const [search, setSearch]         = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [filterCategory, setFilterCategory] = useState('')
+  const [visibility, setVisibility] = useState('')          // '' | 'visible' | 'hidden'
+  const [lowStockOnly, setLowStockOnly] = useState(() => new URLSearchParams(window.location.search).get('lowStock') === '1')
+  const [selected, setSelected]     = useState(() => new Set())
+  const [bulkBusy, setBulkBusy]     = useState(false)
+  const [bulkCategory, setBulkCategory] = useState('')
+
+  // Any filter change starts again from page 1 with nothing selected.
+  const resetPaging = () => { setPage(0); setSelected(new Set()) }
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const next = search.trim()
+      setDebouncedSearch(prev => { if (prev !== next) resetPaging(); return next })
+    }, 350)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const filterQuery = [
+    debouncedSearch && `&name=${encodeURIComponent(debouncedSearch)}`,
+    filterCategory && `&categoryId=${filterCategory}`,
+    visibility && `&visibility=${visibility}`,
+    lowStockOnly && '&lowStock=true',
+  ].filter(Boolean).join('')
 
   const fetchProducts = useCallback(() => {
     setLoading(true)
-    apiService.admin.products.getAll(page, 12)
+    apiService.admin.products.getAll(page, 12, filterQuery)
       .then(({ data }) => {
         const payload = data.data ?? data
         setProducts(payload.content ?? (Array.isArray(payload) ? payload : []))
@@ -88,7 +116,40 @@ export default function AdminProducts() {
       })
       .catch(() => setProducts([]))
       .finally(() => setLoading(false))
-  }, [page])
+  }, [page, filterQuery])
+
+  const pageIds = products.map(p => p.productId ?? p.id)
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every(id => selected.has(id))
+  const toggleOne = (id) => setSelected(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id); else next.add(id)
+    return next
+  })
+  const toggleAllOnPage = () => setSelected(prev => {
+    const next = new Set(prev)
+    if (allOnPageSelected) pageIds.forEach(id => next.delete(id)); else pageIds.forEach(id => next.add(id))
+    return next
+  })
+
+  const runBulk = async (action) => {
+    if (!selected.size) return
+    if (action === 'category' && !bulkCategory) { setError('Pick a category to move the selected products into.'); return }
+    setBulkBusy(true)
+    setError(null)
+    try {
+      const { data } = await apiService.admin.products.bulk([...selected], action, action === 'category' ? Number(bulkCategory) : undefined)
+      const r = data?.data ?? data
+      const verb = action === 'publish' ? 'published' : action === 'hide' ? 'hidden' : 'moved'
+      setSuccess(`${r.updated} product${r.updated === 1 ? '' : 's'} ${verb}${r.skipped ? ` · ${r.skipped} skipped (no price yet)` : ''}.`)
+      setTimeout(() => setSuccess(null), 5000)
+      setSelected(new Set())
+      fetchProducts()
+    } catch (e) {
+      setError(e?.response?.data?.message ?? 'Bulk update failed.')
+    } finally {
+      setBulkBusy(false)
+    }
+  }
 
   useEffect(() => { fetchProducts() }, [fetchProducts])
 
@@ -122,6 +183,11 @@ export default function AdminProducts() {
       setLoadingDetail(false)
     }
   }
+
+  // Drop ?new=1 / ?lowStock=1 from the address bar once they've been read on mount.
+  useEffect(() => {
+    if (window.location.search) window.history.replaceState(null, '', window.location.pathname)
+  }, [])
 
   const closeModal = () => { setModal(null); setEditing(null); setError(null); setFileUploads([]) }
 
@@ -302,11 +368,57 @@ export default function AdminProducts() {
         </div>
       )}
 
+      {error && !modal && (
+        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, padding: '10px 16px', marginBottom: 18, fontSize: 13, color: '#ef4444' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: 360 }}>
+          <Search size={14} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-dark)' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name, brand or model…"
+            style={{ ...filterInput, width: '100%', paddingLeft: 32 }} />
+        </div>
+        <select value={filterCategory} onChange={e => { setFilterCategory(e.target.value); resetPaging() }} style={filterInput}>
+          <option value="">All categories</option>
+          {categories.map(c => <option key={c.categoryId ?? c.id} value={c.categoryId ?? c.id}>{c.name}</option>)}
+        </select>
+        <select value={visibility} onChange={e => { setVisibility(e.target.value); resetPaging() }} style={filterInput}>
+          <option value="">Live &amp; hidden</option>
+          <option value="visible">Live only</option>
+          <option value="hidden">Hidden only</option>
+        </select>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--text)', cursor: 'pointer' }}>
+          <input type="checkbox" checked={lowStockOnly} onChange={e => { setLowStockOnly(e.target.checked); resetPaging() }} /> Low stock (under 5)
+        </label>
+      </div>
+
+      {/* Bulk actions */}
+      {selected.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 14px', marginBottom: 12, borderRadius: 10, border: '1px solid var(--accent)', background: 'var(--accent-dim)', fontSize: 13 }}>
+          <strong>{selected.size} selected</strong>
+          <span style={{ flex: 1 }} />
+          <button disabled={bulkBusy} onClick={() => runBulk('publish')} style={bulkBtn}><Eye size={13} /> Publish</button>
+          <button disabled={bulkBusy} onClick={() => runBulk('hide')} style={bulkBtn}><EyeOff size={13} /> Hide</button>
+          <select value={bulkCategory} onChange={e => setBulkCategory(e.target.value)} style={{ ...filterInput, padding: '6px 10px' }}>
+            <option value="">Move to category…</option>
+            {categories.map(c => <option key={c.categoryId ?? c.id} value={c.categoryId ?? c.id}>{c.name}</option>)}
+          </select>
+          <button disabled={bulkBusy || !bulkCategory} onClick={() => runBulk('category')} style={bulkBtn}>Move</button>
+          <button onClick={() => setSelected(new Set())} style={{ ...bulkBtn, border: 'none', background: 'transparent' }}>Clear</button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="surface" style={{ borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--admin-border)' }}>
+              <th style={{ padding: '12px 0 12px 16px', width: 28 }}>
+                <input type="checkbox" aria-label="Select all on this page" checked={allOnPageSelected} onChange={toggleAllOnPage} />
+              </th>
               {['Product', 'Category', 'Price', 'Status', 'Actions'].map(h => (
                 <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'var(--muted-dark)', fontWeight: 600, fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
               ))}
@@ -316,7 +428,7 @@ export default function AdminProducts() {
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid var(--admin-border)' }}>
-                  {Array.from({ length: 5 }).map((__, j) => (
+                  {Array.from({ length: 6 }).map((__, j) => (
                     <td key={j} style={{ padding: '14px 16px' }}>
                       <div className="skeleton" style={{ height: 14, borderRadius: 4 }} />
                     </td>
@@ -324,12 +436,15 @@ export default function AdminProducts() {
                 </tr>
               ))
             ) : products.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: 'var(--muted-dark)' }}>No products yet. Add your first one!</td></tr>
+              <tr><td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--muted-dark)' }}>{filterQuery ? 'No products match these filters.' : 'No products yet. Add your first one!'}</td></tr>
             ) : products.map(p => (
               <tr key={p.productId ?? p.id} style={{ borderBottom: '1px solid var(--admin-border)', transition: 'background 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--overlay-hover)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
+                <td style={{ padding: '14px 0 14px 16px' }}>
+                  <input type="checkbox" aria-label={`Select ${p.name}`} checked={selected.has(p.productId ?? p.id)} onChange={() => toggleOne(p.productId ?? p.id)} />
+                </td>
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <img
@@ -678,4 +793,13 @@ function IconBtn({ icon: Icon, onClick, title, danger, loading, disabled }) {
       <Icon size={13} />
     </button>
   )
+}
+
+const filterInput = {
+  padding: '8px 12px', borderRadius: 8, fontSize: 13, border: '1px solid var(--admin-border, var(--border))',
+  background: 'var(--admin-input-bg, var(--surface))', color: 'var(--text)', outline: 'none',
+}
+const bulkBtn = {
+  display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, fontSize: 12.5, fontWeight: 600,
+  border: '1px solid var(--admin-border, var(--border))', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer',
 }

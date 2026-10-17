@@ -83,7 +83,7 @@ const apiService = {
 
   // --- AI ASSISTANT ---
   chat: {
-    send: (messages) => api.post('/chat', { messages }, { skipAuthRedirect: true }),
+    send: (messages, sessionId) => api.post('/chat', { messages, sessionId }, { skipAuthRedirect: true }),
   },
 
   // --- PAYMENTS ---
@@ -119,6 +119,7 @@ const apiService = {
     quoteRequests: {
       getAll: (status) => api.get(`/admin/quote-requests${status ? `?status=${status}` : ''}`),
       updateStatus: (id, status) => api.patch(`/admin/quote-requests/${id}`, { status }),
+      updateNote: (id, adminNote) => api.patch(`/admin/quote-requests/${id}`, { adminNote }),
     },
     products: {
       // includeHidden: admins also see products that aren't published yet.
@@ -127,6 +128,8 @@ const apiService = {
       create: (data) => api.post('/products', data),
       update: (id, data) => api.put(`/products/${id}`, data),
       delete: (id) => api.delete(`/products/${id}`),
+      bulk: (ids, action, categoryId) => api.post('/admin/products/bulk', { ids, action, categoryId }),
+      setStock: (variantId, stockQuantity) => api.patch(`/admin/variants/${variantId}`, { stockQuantity }),
       uploadFile: (formData) => api.post('/products/images/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       }),
@@ -159,6 +162,11 @@ const apiService = {
     settings: {
       get: () => api.get('/admin/settings'),
       updateExchangeRate: (usdToRwfRate) => api.put('/admin/settings/exchange-rate', { usdToRwfRate }),
+      getBlue: () => api.get('/admin/settings/blue'),
+      saveBlue: (instructions) => api.put('/admin/settings/blue', { instructions }),
+    },
+    chat: {
+      insights: (days = 30) => api.get(`/admin/chat/insights?days=${days}`),
     },
   }
 };

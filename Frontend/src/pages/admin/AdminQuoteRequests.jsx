@@ -4,6 +4,7 @@ import { Search } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'
 import { dateShort } from '../../lib/format'
+import { QuoteReplyButtons, QuoteNote } from './QuoteReplyTools'
 
 const STATUSES = ['new', 'contacted', 'closed']
 
@@ -94,6 +95,8 @@ export default function AdminQuoteRequests() {
                 {q.notes && (
                   <p style={{ fontSize: 13, color: 'var(--text)', opacity: 0.85, lineHeight: 1.5, margin: 0 }}>{q.notes}</p>
                 )}
+                <QuoteReplyButtons q={q} />
+                <QuoteNote key={`${q.quoteRequestId}:${q.adminNote ?? ''}`} q={q} onSaved={() => qc.invalidateQueries({ queryKey: ['admin-quote-requests'] })} />
               </div>
 
               {/* Right: status control */}

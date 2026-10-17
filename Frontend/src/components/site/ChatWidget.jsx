@@ -11,6 +11,15 @@ import { SUPPORT_EMAIL, WHATSAPP_NUMBER } from '../../lib/helpLinks'
 // grounded in the published catalogue); the conversation lives in sessionStorage so it
 // survives page navigation but not a new visit.
 const STORAGE_KEY = 'bluechat-v1'
+// Anonymous per-tab id so Admin → Blue can group turns into conversations.
+const SESSION_KEY = 'bluechat-session'
+function chatSessionId() {
+  try {
+    let id = sessionStorage.getItem(SESSION_KEY)
+    if (!id) { id = crypto.randomUUID?.() ?? String(Date.now()) + Math.random().toString(16).slice(2); sessionStorage.setItem(SESSION_KEY, id) }
+    return id
+  } catch { return 'anonymous' }
+}
 const HIDDEN_ON = ['/checkout', '/login', '/register']
 const SUGGESTIONS = [
   'Best laptop for a student under 600,000 RWF?',
@@ -123,6 +132,7 @@ export default function ChatWidget() {
     try {
       const { data } = await apiService.chat.send(
         next.filter((m) => m !== GREETING && !m.error).map(({ role, text }) => ({ role, text })),
+        chatSessionId(),
       )
       setMessages((m) => [...m, { role: 'assistant', text: data.reply, products: data.products, handoff: data.handoff }])
     } catch (error) {
@@ -210,7 +220,7 @@ export default function ChatWidget() {
               />
               <button type="submit" className="bluechat-send" disabled={!input.trim() || sending} aria-label="Send message"><ArrowUp size={17} /></button>
             </form>
-            <div className="bluechat-foot">AI can make mistakes — check details on the product page.</div>
+            <div className="bluechat-foot">AI can make mistakes — check details on the product page. Chats are saved anonymously to improve answers.</div>
           </motion.div>
         )}
       </AnimatePresence>

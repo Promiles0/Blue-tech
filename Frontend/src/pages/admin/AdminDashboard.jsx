@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ActionCenter, QuickActions, Delta, RestockInput } from './DashboardExtras'
 import {
   DollarSign, TrendingUp, ShoppingBag, Users,
   AlertTriangle, Clock, UserPlus,
@@ -35,6 +36,7 @@ const tooltipStyle = {
 
 export default function AdminDashboard() {
   const { data, isLoading, isError } = useQuery({ queryKey: ['admin-overview'], queryFn: fetchStats })
+  const qc = useQueryClient()
   const navigate = useNavigate()
 
   // Build order pipeline chart data from the map
@@ -45,21 +47,28 @@ export default function AdminDashboard() {
   return (
     <div style={{ padding: 40 }}>
       {/* Header */}
-      <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+        <div>
         <h1 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em' }}>
           Overview
         </h1>
         <p style={{ color: 'var(--admin-muted)', fontSize: 13, marginTop: 4 }}>
           Store performance at a glance
         </p>
+        </div>
+        <QuickActions />
       </div>
+
+      <ActionCenter data={data} loading={isLoading} />
 
       {isError && !data && <ErrorBanner msg="Failed to load dashboard stats." />}
 
       {/* KPI Grid — 3 essential + 3 secondary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
-        <KPI icon={DollarSign}  label="Revenue 30d"    value={isLoading ? '—' : money(data?.revenue30d)} large />
-        <KPI icon={ShoppingBag} label="Orders 30d"     value={isLoading ? '—' : (data?.orders30d ?? 0).toLocaleString()} large />
+        <KPI icon={DollarSign}  label="Revenue 30d"    value={isLoading ? '—' : money(data?.revenue30d)} large
+          footer={!isLoading && <Delta current={data?.revenue30d} previous={data?.revenuePrev30d} />} />
+        <KPI icon={ShoppingBag} label="Orders 30d"     value={isLoading ? '—' : (data?.orders30d ?? 0).toLocaleString()} large
+          footer={!isLoading && <Delta current={data?.orders30d} previous={data?.ordersPrev30d} />} />
         <KPI icon={Users}       label="Total Customers" value={isLoading ? '—' : (data?.totalCustomers ?? 0).toLocaleString()} large />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
@@ -90,7 +99,7 @@ export default function AdminDashboard() {
                 />
                 <YAxis
                   tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
-                  tickFormatter={v => `$${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
+                  tickFormatter={v => v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}
                   axisLine={false} tickLine={false} width={50}
                 />
                 <Tooltip
@@ -129,9 +138,12 @@ export default function AdminDashboard() {
                     <div style={{ fontSize: 13, fontWeight: 500 }}>{a.productName}</div>
                     {a.skuCode && <div style={{ fontSize: 11, color: 'var(--admin-muted)', marginTop: 1 }}>{a.skuCode}</div>}
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: a.currentStock === 0 ? 'var(--admin-danger)' : 'var(--admin-warning)' }}>
-                    {a.currentStock === 0 ? 'Out' : `${a.currentStock} left`}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: a.currentStock === 0 ? 'var(--admin-danger)' : 'var(--admin-warning)' }}>
+                      {a.currentStock === 0 ? 'Out' : `${a.currentStock} left`}
+                    </span>
+                    <RestockInput alert={a} onDone={() => qc.invalidateQueries({ queryKey: ['admin-overview'] })} />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -242,7 +254,7 @@ export default function AdminDashboard() {
   )
 }
 
-function KPI({ icon: Icon, label, value, accent, large }) {
+function KPI({ icon: Icon, label, value, accent, large, footer }) {
   const color = accent ?? 'var(--admin-primary)'
   return (
     <div className="surface" style={{ borderRadius: 12, padding: large ? '22px 24px' : '16px 20px' }}>
@@ -253,6 +265,7 @@ function KPI({ icon: Icon, label, value, accent, large }) {
       <div style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: large ? 28 : 22, fontWeight: 700, letterSpacing: '-0.01em', color: accent ?? 'var(--text)' }}>
         {value}
       </div>
+      {footer && <div style={{ marginTop: 6 }}>{footer}</div>}
     </div>
   )
 }

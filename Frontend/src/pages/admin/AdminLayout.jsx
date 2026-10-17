@@ -3,8 +3,10 @@ import { Toaster } from 'sonner'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Truck, Users, MessageSquare, BarChart3, ScrollText,
-  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings,
+  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles,
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import apiService from '../../api/service'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import AdminNotificationBell from '../../components/admin/AdminNotificationBell'
@@ -14,20 +16,27 @@ const NAV = [
   { to: '/admin',            label: 'Overview',    icon: LayoutDashboard, end: true },
   { to: '/admin/products',   label: 'Products',    icon: Package },
   { to: '/admin/categories', label: 'Categories',  icon: FolderTree },
-  { to: '/admin/quote-requests', label: 'Quote Requests', icon: FileText },
-  { to: '/admin/orders',     label: 'Orders',      icon: ShoppingCart },
+  { to: '/admin/quote-requests', label: 'Quote Requests', icon: FileText, badge: 'newQuotes' },
+  { to: '/admin/orders',     label: 'Orders',      icon: ShoppingCart, badge: 'toShip' },
   { to: '/admin/shipments',  label: 'Shipments',   icon: Truck },
   { to: '/admin/users',      label: 'Users',       icon: Users },
-  { to: '/admin/reviews',    label: 'Reviews',     icon: MessageSquare },
+  { to: '/admin/reviews',    label: 'Reviews',     icon: MessageSquare, badge: 'newReviews7d' },
   { to: '/admin/coupons',      label: 'Coupons',      icon: Tag },
   { to: '/admin/hero-slides',  label: 'Hero Slides',  icon: Image },
   { to: '/admin/settings',     label: 'Settings',     icon: Settings },
   { to: '/admin/analytics',    label: 'Analytics',    icon: BarChart3 },
+  { to: '/admin/blue',         label: 'Blue AI',      icon: Sparkles },
   { to: '/admin/audit',          label: 'Audit Log',      icon: ScrollText },
   { to: '/admin/notifications',  label: 'Notifications',  icon: Bell },
 ]
 
 export default function AdminLayout() {
+  const { data: badges } = useQuery({
+    queryKey: ['admin-overview'],
+    queryFn: () => apiService.admin.getDashboardStats().then(r => r.data?.data ?? r.data),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  })
   const { user, logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
@@ -85,7 +94,7 @@ export default function AdminLayout() {
 
         {/* Nav items */}
         <nav style={{ flex: 1, padding: '2px 8px', display: 'flex', flexDirection: 'column', gap: 1, overflowY: 'auto' }}>
-          {NAV.map(({ to, label, icon: Icon, end }) => (
+          {NAV.map(({ to, label, icon: Icon, end, badge }) => (
             <NavLink key={to} to={to} end={end}
                style={({ isActive }) => ({
                  display: 'flex', alignItems: 'center', gap: 9,
@@ -100,7 +109,12 @@ export default function AdminLayout() {
                onMouseLeave={e => { if (!e.currentTarget.classList.contains('active')) e.currentTarget.style.color = 'var(--admin-sidebar-muted)' }}
             >
               <Icon size={14} style={{ flexShrink: 0 }} />
-              {label}
+              <span style={{ flex: 1 }}>{label}</span>
+              {badge && badges?.[badge] > 0 && (
+                <span style={{ fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--admin-primary)', color: '#fff' }}>
+                  {badges[badge] > 99 ? '99+' : badges[badge]}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

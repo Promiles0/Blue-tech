@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Eye, Download, CreditCard, Truck, X } from 'lucide-react'
+import { Eye, Download, CreditCard, Truck, X, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'
 import { money, dateShort, dateTime } from '../../lib/format'
@@ -28,8 +28,11 @@ export default function AdminOrders() {
   const qc = useQueryClient()
   const [statusFilter, setStatusFilter] = useState('all')
   const [drawerOrderId, setDrawerOrderId] = useState(null)
+  const [search, setSearch] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: allOrders = [], isLoading } = useQuery({
     queryKey: ['admin-orders', statusFilter],
     queryFn: () => fetchOrders(statusFilter),
   })
@@ -41,6 +44,23 @@ export default function AdminOrders() {
     onError: () => toast.error('Failed to update status'),
   })
 
+  // Search (order number, customer name or email) and date range, applied to the
+  // table and the CSV export alike.
+  const needle = search.trim().toLowerCase().replace(/^#/, '')
+  const from = fromDate ? new Date(`${fromDate}T00:00:00`) : null
+  const to = toDate ? new Date(`${toDate}T23:59:59`) : null
+  const orders = allOrders.filter(o => {
+    if (needle) {
+      const hay = [String(o.orderId), String(o.orderId).padStart(6, '0'), o.customerName ?? '', o.customerEmail ?? ''].join(' ').toLowerCase()
+      if (!hay.includes(needle)) return false
+    }
+    const at = o.orderedAt ? new Date(o.orderedAt) : null
+    if (from && (!at || at < from)) return false
+    if (to && (!at || at > to)) return false
+    return true
+  })
+  const filtersActive = Boolean(needle || from || to)
+
   function exportCSV() {
     const rows = [['ID', 'Customer', 'Email', 'Items', 'Total', 'Status', 'Date']]
     orders.forEach(o => rows.push([
@@ -50,7 +70,8 @@ export default function AdminOrders() {
     ]))
     const csv = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
-    Object.assign(document.createElement('a'), { href: url, download: 'orders.csv' }).click()
+    const range = fromDate || toDate ? `-${fromDate || 'start'}_to_${toDate || 'today'}` : ''
+    Object.assign(document.createElement('a'), { href: url, download: `orders${range}.csv` }).click()
     URL.revokeObjectURL(url)
   }
 
@@ -70,10 +91,30 @@ export default function AdminOrders() {
           >
             {STATUSES.map(s => <option key={s} value={s}>{s === 'all' ? 'All statuses' : s.charAt(0) + s.slice(1).toLowerCase()}</option>)}
           </select>
-          <button onClick={exportCSV} style={outlineBtn}>
-            <Download size={13} /> Export CSV
+          <button onClick={exportCSV} style={outlineBtn} disabled={!orders.length}>
+            <Download size={13} /> Export CSV{filtersActive ? ` (${orders.length})` : ''}
           </button>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--admin-muted)' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Order #, customer name or email…"
+            style={{ ...selectStyle, cursor: 'text', paddingLeft: 32, width: 260 }} />
+        </div>
+        <label style={{ fontSize: 12, color: 'var(--admin-muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          From <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={selectStyle} />
+        </label>
+        <label style={{ fontSize: 12, color: 'var(--admin-muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          To <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={selectStyle} />
+        </label>
+        {filtersActive && (
+          <button onClick={() => { setSearch(''); setFromDate(''); setToDate('') }} style={{ ...outlineBtn, border: 'none' }}>
+            <X size={13} /> Clear
+          </button>
+        )}
+        {filtersActive && <span style={{ fontSize: 12, color: 'var(--admin-muted)' }}>{orders.length} of {allOrders.length} orders</span>}
       </div>
 
       {/* Table */}
