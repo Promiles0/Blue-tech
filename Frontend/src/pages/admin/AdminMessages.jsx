@@ -46,6 +46,14 @@ export default function AdminMessages() {
         </p>
       )}
 
+      <div className="surface" style={{ borderRadius: 14, padding: '16px 18px', marginBottom: 20, fontSize: 12.5, color: 'var(--admin-muted)', lineHeight: 1.6 }}>
+        <strong style={{ color: 'var(--text)' }}>Blue on WhatsApp</strong> — customers can chat with Blue on your WhatsApp Business number.
+        In Meta's WhatsApp settings, set the webhook URL to{' '}
+        <code style={{ color: 'var(--text)' }}>https://cfwqgpomvbqayqeghrft.supabase.co/functions/v1/api/whatsapp/webhook</code>{' '}
+        and subscribe to <code>messages</code>. Then add the secrets WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_APP_SECRET and
+        WHATSAPP_VERIFY_TOKEN (any phrase you choose — enter the same one in Meta). Until then it stays off.
+      </div>
+
       <div className="surface" style={{ borderRadius: 14, padding: '20px 22px', marginBottom: 20 }}>
         <h2 style={{ fontSize: 15, fontWeight: 600, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}><BellRing size={16} /> Waiting for restock</h2>
         {isLoading ? <p style={{ fontSize: 13, color: 'var(--admin-muted)' }}>Loading…</p> : !data?.waitingAlerts?.length ? (
