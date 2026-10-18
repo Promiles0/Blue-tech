@@ -834,7 +834,7 @@ function listParam(url: URL, name: string) {
 
 async function isAdminRequest(request: Request) {
   try {
-    await requireAdmin(request);
+    await requireStaff(request);
     return true;
   } catch {
     return false;
@@ -1905,6 +1905,22 @@ async function requireUser(request: Request) {
   return user;
 }
 
+// Admin or staff (day-to-day operations). Returns "ADMIN" or "STAFF".
+async function requireStaff(request: Request, user?: User) {
+  const authenticated = user ?? await requireUser(request);
+  const [{ data: profile }, { data: userProfile }] = await Promise.all([
+    adminClient.from("profiles").select("role").eq("id", authenticated.id).maybeSingle(),
+    adminClient.from("users").select("role, is_suspended").eq("id", authenticated.id).maybeSingle(),
+  ]);
+  const roles = [profile?.role, userProfile?.role].map((r) => String(r ?? "").toUpperCase());
+  const role = roles.includes("ADMIN") ? "ADMIN" : roles.includes("STAFF") ? "STAFF" : null;
+  if (!role || userProfile?.is_suspended) throw new Response(
+    JSON.stringify({ success: false, message: "Staff access required" }),
+    { status: 403, headers: { ...corsHeaders(request), "Content-Type": "application/json" } },
+  );
+  return role;
+}
+
 async function requireAdmin(request: Request, user?: User) {
   const authenticated = user ?? await requireUser(request);
   const { data: profile, error } = await adminClient
@@ -2566,7 +2582,18 @@ async function handle(request: Request) {
   const user = await requireUser(request);
 
   if ((path === "/products" || /^\/products\/[^/]+$/.test(path)) && ["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
-    await requireAdmin(request, user);
+    const productRole = await requireStaff(request, user);
+    if (productRole === "STAFF") {
+      if (method === "DELETE") return failure("Only an admin can delete products", 403, request);
+      if (method === "PUT" || method === "PATCH") {
+        const draft = await request.clone().json().catch(() => ({}));
+        const targetId = path === "/products" ? url.searchParams.get("id") : path.split("/").pop();
+        if (draft.price !== undefined && targetId) {
+          const { data: current } = await adminClient.from("products").select("price").eq("id", targetId).maybeSingle();
+          if (current && Number(draft.price) !== Number(current.price)) return failure("Only an admin can change prices", 403, request);
+        }
+      }
+    }
     const id = path === "/products" ? url.searchParams.get("id") : path.split("/").pop();
     if (method === "DELETE") {
       if (!id) return failure("Product id is required");
@@ -2754,7 +2781,7 @@ async function handle(request: Request) {
   }
 
   if (method === "POST" && path === "/products/images/upload") {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     const formData = await request.formData();
     const file = formData.get("file");
     if (!(file instanceof File)) return failure("A file is required", 400);
@@ -2917,14 +2944,14 @@ async function handle(request: Request) {
   }
 
   if (method === "GET" && path === "/notifications/admin/unread-count") {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     const { count, error } = await adminClient.from("admin_notifications").select("id", { count: "exact", head: true }).eq("read", false);
     if (error) return failure(error.message, 500);
     return success("Admin unread notification count fetched", count ?? 0);
   }
 
   if (method === "GET" && path === "/notifications/admin") {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
     const { data, error } = await adminClient.from("admin_notifications").select("*").order("created_at", { ascending: false }).limit(limit);
     if (error) return failure(error.message, 500);
@@ -2932,14 +2959,14 @@ async function handle(request: Request) {
   }
 
   if (method === "POST" && /^\/notifications\/admin\/[0-9]+\/read$/.test(path)) {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     const { error } = await adminClient.from("admin_notifications").update({ read: true }).eq("id", path.split("/")[3]);
     if (error) return failure(error.message, 400, request);
     return success("Marked as read", null, request);
   }
 
   if (method === "POST" && path === "/notifications/admin/mark-all-read") {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     const { error } = await adminClient.from("admin_notifications").update({ read: true }).eq("read", false);
     if (error) return failure(error.message, 400);
     return success("Admin notifications marked as read", null);
@@ -3066,7 +3093,7 @@ async function handle(request: Request) {
     if (error) return failure(error.message, 500, request);
     if (!data) return failure("Order not found", 404, request);
     if (data.user_id !== user.id) {
-      await requireAdmin(request, user);
+      await requireStaff(request, user);
     }
     return success("Order fetched", await orderResult(data), request);
   }
@@ -3169,7 +3196,7 @@ async function handle(request: Request) {
   }
 
   if (path === "/admin/orders" || /^\/admin\/orders\/[^/]+/.test(path)) {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
 
     if (method === "GET" && path === "/admin/orders") {
       const status = url.searchParams.get("status");
@@ -3245,6 +3272,19 @@ async function handle(request: Request) {
     }
   }
 
+  if (method === "PATCH" && /^\/admin\/users\/[^/]+\/role$/.test(path)) {
+    await requireAdmin(request, user);
+    const targetId = path.split("/")[3];
+    const role = String((await readJson(request)).role ?? "");
+    if (!["user", "staff", "admin"].includes(role)) return failure("Role must be user, staff or admin", 400, request);
+    if (targetId === user.id && role !== "admin") return failure("You can't remove your own admin rights", 400, request);
+    const { data, error } = await adminClient.from("users").update({ role }).eq("id", targetId).select("id,role").maybeSingle();
+    if (error) return failure(error.message, 400, request);
+    if (!data) return failure("User not found", 404, request);
+    await adminClient.from("profiles").update({ role: role === "admin" ? "ADMIN" : role === "staff" ? "STAFF" : "USER" }).eq("id", targetId);
+    return success("Role updated", data, request);
+  }
+
   if (path === "/admin/users" || /^\/admin\/users\/[^/]+\/(admin|suspend)$/.test(path)) {
     await requireAdmin(request, user);
 
@@ -3276,7 +3316,7 @@ async function handle(request: Request) {
   }
 
   if (path === "/admin/shipments" || /^\/admin\/shipments\/[^/]+$/.test(path)) {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
 
     if (method === "GET" && path === "/admin/shipments") {
       const { data, error } = await adminClient.from("shipments").select("*, orders(user_id, users(email))").order("id", { ascending: false });
@@ -3299,7 +3339,7 @@ async function handle(request: Request) {
   }
 
   if (path === "/admin/reviews" || /^\/admin\/reviews\/[^/]+$/.test(path)) {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
 
     if (method === "GET" && path === "/admin/reviews") {
       const rating = url.searchParams.get("rating");
@@ -3328,7 +3368,7 @@ async function handle(request: Request) {
   }
 
   if (path === "/admin/quote-requests" || /^\/admin\/quote-requests\/[^/]+$/.test(path)) {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
 
     if (method === "GET" && path === "/admin/quote-requests") {
       const status = url.searchParams.get("status");
@@ -3368,7 +3408,7 @@ async function handle(request: Request) {
 
   // Bulk publish / hide / move-to-category from the admin product list.
   if (method === "POST" && path === "/admin/products/bulk") {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     const body = await readJson(request);
     const ids = (Array.isArray(body.ids) ? body.ids : []).map(Number).filter(Number.isFinite).slice(0, 500);
     if (!ids.length) return failure("No products selected", 400, request);
@@ -3396,7 +3436,7 @@ async function handle(request: Request) {
 
   // Quick restock from the dashboard's low-stock list.
   if (method === "PATCH" && /^\/admin\/variants\/[^/]+$/.test(path)) {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     const variantId = path.split("/").pop();
     const body = await readJson(request);
     const stock = Number(body.stockQuantity);
@@ -3485,7 +3525,7 @@ async function handle(request: Request) {
   }
 
   if (method === "GET" && path === "/admin/messages") {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     const [{ data: log }, { data: alerts }] = await Promise.all([
       adminClient.from("message_log").select("*").order("created_at", { ascending: false }).limit(150),
       adminClient.from("stock_alerts").select("*, products(name)").is("notified_at", null).order("created_at", { ascending: false }).limit(500),
@@ -3551,7 +3591,7 @@ async function handle(request: Request) {
   }
 
   if (path === "/admin/proformas" || /^\/admin\/proformas\/[^/]+$/.test(path)) {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     if (method === "GET" && path === "/admin/proformas") {
       const { data, error } = await adminClient.from("proformas").select("*").order("created_at", { ascending: false }).limit(300);
       if (error) return failure(error.message, 500, request);
@@ -3738,7 +3778,7 @@ async function handle(request: Request) {
   }
 
   if (method === "GET" && path === "/admin/dashboard/stats") {
-    await requireAdmin(request, user);
+    await requireStaff(request, user);
     try {
       return success("Dashboard stats fetched", await getAdminDashboardStats(), request);
     } catch (error) {

@@ -143,38 +143,53 @@ export default function App() {
   )
 }
 
+// Pages only admins may open; staff see a short explanation instead.
+function AdminOnly({ children }) {
+  const { isAdmin } = useAuth()
+  if (isAdmin) return children
+  return (
+    <div style={{ padding: 40, maxWidth: 520 }}>
+      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Admins only</h1>
+      <p style={{ color: 'var(--admin-muted)', fontSize: 14, lineHeight: 1.6 }}>
+        Your staff account can manage orders, shipping, products, quotes, proformas, reviews and messages.
+        Ask an admin if you need access to this page.
+      </p>
+    </div>
+  )
+}
+
 function AdminSection() {
-  const { isAdmin, loading } = useAuth()
+  const { canUseAdmin, loading } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (!loading && !isAdmin) navigate('/login', { state: { from: '/admin' }, replace: true })
-  }, [isAdmin, loading, navigate])
+    if (!loading && !canUseAdmin) navigate('/login', { state: { from: '/admin' }, replace: true })
+  }, [canUseAdmin, loading, navigate])
 
   if (loading) return null
-  if (!isAdmin) return null
+  if (!canUseAdmin) return null
 
   return (
     <Suspense fallback={<PageFallback />}><Routes>
       <Route element={<AdminLayout />}>
         <Route index             element={<AdminDashboard />} />
         <Route path="products"   element={<AdminProducts />} />
-        <Route path="categories" element={<AdminCategories />} />
+        <Route path="categories" element={<AdminOnly><AdminCategories /></AdminOnly>} />
         <Route path="orders"     element={<AdminOrders />} />
         <Route path="shipments"  element={<Navigate to="/admin/orders?filter=to-ship" replace />} />
-        <Route path="users"      element={<AdminUsers />} />
+        <Route path="users"      element={<AdminOnly><AdminUsers /></AdminOnly>} />
         <Route path="reviews"    element={<AdminReviews />} />
         <Route path="quote-requests" element={<AdminQuoteRequests />} />
-        <Route path="coupons"      element={<AdminCoupons />} />
-        <Route path="hero-slides"  element={<AdminHeroSlides />} />
-        <Route path="analytics"    element={<AdminAnalytics />} />
-        <Route path="audit"          element={<AdminAudit />} />
+        <Route path="coupons"      element={<AdminOnly><AdminCoupons /></AdminOnly>} />
+        <Route path="hero-slides"  element={<AdminOnly><AdminHeroSlides /></AdminOnly>} />
+        <Route path="analytics"    element={<AdminOnly><AdminAnalytics /></AdminOnly>} />
+        <Route path="audit"          element={<AdminOnly><AdminAudit /></AdminOnly>} />
         <Route path="notifications"  element={<AdminNotifications />} />
-        <Route path="settings"       element={<AdminSettings />} />
-        <Route path="blue"           element={<AdminBlue />} />
+        <Route path="settings"       element={<AdminOnly><AdminSettings /></AdminOnly>} />
+        <Route path="blue"           element={<AdminOnly><AdminBlue /></AdminOnly>} />
         <Route path="proformas"      element={<AdminProformas />} />
         <Route path="messages"       element={<AdminMessages />} />
-        <Route path="programs"       element={<AdminPrograms />} />
+        <Route path="programs"       element={<AdminOnly><AdminPrograms /></AdminOnly>} />
       </Route>
     </Routes></Suspense>
   )

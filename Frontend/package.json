@@ -7,7 +7,9 @@
     "dev": "vite --configLoader native",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:api": "node scripts/check-api-calls.mjs",
+    "prebuild": "node scripts/check-api-calls.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.8.0",

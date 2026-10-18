@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useAuth } from '../../context/AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, ShieldCheck, ShieldOff, Ban, CheckCircle } from 'lucide-react'
+import { Search, Ban, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'
 import { money, dateShort } from '../../lib/format'
@@ -25,13 +26,14 @@ export default function AdminUsers() {
     window._userSearchTimer = setTimeout(() => setDebouncedSearch(e.target.value), 350)
   }
 
-  const setAdmin = useMutation({
-    mutationFn: ({ userId, make }) => apiService.admin.users.setAdmin(userId, make).then(r => r.data),
-    onSuccess: (_, { make }) => {
+  const { user } = useAuth()
+  const setRole = useMutation({
+    mutationFn: ({ userId, role }) => apiService.admin.users.setRole(userId, role).then(r => r.data),
+    onSuccess: (_, { role }) => {
       qc.invalidateQueries({ queryKey: ['admin-users'] })
-      toast.success(make ? 'Admin role granted' : 'Admin role removed')
+      toast.success(role === 'staff' ? 'Now a staff member' : role === 'admin' ? 'Now an admin' : 'Now a customer')
     },
-    onError: () => toast.error('Failed to update role'),
+    onError: (e) => toast.error(e?.response?.data?.message ?? 'Failed to update role'),
   })
 
   const setSuspend = useMutation({
@@ -92,26 +94,18 @@ export default function AdminUsers() {
                   <td style={{ color: 'var(--admin-muted)', fontSize: 12 }}>{dateShort(u.createdAt)}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                      {/* Admin toggle */}
-                      {u.role?.toLowerCase() === 'admin' ? (
-                        <button
-                          onClick={() => setAdmin.mutate({ userId: u.userId, make: false })}
-                          disabled={setAdmin.isPending}
-                          style={outlineBtn}
-                          title="Remove admin"
-                        >
-                          <ShieldOff size={12} /> Remove admin
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setAdmin.mutate({ userId: u.userId, make: true })}
-                          disabled={setAdmin.isPending}
-                          style={primaryBtn}
-                          title="Make admin"
-                        >
-                          <ShieldCheck size={12} /> Make admin
-                        </button>
-                      )}
+                      {/* Role: customer / staff / admin */}
+                      <select
+                        value={(u.role ?? 'user').toLowerCase()}
+                        disabled={setRole.isPending || u.userId === user?.userId}
+                        title={u.userId === user?.userId ? "You can't change your own role" : 'Change role'}
+                        onChange={e => setRole.mutate({ userId: u.userId, role: e.target.value })}
+                        style={{ ...outlineBtn, paddingRight: 8 }}
+                      >
+                        <option value="user">Customer</option>
+                        <option value="staff">Staff</option>
+                        <option value="admin">Admin</option>
+                      </select>
                       {/* Suspend toggle */}
                       {u.suspended ? (
                         <button
@@ -145,7 +139,7 @@ export default function AdminUsers() {
 }
 
 function RoleBadge({ role }) {
-  const isAdmin = role?.toLowerCase() === 'admin'
+  const isAdmin = ['admin', 'staff'].includes(role?.toLowerCase())
   return (
     <span style={{
       fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20,
@@ -164,11 +158,6 @@ const dangerBadge = {
 const inputStyle = {
   background: 'var(--glass-border)', border: '1px solid var(--admin-border)',
   borderRadius: 8, color: 'var(--text)', padding: '7px 12px', fontSize: 13, outline: 'none',
-}
-const primaryBtn = {
-  display: 'inline-flex', alignItems: 'center', gap: 5,
-  background: 'var(--admin-primary)', border: 'none', borderRadius: 7,
-  color: 'var(--admin-primary-fg)', padding: '5px 10px', fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap',
 }
 const outlineBtn = {
   display: 'inline-flex', alignItems: 'center', gap: 5,

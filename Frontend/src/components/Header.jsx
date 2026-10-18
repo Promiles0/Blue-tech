@@ -16,7 +16,7 @@ import { useTheme } from '../context/ThemeContext'
 
 export default function Header() {
   const { t } = useT()
-  const { user, logout, isAdmin }                           = useAuth()
+  const { user, logout, isAdmin, canUseAdmin }              = useAuth()
   const { count }                                           = useCart()
   const { setCartOpen, setMobileNavOpen }                   = useUI()
   const { theme, toggleTheme }                              = useTheme()
@@ -293,7 +293,7 @@ export default function Header() {
                   {!isAdmin && <DropdownItem to="/account"       icon={<User size={14} />}     onClick={() => setUserMenuOpen(false)}>{t('My profile')}</DropdownItem>}
                   {!isAdmin && <DropdownItem to="/orders"        icon={<Package size={14} />}  onClick={() => setUserMenuOpen(false)}>{t('My orders')}</DropdownItem>}
                   {!isAdmin && <DropdownItem to="/notifications" icon={<Bell size={14} />}     onClick={() => setUserMenuOpen(false)}>{t('Notifications')}</DropdownItem>}
-                  {isAdmin && (
+                  {canUseAdmin && (
                     <DropdownItem to="/admin" icon={<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--accent)' }}>ADM</span>} onClick={() => setUserMenuOpen(false)}>
                       {t('Admin panel')}
                     </DropdownItem>

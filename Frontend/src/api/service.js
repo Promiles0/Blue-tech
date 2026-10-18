@@ -125,6 +125,7 @@ const apiService = {
     users: {
       getAll: (search) => api.get(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
       setAdmin: (userId, make) => api.patch(`/admin/users/${userId}/admin`, { make }),
+      setRole: (userId, role) => api.patch(`/admin/users/${userId}/role`, { role }),
       setSuspend: (userId, suspend) => api.patch(`/admin/users/${userId}/suspend`, { suspend }),
     },
     shipments: {

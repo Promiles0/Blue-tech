@@ -65,6 +65,9 @@ export function AuthProvider({ children }) {
     updateUser,
     isAuthenticated: !!user,
     isAdmin: user?.role?.toLowerCase() === 'admin',
+    // Staff run day-to-day operations in the admin panel; admins also manage settings and people.
+    isStaff: user?.role?.toLowerCase() === 'staff',
+    canUseAdmin: ['admin', 'staff'].includes(user?.role?.toLowerCase()),
   }), [user, loading, login, register, googleLogin, logout, updateUser])
 
   return (

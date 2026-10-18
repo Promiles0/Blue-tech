@@ -25,7 +25,7 @@ const NAV_ITEMS = [
 export default function MobileNav() {
   const { t } = useT()
   const { mobileNavOpen, setMobileNavOpen, setPaletteOpen } = useUI()
-  const { user, logout, isAdmin } = useAuth()
+  const { user, logout, isAdmin, canUseAdmin } = useAuth()
   const navigate         = useNavigate()
   const { theme, toggleTheme } = useTheme()
   const canInstall = useCanInstall()
@@ -142,7 +142,7 @@ export default function MobileNav() {
 
               {user ? (
                 <>
-                  {isAdmin && (
+                  {canUseAdmin && (
                     <Link to="/admin" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent)', fontSize: 14, fontWeight: 700 }}>
                       <User size={15} /> {t('Admin panel')}
                     </Link>

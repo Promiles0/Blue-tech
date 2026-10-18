@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
-  Truck, Users, MessageSquare, BarChart3, ScrollText,
+  Users, MessageSquare, BarChart3, ScrollText,
   LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send, Gift,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -12,25 +12,35 @@ import { useTheme } from '../../context/ThemeContext'
 import AdminNotificationBell from '../../components/admin/AdminNotificationBell'
 import Logo from '../../components/site/Logo'
 
-const NAV = [
-  { to: '/admin',            label: 'Overview',    icon: LayoutDashboard, end: true },
-  { to: '/admin/products',   label: 'Products',    icon: Package },
-  { to: '/admin/categories', label: 'Categories',  icon: FolderTree },
-  { to: '/admin/quote-requests', label: 'Quote Requests', icon: FileText, badge: 'newQuotes' },
-  { to: '/admin/proformas',  label: 'Proformas',   icon: Receipt },
-  { to: '/admin/orders',     label: 'Orders',      icon: ShoppingCart, badge: 'toShip' },
-  { to: '/admin/shipments',  label: 'Shipments',   icon: Truck },
-  { to: '/admin/users',      label: 'Users',       icon: Users },
-  { to: '/admin/reviews',    label: 'Reviews',     icon: MessageSquare, badge: 'newReviews7d' },
-  { to: '/admin/coupons',      label: 'Coupons',      icon: Tag },
-  { to: '/admin/programs',     label: 'Programs',     icon: Gift },
-  { to: '/admin/hero-slides',  label: 'Hero Slides',  icon: Image },
-  { to: '/admin/settings',     label: 'Settings',     icon: Settings },
-  { to: '/admin/analytics',    label: 'Analytics',    icon: BarChart3 },
-  { to: '/admin/blue',         label: 'Blue AI',      icon: Sparkles },
-  { to: '/admin/audit',          label: 'Audit Log',      icon: ScrollText },
-  { to: '/admin/notifications',  label: 'Notifications',  icon: Bell },
-  { to: '/admin/messages',       label: 'Messages',       icon: Send },
+// Sidebar groups. `adminOnly` items are hidden from staff accounts (the API enforces it too).
+const NAV_GROUPS = [
+  { label: 'Sales', items: [
+    { to: '/admin',                label: 'Overview',       icon: LayoutDashboard, end: true },
+    { to: '/admin/orders',         label: 'Orders',         icon: ShoppingCart, badge: 'toShip' },
+    { to: '/admin/quote-requests', label: 'Quote Requests', icon: FileText, badge: 'newQuotes' },
+    { to: '/admin/proformas',      label: 'Proformas',      icon: Receipt },
+  ] },
+  { label: 'Catalog', items: [
+    { to: '/admin/products',    label: 'Products',     icon: Package },
+    { to: '/admin/categories',  label: 'Categories',   icon: FolderTree, adminOnly: true },
+    { to: '/admin/hero-slides', label: 'Home banners', icon: Image, adminOnly: true },
+  ] },
+  { label: 'Customers', items: [
+    { to: '/admin/users',    label: 'Users',    icon: Users, adminOnly: true },
+    { to: '/admin/reviews',  label: 'Reviews',  icon: MessageSquare, badge: 'newReviews7d' },
+    { to: '/admin/messages', label: 'Messages', icon: Send },
+    { to: '/admin/programs', label: 'Programs', icon: Gift, adminOnly: true },
+    { to: '/admin/coupons',  label: 'Coupons',  icon: Tag, adminOnly: true },
+  ] },
+  { label: 'Insights', items: [
+    { to: '/admin/analytics', label: 'Sales insights', icon: BarChart3, adminOnly: true },
+    { to: '/admin/blue',      label: 'Blue AI',        icon: Sparkles, adminOnly: true },
+  ] },
+  { label: 'System', items: [
+    { to: '/admin/settings',      label: 'Settings',      icon: Settings, adminOnly: true },
+    { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+    { to: '/admin/audit',         label: 'Audit Log',     icon: ScrollText, adminOnly: true },
+  ] },
 ]
 
 export default function AdminLayout() {
@@ -40,7 +50,7 @@ export default function AdminLayout() {
     refetchInterval: 60_000,
     staleTime: 30_000,
   })
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const handleLogout = () => { logout(); navigate('/login') }
@@ -92,34 +102,45 @@ export default function AdminLayout() {
 
         {/* Nav label */}
         <div style={{ padding: '14px 18px 6px', fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--admin-sidebar-muted)', opacity: 0.5, textTransform: 'uppercase' }}>
-          Admin
+          {isAdmin ? 'Admin' : 'Staff'}
         </div>
 
-        {/* Nav items */}
-        <nav style={{ flex: 1, padding: '2px 8px', display: 'flex', flexDirection: 'column', gap: 1, overflowY: 'auto' }}>
-          {NAV.map(({ to, label, icon: Icon, end, badge }) => (
-            <NavLink key={to} to={to} end={end}
-               style={({ isActive }) => ({
-                 display: 'flex', alignItems: 'center', gap: 9,
-                 padding: '8px 11px', borderRadius: 8,
-                 fontSize: 13, fontWeight: 500,
-                 color: isActive ? 'var(--admin-sidebar-text)' : 'var(--admin-sidebar-muted)',
-                 background: isActive ? 'var(--admin-sidebar-active)' : 'transparent',
-                 textDecoration: 'none',
-                 transition: 'color 0.15s, background 0.15s',
-               })}
-               onMouseEnter={e => { if (!e.currentTarget.classList.contains('active')) e.currentTarget.style.color = 'var(--admin-sidebar-text)' }}
-               onMouseLeave={e => { if (!e.currentTarget.classList.contains('active')) e.currentTarget.style.color = 'var(--admin-sidebar-muted)' }}
-            >
-              <Icon size={14} style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>{label}</span>
-              {badge && badges?.[badge] > 0 && (
-                <span style={{ fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--admin-primary)', color: '#fff' }}>
-                  {badges[badge] > 99 ? '99+' : badges[badge]}
-                </span>
-              )}
-            </NavLink>
-          ))}
+        {/* Nav items, grouped */}
+        <nav style={{ flex: 1, padding: '2px 8px 8px', display: 'flex', flexDirection: 'column', gap: 1, overflowY: 'auto' }}>
+          {NAV_GROUPS.map(group => {
+            const items = group.items.filter(item => isAdmin || !item.adminOnly)
+            if (!items.length) return null
+            return (
+              <div key={group.label} style={{ marginBottom: 6 }}>
+                <div style={{ padding: '10px 11px 4px', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--admin-sidebar-muted)', opacity: 0.6 }}>
+                  {group.label}
+                </div>
+                {items.map(({ to, label, icon: Icon, end, badge }) => (
+                  <NavLink key={to} to={to} end={end}
+                     style={({ isActive }) => ({
+                       display: 'flex', alignItems: 'center', gap: 9,
+                       padding: '7px 11px', borderRadius: 8,
+                       fontSize: 13, fontWeight: 500,
+                       color: isActive ? 'var(--admin-sidebar-text)' : 'var(--admin-sidebar-muted)',
+                       background: isActive ? 'var(--admin-sidebar-active)' : 'transparent',
+                       textDecoration: 'none',
+                       transition: 'color 0.15s, background 0.15s',
+                     })}
+                     onMouseEnter={e => { if (!e.currentTarget.classList.contains('active')) e.currentTarget.style.color = 'var(--admin-sidebar-text)' }}
+                     onMouseLeave={e => { if (!e.currentTarget.classList.contains('active')) e.currentTarget.style.color = 'var(--admin-sidebar-muted)' }}
+                  >
+                    <Icon size={14} style={{ flexShrink: 0 }} />
+                    <span style={{ flex: 1 }}>{label}</span>
+                    {badge && badges?.[badge] > 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--admin-primary)', color: '#fff' }}>
+                        {badges[badge] > 99 ? '99+' : badges[badge]}
+                      </span>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            )
+          })}
         </nav>
 
         {/* Footer */}

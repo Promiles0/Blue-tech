@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useAuth } from '../../context/AuthContext'
 import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check, UploadCloud, Eye, EyeOff, Search } from 'lucide-react'
 import apiService from '../../api/service'
 import { getProductImage, handleProductImageError } from '../../lib/productImage'
@@ -62,6 +63,7 @@ function formFromDetail(p, categories) {
 }
 
 export default function AdminProducts() {
+  const { isAdmin } = useAuth()
   const [products, setProducts]     = useState([])
   const [categories, setCategories] = useState([])
   const [page, setPage]             = useState(0)
@@ -479,7 +481,7 @@ export default function AdminProducts() {
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <IconBtn icon={Pencil} onClick={() => openEdit(p)} title="Edit" />
-                    <IconBtn icon={Trash2} onClick={() => handleDelete(p)} title="Delete" danger loading={deleting === (p.productId ?? p.id)} />
+                    {isAdmin && <IconBtn icon={Trash2} onClick={() => handleDelete(p)} title="Delete" danger loading={deleting === (p.productId ?? p.id)} />}
                   </div>
                 </td>
               </tr>
@@ -546,7 +548,7 @@ export default function AdminProducts() {
               </label>
               <label style={labelStyle}>
                 <span>Price (RWF) *</span>
-                <input className="noir-input" type="number" min="0" step="1" value={form.price}
+                <input className="noir-input" type="number" min="0" step="1" disabled={!isAdmin && modal === 'edit'} title={!isAdmin && modal === 'edit' ? 'Only an admin can change prices' : undefined} value={form.price}
                   onChange={setField('price')} placeholder="e.g. 1200000" />
               </label>
               <label style={labelStyle}>
