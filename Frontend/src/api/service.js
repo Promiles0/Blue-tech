@@ -82,6 +82,10 @@ const apiService = {
   },
 
   // --- AI ASSISTANT ---
+  proformas: {
+    create: (data) => api.post('/proformas', data, { skipAuthRedirect: true }),
+  },
+
   chat: {
     send: (messages, sessionId) => api.post('/chat', { messages, sessionId }, { skipAuthRedirect: true }),
   },
@@ -162,8 +166,14 @@ const apiService = {
     settings: {
       get: () => api.get('/admin/settings'),
       updateExchangeRate: (usdToRwfRate) => api.put('/admin/settings/exchange-rate', { usdToRwfRate }),
+      saveDelivery: (config) => api.put('/admin/settings/delivery', config),
+      saveBusiness: (info) => api.put('/admin/settings/business', info),
       getBlue: () => api.get('/admin/settings/blue'),
       saveBlue: (instructions) => api.put('/admin/settings/blue', { instructions }),
+    },
+    proformas: {
+      getAll: () => api.get('/admin/proformas'),
+      setStatus: (id, status) => api.patch(`/admin/proformas/${id}`, { status }),
     },
     chat: {
       insights: (days = 30) => api.get(`/admin/chat/insights?days=${days}`),

@@ -17,6 +17,7 @@ import { buildWhatsAppLink } from '../lib/helpLinks'
 import { useCurrency } from '../context/CurrencyContext'
 import ProductSpecs from '../components/site/ProductSpecs'
 import RelatedProducts from '../components/site/RelatedProducts'
+import DeliveryEstimate from '../components/site/DeliveryEstimate'
 import { Breadcrumb, ProductActions, BuyInfo } from '../components/site/ProductExtras'
 import { usePageMeta } from '../hooks/usePageMeta'
 
@@ -291,6 +292,7 @@ export default function ProductDetail() {
             </a>
 
             <ProductActions product={product} />
+            <DeliveryEstimate />
             <BuyInfo product={product} />
 
             {product.inTheBox && (

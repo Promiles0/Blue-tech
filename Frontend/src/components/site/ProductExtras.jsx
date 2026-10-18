@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { ChevronRight, Sparkles, Share2, GitCompare, Truck, ShieldCheck, CreditCard, RotateCcw } from 'lucide-react'
+import { ChevronRight, Sparkles, Share2, GitCompare, ShieldCheck, CreditCard, RotateCcw } from 'lucide-react'
 import { openLiveChat } from '../../lib/liveChat'
 import { toggleCompare, useCompare, COMPARE_MAX } from '../../lib/compare'
 
@@ -83,7 +83,6 @@ export function ProductActions({ product }) {
 // Delivery, warranty, returns and payment in one glance, right under the buy buttons.
 export function BuyInfo({ product }) {
   const rows = [
-    { Icon: Truck, text: 'Free delivery across Rwanda · express next-day available' },
     { Icon: ShieldCheck, text: product.warranty ? `${product.warranty} warranty` : 'Warranty included' },
     { Icon: RotateCcw, text: '30-day returns' },
     { Icon: CreditCard, text: 'Pay with MTN MoMo, Airtel Money or card' },

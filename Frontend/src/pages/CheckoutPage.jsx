@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useStoreSettings, deliveryWindow, formatWindow } from "../lib/delivery";
 import RwandaAddressFields from "../components/site/RwandaAddressFields";
 import { EMPTY_RW_ADDRESS, addressStreet } from "../lib/rwandaAddress";
 import { useNavigate, Link } from "react-router-dom";
@@ -60,6 +61,7 @@ function CheckoutForm() {
   const [coupon, setCoupon] = useState(null);
   const [momoPhone, setMomoPhone] = useState("");
   const [shippingMethod, setShippingMethod] = useState("STANDARD");
+  const { deliveryConfig } = useStoreSettings();
   const [paymentMethod, setPaymentMethod] = useState("CARD");
   const [pendingOrderId, setPendingOrderId] = useState(null);
   const [momoOutcome, setMomoOutcome] = useState("waiting"); // "waiting" | "timeout"
@@ -91,6 +93,10 @@ function CheckoutForm() {
   const safeDiscount = Math.min(discount, subtotal);
   // RWF, like every price. Keep in sync with EXPRESS_SHIPPING_FEE_RWF in the API.
   const shippingFee = shippingMethod === "EXPRESS" ? EXPRESS_SHIPPING_FEE_RWF : 0;
+  // District the estimate is for: the new-address form, else the chosen saved address.
+  const deliveryDistrict = showNewAddressForm
+    ? newAddress.city
+    : addresses.find((a) => a.addressId === selectedAddressId)?.city ?? "";
   const total = Math.max(0, subtotal - safeDiscount + shippingFee);
 
   const buildPayload = () => {
@@ -339,10 +345,19 @@ function CheckoutForm() {
                 }}
                 className="noir-input"
                 style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", color: "var(--text-primary)", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none", width: "100%", cursor: "pointer", appearance: "none" }}>
-                <option value="STANDARD">Standard Delivery (FREE, 2-4 days)</option>
-                <option value="EXPRESS">Express Delivery (+{formatPrice(EXPRESS_SHIPPING_FEE_RWF)}, next day)</option>
-                <option value="PICKUP">Store Pickup (FREE, collect in Kigali)</option>
+                <option value="STANDARD">Standard delivery — FREE{deliveryConfig ? ` · ${formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'STANDARD'))}` : ''}</option>
+                <option value="EXPRESS">Express — +{formatPrice(EXPRESS_SHIPPING_FEE_RWF)}{deliveryConfig ? ` · ${formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'EXPRESS'))}` : ''}</option>
+                {deliveryConfig?.pickupEnabled && (
+                  <option value="PICKUP">Pick up at our shop — FREE · from {formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'PICKUP'))}</option>
+                )}
               </select>
+              <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 8 }}>
+                {shippingMethod === "PICKUP" && deliveryConfig
+                  ? `Pick up at ${deliveryConfig.pickupAddress}. We'll call you when it's ready.`
+                  : deliveryDistrict
+                    ? `Estimated for ${deliveryDistrict}. Orders after ${String(deliveryConfig?.cutoffHour ?? 15).padStart(2, '0')}:00 are handled the next day.`
+                    : "Choose your district above to see the delivery date."}
+              </p>
             </section>
 
             {/* Payment Method */}

@@ -34,6 +34,7 @@ const rateLimiters = redis ? {
   coupon: new Ratelimit({ redis, prefix: "rl:coupon", limiter: Ratelimit.slidingWindow(10, "1 h") }),
   checkout: new Ratelimit({ redis, prefix: "rl:checkout", limiter: Ratelimit.slidingWindow(20, "1 h") }),
   quoteRequest: new Ratelimit({ redis, prefix: "rl:quote-request", limiter: Ratelimit.slidingWindow(5, "1 h") }),
+  proforma: new Ratelimit({ redis, prefix: "rl:proforma", limiter: Ratelimit.slidingWindow(15, "1 h") }),
   chat: new Ratelimit({ redis, prefix: "rl:chat", limiter: Ratelimit.slidingWindow(30, "10 m") }),
   global: new Ratelimit({ redis, prefix: "rl:global", limiter: Ratelimit.slidingWindow(100, "1 m") }),
 } : null;
@@ -256,6 +257,82 @@ function momoProviderFor(localPhone: string) {
 const EXPRESS_SHIPPING_FEE_RWF = 7500;
 const RWF_RATE_KEY = "usd_to_rwf_rate";
 const RWF_RATE_FALLBACK = 1471;
+
+// ── Delivery estimates & invoice details (site_settings JSON, edited in Admin → Settings) ──
+const DEFAULT_DELIVERY = {
+  kigaliDistricts: ["Gasabo", "Kicukiro", "Nyarugenge"],
+  kigaliStandard: [1, 2],
+  provinceStandard: [2, 4],
+  expressDays: 1,
+  cutoffHour: 15,
+  deliverSunday: false,
+  pickupEnabled: false,
+  pickupAddress: "KN59, ST 38, near Gloria Hotel, Kigali",
+};
+const DEFAULT_BUSINESS = {
+  legalName: "Blue-Tech",
+  tin: "",
+  address: "KN59, ST 38, near Gloria Hotel, Kigali, Rwanda",
+  phone: "+250 788 304 366",
+  email: "bluetech2020@gmail.com",
+  vatMode: "none", // "none" | "included" (prices include VAT) | "added" (VAT added on top)
+  vatRate: 18,
+  proformaValidDays: 14,
+  paymentDetails: "",
+};
+
+async function jsonSetting<T extends Record<string, unknown>>(key: string, fallback: T): Promise<T> {
+  const { data } = await adminClient.from("site_settings").select("value").eq("key", key).maybeSingle();
+  try { return { ...fallback, ...JSON.parse(String(data?.value ?? "{}")) }; } catch { return fallback; }
+}
+
+async function saveJsonSetting(key: string, value: Record<string, unknown>) {
+  return await adminClient.from("site_settings").upsert(
+    { key, value: JSON.stringify(value), is_public: true, updated_at: new Date().toISOString() },
+    { onConflict: "key" },
+  );
+}
+
+const dayRange = (v: unknown, fallback: number[]) => {
+  const arr = Array.isArray(v) ? v.map(Number) : fallback;
+  const [a, b] = [Math.max(0, Math.round(arr[0] ?? fallback[0])), Math.max(0, Math.round(arr[1] ?? arr[0] ?? fallback[1]))];
+  return [Math.min(a, 30), Math.min(Math.max(a, b), 30)];
+};
+
+function cleanDeliveryConfig(body: Record<string, unknown>) {
+  return {
+    kigaliDistricts: Array.isArray(body.kigaliDistricts) ? body.kigaliDistricts.map(String).slice(0, 30) : DEFAULT_DELIVERY.kigaliDistricts,
+    kigaliStandard: dayRange(body.kigaliStandard, DEFAULT_DELIVERY.kigaliStandard),
+    provinceStandard: dayRange(body.provinceStandard, DEFAULT_DELIVERY.provinceStandard),
+    expressDays: Math.min(Math.max(Math.round(Number(body.expressDays ?? 1)) || 1, 0), 14),
+    cutoffHour: Math.min(Math.max(Math.round(Number(body.cutoffHour ?? 15)), 0), 23),
+    deliverSunday: Boolean(body.deliverSunday),
+    pickupEnabled: Boolean(body.pickupEnabled),
+    pickupAddress: String(body.pickupAddress ?? DEFAULT_DELIVERY.pickupAddress).slice(0, 200),
+  };
+}
+
+function cleanBusinessInfo(body: Record<string, unknown>) {
+  const vatMode = ["none", "included", "added"].includes(String(body.vatMode)) ? String(body.vatMode) : "none";
+  return {
+    legalName: String(body.legalName ?? DEFAULT_BUSINESS.legalName).slice(0, 120),
+    tin: String(body.tin ?? "").replace(/[^0-9A-Za-z-]/g, "").slice(0, 20),
+    address: String(body.address ?? "").slice(0, 200),
+    phone: String(body.phone ?? "").slice(0, 60),
+    email: String(body.email ?? "").slice(0, 120),
+    vatMode,
+    vatRate: Math.min(Math.max(Number(body.vatRate ?? 18) || 0, 0), 50),
+    proformaValidDays: Math.min(Math.max(Math.round(Number(body.proformaValidDays ?? 14)) || 14, 1), 180),
+    paymentDetails: String(body.paymentDetails ?? "").slice(0, 400),
+  };
+}
+
+// VAT split for a gross line total, depending on how the shop prices.
+function vatSplit(amount: number, mode: string, rate: number) {
+  if (mode === "included") { const vat = amount - amount / (1 + rate / 100); return { subtotal: amount - vat, vat, total: amount }; }
+  if (mode === "added") { const vat = amount * rate / 100; return { subtotal: amount, vat, total: amount + vat }; }
+  return { subtotal: amount, vat: 0, total: amount };
+}
 
 // Prices, order totals and coupons are all stored in RWF. The rate only matters for
 // shoppers browsing in USD and for card payments, which Stripe charges in USD.
@@ -741,6 +818,9 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
   const paymentMethod = ["CARD", "MOMO", "AIRTEL_MONEY", "CASH", "CHEQUE"].includes(String(body.paymentMethod ?? "").toUpperCase())
     ? String(body.paymentMethod).toUpperCase()
     : "CARD";
+  if (shippingMethod === "PICKUP" && !(await jsonSetting("delivery_config", DEFAULT_DELIVERY)).pickupEnabled) {
+    throw new Error("Pickup at the shop isn't available right now — please choose delivery.");
+  }
   if ((paymentMethod === "CASH" || paymentMethod === "CHEQUE") && shippingMethod !== "PICKUP") {
     throw new Error("Cash and Cheque payments are only available for Pickup orders.");
   }
@@ -1051,6 +1131,25 @@ function couponResult(row: Record<string, unknown>) {
     maxUses: row.max_uses,
     uses: toNumber(row.uses),
     isActive: Boolean(row.is_active),
+    createdAt: row.created_at,
+  };
+}
+
+function proformaResult(row: Record<string, unknown>) {
+  return {
+    proformaId: row.id,
+    number: `PF-${String(row.id).padStart(5, "0")}`,
+    organization: row.organization,
+    tin: row.tin,
+    contactName: row.contact_name,
+    email: row.email,
+    phone: row.phone,
+    items: row.items,
+    subtotal: toNumber(row.subtotal),
+    vat: toNumber(row.vat),
+    total: toNumber(row.total),
+    validUntil: row.valid_until,
+    status: row.status,
     createdAt: row.created_at,
   };
 }
@@ -1664,6 +1763,8 @@ async function handle(request: Request) {
     const settings = Object.fromEntries(((data ?? []) as Record<string, unknown>[]).map((row) => [row.key, row.value]));
     return success("Settings fetched successfully", {
       usdToRwfRate: Number(settings[RWF_RATE_KEY]) || RWF_RATE_FALLBACK,
+      deliveryConfig: (() => { try { return { ...DEFAULT_DELIVERY, ...JSON.parse(String(settings.delivery_config ?? "{}")) }; } catch { return DEFAULT_DELIVERY; } })(),
+      businessInfo: (() => { try { return { ...DEFAULT_BUSINESS, ...JSON.parse(String(settings.business_info ?? "{}")) }; } catch { return DEFAULT_BUSINESS; } })(),
     });
   }
 
@@ -1776,6 +1877,53 @@ async function handle(request: Request) {
     }
 
     return response({ success: true, message: "Quote request received", data: quoteRequestResult(quote) }, 201, request);
+  }
+
+  // Proforma invoice from a cart: prices come from the database, never the client.
+  if (method === "POST" && path === "/proformas") {
+    await enforceRateLimit(rateLimiters?.proforma, `ip:${clientIp(request)}`, request);
+    const body = await readJson(request);
+    const organization = String(body.organization ?? "").trim().slice(0, 160);
+    if (!organization) return failure("Organisation name is required", 400, request);
+    const lines = (Array.isArray(body.items) ? body.items : [])
+      .map((i: Record<string, unknown>) => ({ variantId: Number(i.variantId), quantity: Math.min(Math.max(Math.round(Number(i.quantity) || 1), 1), 1000) }))
+      .filter((i: { variantId: number }) => Number.isFinite(i.variantId))
+      .slice(0, 100);
+    if (!lines.length) return failure("The cart is empty", 400, request);
+
+    const { data: variants, error: vErr } = await adminClient.from("product_variants")
+      .select("id,sku_code,size_or_color,price_adjustment,products(id,name,price,is_active,warranty)")
+      .in("id", lines.map((l: { variantId: number }) => l.variantId));
+    if (vErr) return failure(vErr.message, 500, request);
+    const business = await jsonSetting("business_info", DEFAULT_BUSINESS);
+    const items = lines.map((l: { variantId: number; quantity: number }) => {
+      const v = (variants ?? []).find((x) => Number(x.id) === l.variantId) as Record<string, unknown> | undefined;
+      const product = v?.products as Record<string, unknown> | undefined;
+      if (!v || !product || product.is_active === false) return null;
+      const unitPrice = toNumber(product.price) + toNumber(v.price_adjustment);
+      return {
+        variantId: l.variantId, productId: product.id, name: product.name, sku: v.sku_code ?? null,
+        option: v.size_or_color ?? null, warranty: product.warranty ?? null,
+        quantity: l.quantity, unitPrice, lineTotal: unitPrice * l.quantity,
+      };
+    }).filter(Boolean) as { lineTotal: number }[];
+    if (!items.length) return failure("None of these products are available", 400, request);
+
+    const gross = items.reduce((sum, i) => sum + i.lineTotal, 0);
+    const { subtotal, vat, total } = vatSplit(gross, String(business.vatMode), Number(business.vatRate));
+    const validUntil = new Date(Date.now() + Number(business.proformaValidDays) * 86400000).toISOString().slice(0, 10);
+    const maybeUser = await getAuthUser(request).catch(() => null);
+    const { data: row, error } = await adminClient.from("proformas").insert({
+      organization,
+      tin: String(body.tin ?? "").replace(/[^0-9A-Za-z-]/g, "").slice(0, 20) || null,
+      contact_name: String(body.contactName ?? "").slice(0, 120) || null,
+      email: String(body.email ?? "").slice(0, 160) || null,
+      phone: String(body.phone ?? "").slice(0, 40) || null,
+      items, subtotal, vat, total, valid_until: validUntil,
+      user_id: maybeUser?.id ?? null,
+    }).select().single();
+    if (error) return failure(error.message, 400, request);
+    return success("Proforma created", { ...proformaResult(row), business }, request);
   }
 
   // Public AI shopping assistant. Stateless: the widget sends the recent conversation each turn.
@@ -2657,11 +2805,42 @@ async function handle(request: Request) {
     }
   }
 
+  if (method === "PUT" && (path === "/admin/settings/delivery" || path === "/admin/settings/business")) {
+    await requireAdmin(request, user);
+    const body = await readJson(request);
+    const isDelivery = path.endsWith("/delivery");
+    const value = isDelivery ? cleanDeliveryConfig(body) : cleanBusinessInfo(body);
+    const { error } = await saveJsonSetting(isDelivery ? "delivery_config" : "business_info", value);
+    if (error) return failure(error.message, 400, request);
+    return success("Settings saved", value, request);
+  }
+
+  if (path === "/admin/proformas" || /^\/admin\/proformas\/[^/]+$/.test(path)) {
+    await requireAdmin(request, user);
+    if (method === "GET" && path === "/admin/proformas") {
+      const { data, error } = await adminClient.from("proformas").select("*").order("created_at", { ascending: false }).limit(300);
+      if (error) return failure(error.message, 500, request);
+      return success("Proformas fetched", ((data ?? []) as Record<string, unknown>[]).map(proformaResult), request);
+    }
+    if (method === "PATCH") {
+      const id = path.split("/").pop();
+      const status = String((await readJson(request)).status ?? "");
+      if (!["new", "contacted", "won", "lost"].includes(status)) return failure("Invalid status", 400, request);
+      const { data, error } = await adminClient.from("proformas").update({ status }).eq("id", id).select().maybeSingle();
+      if (error) return failure(error.message, 400, request);
+      if (!data) return failure("Proforma not found", 404, request);
+      return success("Proforma updated", proformaResult(data), request);
+    }
+  }
+
   if (path === "/admin/settings" || path === "/admin/settings/exchange-rate") {
     await requireAdmin(request, user);
 
     if (method === "GET" && path === "/admin/settings") {
-      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate() }, request);
+      const [deliveryConfig, businessInfo] = await Promise.all([
+        jsonSetting("delivery_config", DEFAULT_DELIVERY), jsonSetting("business_info", DEFAULT_BUSINESS),
+      ]);
+      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate(), deliveryConfig, businessInfo }, request);
     }
 
     if (method === "PUT" && path === "/admin/settings/exchange-rate") {
