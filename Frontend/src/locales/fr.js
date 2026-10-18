@@ -481,4 +481,8 @@ export default {
   'We accept MTN Mobile Money, Airtel Money and bank cards (Visa, Mastercard).': 'Nous acceptons MTN Mobile Money, Airtel Money et les cartes bancaires (Visa, Mastercard).',
   'Mobile money: after you place the order, approve the payment prompt on your phone. Card payments are processed securely by our card provider — Blue-Tech never sees or stores your card number.': 'Mobile money : après la commande, approuvez la demande de paiement sur votre téléphone. Les paiements par carte sont traités de façon sécurisée par notre prestataire — Blue-Tech ne voit ni ne conserve votre numéro de carte.',
   'Prices are in Rwandan francs (RWF). You can view them in US dollars with the currency switch at the top of the page; you are charged the amount shown at checkout.': "Les prix sont en francs rwandais (RWF). Vous pouvez les afficher en dollars avec le sélecteur de devise en haut de la page ; vous payez le montant affiché lors de la commande.",
+
+  // ── Installable app ──
+  "Install the Blue-Tech app": "Installer l'application Blue-Tech",
+  "On iPhone: tap Share, then “Add to Home Screen”.": "Sur iPhone : touchez Partager, puis « Sur l'écran d'accueil ».",
 }

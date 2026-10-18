@@ -482,4 +482,8 @@ export default {
   'We accept MTN Mobile Money, Airtel Money and bank cards (Visa, Mastercard).': "Twakira MTN Mobile Money, Airtel Money n'amakarita ya banki (Visa, Mastercard).",
   'Mobile money: after you place the order, approve the payment prompt on your phone. Card payments are processed securely by our card provider — Blue-Tech never sees or stores your card number.': "Mobile money: umaze gutumiza, emeza ubutumwa bwo kwishyura kuri telefone yawe. Kwishyura n'ikarita bikorwa mu mutekano n'ikigo dukorana nacyo — Blue-Tech ntibona kandi ntibika nimero y'ikarita yawe.",
   'Prices are in Rwandan francs (RWF). You can view them in US dollars with the currency switch at the top of the page; you are charged the amount shown at checkout.': "Ibiciro biri mu mafaranga y'u Rwanda (RWF). Ushobora kubireba mu madolari ukoresheje guhindura ifaranga hejuru ku paji; wishyura amafaranga agaragara igihe wishyura.",
+
+  // ── Installable app ──
+  'Install the Blue-Tech app': 'Shyira porogaramu ya Blue-Tech kuri telefone',
+  'On iPhone: tap Share, then “Add to Home Screen”.': 'Kuri iPhone: kanda Share, hanyuma “Add to Home Screen”.',
 }

@@ -1,0 +1,24 @@
+{
+  "name": "Blue-Tech — Laptops, computers & interactive screens",
+  "short_name": "Blue-Tech",
+  "description": "Laptops, computers, printers and interactive screens — delivered across Rwanda.",
+  "start_url": "/?source=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#354380",
+  "lang": "en",
+  "categories": ["shopping", "business"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/app-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Shop", "url": "/products?source=app", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "My orders", "url": "/orders?source=app", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Interactive screens", "url": "/interactive-screens?source=app", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useT } from '../../lib/i18n'
 import { Link, useNavigate } from 'react-router-dom'
-import { X, Search, User, LogOut, Heart, GitCompare, HelpCircle, Sparkles, Moon, Sun } from 'lucide-react'
+import { X, Search, User, LogOut, Heart, GitCompare, HelpCircle, Sparkles, Moon, Sun, Download } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { openLiveChat } from '../../lib/liveChat'
+import { promptInstall, useCanInstall, isIosSafari } from '../../lib/pwa'
 import CurrencySwitcher from './CurrencySwitcher'
 import LanguageSwitcher from './LanguageSwitcher'
 import { useUI } from '../../context/UIContext'
@@ -26,6 +28,8 @@ export default function MobileNav() {
   const { user, logout, isAdmin } = useAuth()
   const navigate         = useNavigate()
   const { theme, toggleTheme } = useTheme()
+  const canInstall = useCanInstall()
+  const [showIosHint, setShowIosHint] = useState(false)
 
   const close = () => setMobileNavOpen(false)
 
@@ -111,6 +115,15 @@ export default function MobileNav() {
               </button>
               <div className="mnav-chip" style={{ justifyContent: 'space-between' }}>{t('Currency')} <CurrencySwitcher /></div>
               <div className="mnav-chip" style={{ justifyContent: 'space-between', gridColumn: '1 / -1' }}>{t('Language')} <LanguageSwitcher full /></div>
+              {(canInstall || isIosSafari()) && (
+                <button className="mnav-chip" style={{ gridColumn: '1 / -1', justifyContent: 'center', background: 'var(--accent)', borderColor: 'var(--accent)', color: '#fff', fontWeight: 700 }}
+                  onClick={() => canInstall ? promptInstall() : setShowIosHint(v => !v)}>
+                  <Download size={15} /> {t('Install the Blue-Tech app')}
+                </button>
+              )}
+              {showIosHint && (
+                <p style={{ gridColumn: '1 / -1', fontSize: 12.5, color: 'var(--muted)', margin: 0 }}>{t('On iPhone: tap Share, then “Add to Home Screen”.')}</p>
+              )}
             </div>
 
             {/* Bottom actions */}

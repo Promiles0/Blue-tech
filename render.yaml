@@ -13,6 +13,10 @@ services:
         source: /*
         destination: /index.html
     headers:
+      # The service worker must always be re-checked, or phones keep an old copy of the app.
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
       # Safe on any site regardless of script/connect sources in use — no risk of breaking
       # Google Sign-In, Stripe Elements widgets.
       - path: /*
