@@ -18,6 +18,7 @@ import { useCurrency } from '../context/CurrencyContext'
 import ProductSpecs from '../components/site/ProductSpecs'
 import RelatedProducts from '../components/site/RelatedProducts'
 import DeliveryEstimate from '../components/site/DeliveryEstimate'
+import BackInStockForm from '../components/site/BackInStockForm'
 import { Breadcrumb, ProductActions, BuyInfo } from '../components/site/ProductExtras'
 import { usePageMeta } from '../hooks/usePageMeta'
 
@@ -292,6 +293,7 @@ export default function ProductDetail() {
               {t('Quick WhatsApp Help – About This Product')}
             </a>
 
+            {selectedVariant && stockQty === 0 && <BackInStockForm productId={product.productId ?? product.id} />}
             <ProductActions product={product} />
             <DeliveryEstimate />
             <BuyInfo product={product} />

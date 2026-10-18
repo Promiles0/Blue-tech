@@ -485,4 +485,10 @@ export default {
   // ── Installable app ──
   "Install the Blue-Tech app": "Installer l'application Blue-Tech",
   "On iPhone: tap Share, then “Add to Home Screen”.": "Sur iPhone : touchez Partager, puis « Sur l'écran d'accueil ».",
+
+  // ── Back in stock ──
+  "Notify me when it's back": "Me prévenir quand il revient",
+  "Email or phone number": "E-mail ou numéro de téléphone",
+  "Notify me": "Me prévenir",
+  "Done — we'll let you know when it's back.": "C'est noté — nous vous préviendrons dès son retour.",
 }

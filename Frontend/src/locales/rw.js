@@ -486,4 +486,10 @@ export default {
   // ── Installable app ──
   'Install the Blue-Tech app': 'Shyira porogaramu ya Blue-Tech kuri telefone',
   'On iPhone: tap Share, then “Add to Home Screen”.': 'Kuri iPhone: kanda Share, hanyuma “Add to Home Screen”.',
+
+  // ── Back in stock ──
+  "Notify me when it's back": "Mbimenyeshe nibiboneka",
+  "Email or phone number": "Email cyangwa nimero ya telefone",
+  "Notify me": "Mbimenyeshe",
+  "Done — we'll let you know when it's back.": "Byakunze — tuzakumenyesha nibiboneka.",
 }

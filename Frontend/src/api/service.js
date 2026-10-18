@@ -82,6 +82,10 @@ const apiService = {
   },
 
   // --- AI ASSISTANT ---
+  stockAlerts: {
+    create: (data) => api.post('/stock-alerts', data, { skipAuthRedirect: true }),
+  },
+
   proformas: {
     create: (data) => api.post('/proformas', data, { skipAuthRedirect: true }),
   },
@@ -171,6 +175,7 @@ const apiService = {
       getBlue: () => api.get('/admin/settings/blue'),
       saveBlue: (instructions) => api.put('/admin/settings/blue', { instructions }),
     },
+    messages: () => api.get('/admin/messages'),
     proformas: {
       getAll: () => api.get('/admin/proformas'),
       setStatus: (id, status) => api.patch(`/admin/proformas/${id}`, { status }),

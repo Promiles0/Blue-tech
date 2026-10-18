@@ -780,8 +780,147 @@ async function restoreVariantStock(variantId: number, quantity: number) {
   await adminClient.from("product_variants").update({ stock_quantity: current + quantity }).eq("id", variantId);
 }
 
-async function notifyUser(userId: string, message: string) {
+async function notifyUser(userId: string, message: string, orderId?: number | string) {
   await adminClient.from("notifications").insert({ user_id: userId, message });
+  // Same update by email / SMS / WhatsApp, for whichever providers are configured.
+  if (orderId != null) await messageOrderCustomer(Number(orderId), message);
+}
+
+// ── Customer messaging: email (Resend), SMS (Africa's Talking), WhatsApp (Meta Cloud API) ──
+// Each channel switches on by itself once its secrets are set:
+//   email:    RESEND_API_KEY (+ verified sender in RESEND_FROM)
+//   SMS:      AT_USERNAME, AT_API_KEY (+ optional AT_SENDER_ID)
+//   WhatsApp: WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_TEMPLATE (an approved template with
+//             one body variable; Meta only allows templates for business-started messages)
+// Every attempt is written to message_log so the admin can see what went out — or what
+// would have, while a channel isn't configured.
+function messagingChannels() {
+  return {
+    email: Boolean(Deno.env.get("RESEND_API_KEY")),
+    sms: Boolean(Deno.env.get("AT_USERNAME") && Deno.env.get("AT_API_KEY")),
+    whatsapp: Boolean(Deno.env.get("WHATSAPP_TOKEN") && Deno.env.get("WHATSAPP_PHONE_ID") && Deno.env.get("WHATSAPP_TEMPLATE")),
+  };
+}
+
+// Rwandan numbers in international form for SMS/WhatsApp: 0788… → +250788…
+function intlPhone(raw: unknown) {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("250") && digits.length === 12) return `+${digits}`;
+  if (digits.startsWith("0") && digits.length === 10) return `+250${digits.slice(1)}`;
+  if (digits.length === 9 && digits.startsWith("7")) return `+250${digits}`;
+  return digits.length >= 10 ? `+${digits}` : null;
+}
+
+async function logMessage(channel: string, recipient: string, kind: string, status: string, detail?: string) {
+  await adminClient.from("message_log").insert({ channel, recipient, kind, status, detail: detail?.slice(0, 500) ?? null });
+}
+
+async function sendSms(to: string, text: string) {
+  const body = new URLSearchParams({ username: Deno.env.get("AT_USERNAME")!, to, message: text });
+  const sender = Deno.env.get("AT_SENDER_ID");
+  if (sender) body.set("from", sender);
+  const res = await fetch("https://api.africastalking.com/version1/messaging", {
+    method: "POST",
+    headers: { apiKey: Deno.env.get("AT_API_KEY")!, Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  const json = await res.json().catch(() => ({}));
+  const recipient = json?.SMSMessageData?.Recipients?.[0];
+  if (!res.ok || (recipient && !/success/i.test(String(recipient.status)))) {
+    throw new Error(`SMS ${res.status}: ${recipient?.status ?? JSON.stringify(json).slice(0, 200)}`);
+  }
+}
+
+async function sendWhatsApp(to: string, text: string) {
+  const res = await fetch(`https://graph.facebook.com/v20.0/${Deno.env.get("WHATSAPP_PHONE_ID")}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${Deno.env.get("WHATSAPP_TOKEN")}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to: to.replace(/^\+/, ""),
+      type: "template",
+      template: {
+        name: Deno.env.get("WHATSAPP_TEMPLATE"),
+        language: { code: Deno.env.get("WHATSAPP_TEMPLATE_LANG") ?? "en" },
+        components: [{ type: "body", parameters: [{ type: "text", text: text.slice(0, 1000) }] }],
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`WhatsApp ${res.status}: ${(await res.text()).slice(0, 200)}`);
+}
+
+async function sendEmailMessage(to: string, subject: string, text: string) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${Deno.env.get("RESEND_API_KEY")}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: Deno.env.get("RESEND_FROM") ?? RESEND_FROM_EMAIL,
+      to,
+      subject,
+      html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#111">${escapeHtml(text).replace(/\n/g, "<br>")}<br><br>— Blue-Tech, Kigali</div>`,
+    }),
+  });
+  if (!res.ok) throw new Error(`Email ${res.status}: ${(await res.text()).slice(0, 200)}`);
+}
+
+// Send one message to a customer on every configured channel they can be reached on.
+// WhatsApp is preferred over SMS for the same phone number, so people don't get both.
+async function messageCustomer(kind: string, contact: { email?: unknown; phone?: unknown }, subject: string, text: string) {
+  const ch = messagingChannels();
+  const email = contact.email ? String(contact.email) : null;
+  const phone = intlPhone(contact.phone);
+  const jobs: Promise<void>[] = [];
+  const attempt = (channel: string, to: string, fn: () => Promise<void>) => jobs.push(
+    fn().then(() => logMessage(channel, to, kind, "sent"), (e) => logMessage(channel, to, kind, "failed", String(e?.message ?? e))),
+  );
+  if (email) {
+    if (ch.email) attempt("email", email, () => sendEmailMessage(email, subject, text));
+    else jobs.push(logMessage("email", email, kind, "skipped", "Email not configured (RESEND_API_KEY)"));
+  }
+  if (phone) {
+    if (ch.whatsapp) attempt("whatsapp", phone, () => sendWhatsApp(phone, text));
+    else if (ch.sms) attempt("sms", phone, () => sendSms(phone, text));
+    else jobs.push(logMessage("sms", phone, kind, "skipped", "SMS/WhatsApp not configured"));
+  }
+  // A messaging hiccup must never break the order flow that triggered it.
+  await Promise.allSettled(jobs);
+}
+
+async function messageOrderCustomer(orderId: number, text: string) {
+  try {
+    const { data: order } = await adminClient.from("orders").select("id,user_id,order_address_phone_number").eq("id", orderId).maybeSingle();
+    if (!order) return;
+    const customer = await adminOrderCustomer(order.user_id);
+    await messageCustomer("order_update", { email: customer.email, phone: order.order_address_phone_number ?? customer.phone },
+      `Blue-Tech order #${orderId}`, `${text}\nTrack it at https://blue-tech.onrender.com/orders/${orderId}`);
+  } catch (e) {
+    console.error("Order message failed:", e);
+  }
+}
+
+// When a product is back in stock, tell everyone waiting for it (once).
+async function sendStockAlerts(productId: number | string) {
+  try {
+    const { data: variants } = await adminClient.from("product_variants").select("stock_quantity").eq("product_id", productId);
+    const inStock = (variants ?? []).some((v) => toNumber(v.stock_quantity) > 0);
+    if (!inStock) return;
+    const { data: waiting } = await adminClient.from("stock_alerts").select("*").eq("product_id", productId).is("notified_at", null).limit(500);
+    if (!waiting?.length) return;
+    const { data: product } = await adminClient.from("products").select("name,is_active").eq("id", productId).maybeSingle();
+    if (!product || product.is_active === false) return;
+    const ch = messagingChannels();
+    for (const a of waiting) {
+      const reachable = (a.email && ch.email) || (a.phone && (ch.sms || ch.whatsapp));
+      await messageCustomer("stock_alert", { email: a.email, phone: a.phone },
+        `${product.name} is back in stock`,
+        `Good news: ${product.name} is back in stock at Blue-Tech.\nhttps://blue-tech.onrender.com/products/${productId}`);
+      // Only mark as done when a message could actually go out; otherwise keep it for later.
+      if (reachable) await adminClient.from("stock_alerts").update({ notified_at: new Date().toISOString() }).eq("id", a.id);
+    }
+  } catch (e) {
+    console.error("Stock alerts failed:", e);
+  }
 }
 
 async function checkoutOrder(user: User, body: Record<string, unknown>, request: Request) {
@@ -908,7 +1047,7 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
     const { error: clearCartError } = await adminClient.from("cart_items").delete().eq("cart_id", cartId);
     if (clearCartError) throw clearCartError;
 
-    await notifyUser(user.id, `Your order #${order.id} has been placed for ${Math.round(totalAmount).toLocaleString("en-US")} RWF.`);
+    await notifyUser(user.id, `Your order #${order.id} has been placed for ${Math.round(totalAmount).toLocaleString("en-US")} RWF.`, order.id as number);
 
     return { orderId: order.id, totalAmount, status: "PENDING" };
   } catch (error) {
@@ -982,7 +1121,7 @@ async function orderResult(order: Record<string, unknown>) {
 async function markOrderPaid(orderId: number) {
   const { data: order } = await adminClient.from("orders").update({ status: "paid" }).eq("id", orderId).select("user_id,total_amount").maybeSingle();
   if (order?.user_id) {
-    await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`);
+    await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`, orderId);
   }
 }
 
@@ -1390,7 +1529,7 @@ async function settlePayment(recordId: number, orderId: number, paid: boolean) {
   } else {
     const { data: order } = await adminClient.from("orders").select("user_id").eq("id", orderId).maybeSingle();
     if (order?.user_id) {
-      await notifyUser(order.user_id as string, `Your payment for order #${orderId} failed. Please try again.`);
+      await notifyUser(order.user_id as string, `Your payment for order #${orderId} failed. Please try again.`, orderId);
     }
   }
 }
@@ -1883,6 +2022,25 @@ async function handle(request: Request) {
     return response({ success: true, message: "Quote request received", data: quoteRequestResult(quote) }, 201, request);
   }
 
+  // "Notify me when it's back": saved now, sent when stock returns and a channel is configured.
+  if (method === "POST" && path === "/stock-alerts") {
+    await enforceRateLimit(rateLimiters?.proforma, `ip:${clientIp(request)}`, request);
+    const body = await readJson(request);
+    const productId = Number(body.productId);
+    const email = String(body.email ?? "").trim().toLowerCase().slice(0, 160) || null;
+    const phone = intlPhone(body.phone);
+    if (!Number.isFinite(productId)) return failure("Unknown product", 400, request);
+    if (!email && !phone) return failure("Enter an email or a phone number", 400, request);
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return failure("That email doesn't look right", 400, request);
+    const maybeUser = await getAuthUser(request).catch(() => null);
+    const { error } = await adminClient.from("stock_alerts").insert({
+      product_id: productId, email, phone, lang: String(body.lang ?? "en").slice(0, 2), user_id: maybeUser?.id ?? null,
+    });
+    // A duplicate request for the same product and contact is fine — they're already on the list.
+    if (error && !/duplicate key/i.test(error.message)) return failure(error.message, 400, request);
+    return success("We'll let you know", { ok: true }, request);
+  }
+
   // Proforma invoice from a cart: prices come from the database, never the client.
   if (method === "POST" && path === "/proformas") {
     await enforceRateLimit(rateLimiters?.proforma, `ip:${clientIp(request)}`, request);
@@ -2099,6 +2257,7 @@ async function handle(request: Request) {
       })));
       if (error) return failure(error.message, 400);
     }
+    if (method !== "POST") await sendStockAlerts(product.id as number);
     return success(method === "POST" ? "Product created successfully" : "Product updated successfully", await productResult(product, { admin: true }));
   }
 
@@ -2528,7 +2687,7 @@ async function handle(request: Request) {
       if (data.user_id) {
         await notifyUser(data.user_id as string, status === "delivered"
           ? `Your order #${orderId} has been marked as delivered! Click here to review your items.`
-          : `Your order #${orderId} status is now ${statusKey(status)}`);
+          : `Your order #${orderId} status is now ${statusKey(status)}`, orderId);
       }
       return success("Status updated", await adminOrderDetailResult(data), request);
     }
@@ -2546,7 +2705,7 @@ async function handle(request: Request) {
       const { data: updated, error: updateError } = await adminClient.from("orders").update({ status: "paid" }).eq("id", orderId).select().maybeSingle();
       if (updateError) return failure(updateError.message, 400, request);
       if (order.user_id) {
-        await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`);
+        await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`, orderId);
       }
       return success("Order marked as paid", await adminOrderDetailResult(updated), request);
     }
@@ -2565,7 +2724,7 @@ async function handle(request: Request) {
       const { data: updated, error: updateError } = await adminClient.from("orders").update({ status: "shipped" }).eq("id", orderId).select().maybeSingle();
       if (updateError) return failure(updateError.message, 400, request);
       if (order.user_id) {
-        await notifyUser(order.user_id as string, `Your order #${orderId} status is now SHIPPED`);
+        await notifyUser(order.user_id as string, `Your order #${orderId} has been shipped${body.carrier ? ` with ${body.carrier}` : ""}${body.trackingNumber ? ` (tracking ${body.trackingNumber})` : ""}.`, orderId);
       }
       return success("Shipment created", await adminOrderDetailResult(updated), request);
     }
@@ -2727,9 +2886,10 @@ async function handle(request: Request) {
     const body = await readJson(request);
     const stock = Number(body.stockQuantity);
     if (!Number.isInteger(stock) || stock < 0 || stock > 100000) return failure("Stock must be a whole number of 0 or more", 400, request);
-    const { data, error } = await adminClient.from("product_variants").update({ stock_quantity: stock }).eq("id", variantId).select("id,stock_quantity").maybeSingle();
+    const { data, error } = await adminClient.from("product_variants").update({ stock_quantity: stock }).eq("id", variantId).select("id,product_id,stock_quantity").maybeSingle();
     if (error) return failure(error.message, 400, request);
     if (!data) return failure("Variant not found", 404, request);
+    if (stock > 0) await sendStockAlerts(data.product_id as number);
     return success("Stock updated", { variantId: data.id, stockQuantity: data.stock_quantity }, request);
   }
 
@@ -2807,6 +2967,25 @@ async function handle(request: Request) {
       blueInstructionsCache = null;
       return success("Blue settings saved", { instructions }, request);
     }
+  }
+
+  if (method === "GET" && path === "/admin/messages") {
+    await requireAdmin(request, user);
+    const [{ data: log }, { data: alerts }] = await Promise.all([
+      adminClient.from("message_log").select("*").order("created_at", { ascending: false }).limit(150),
+      adminClient.from("stock_alerts").select("*, products(name)").is("notified_at", null).order("created_at", { ascending: false }).limit(500),
+    ]);
+    const byProduct = new Map<string, { productId: unknown; name: string; contacts: unknown[] }>();
+    for (const a of (alerts ?? []) as Record<string, unknown>[]) {
+      const key = String(a.product_id);
+      if (!byProduct.has(key)) byProduct.set(key, { productId: a.product_id, name: String((a.products as Record<string, unknown> | null)?.name ?? `#${key}`), contacts: [] });
+      byProduct.get(key)!.contacts.push({ email: a.email, phone: a.phone, createdAt: a.created_at });
+    }
+    return success("Messages", {
+      channels: messagingChannels(),
+      log: (log ?? []).map((r) => ({ channel: r.channel, recipient: r.recipient, kind: r.kind, status: r.status, detail: r.detail, createdAt: r.created_at })),
+      waitingAlerts: [...byProduct.values()],
+    }, request);
   }
 
   if (method === "PUT" && (path === "/admin/settings/delivery" || path === "/admin/settings/business")) {

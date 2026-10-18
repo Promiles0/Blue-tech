@@ -3,7 +3,7 @@ import { Toaster } from 'sonner'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Truck, Users, MessageSquare, BarChart3, ScrollText,
-  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt,
+  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
@@ -29,6 +29,7 @@ const NAV = [
   { to: '/admin/blue',         label: 'Blue AI',      icon: Sparkles },
   { to: '/admin/audit',          label: 'Audit Log',      icon: ScrollText },
   { to: '/admin/notifications',  label: 'Notifications',  icon: Bell },
+  { to: '/admin/messages',       label: 'Messages',       icon: Send },
 ]
 
 export default function AdminLayout() {
