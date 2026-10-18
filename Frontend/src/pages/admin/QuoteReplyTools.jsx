@@ -17,9 +17,10 @@ const linkBtn = {
   border: '1px solid var(--admin-border)', background: 'transparent', color: 'var(--text)', textDecoration: 'none', cursor: 'pointer',
 }
 
-export function QuoteReplyButtons({ q }) {
-  const subject = `Your interactive screen quote — ${q.screenSize} × ${q.quantity}`
-  const greeting = `Hello ${q.name},\n\nThank you for your request for ${q.quantity} × ${q.screenSize} interactive screen${q.quantity > 1 ? 's' : ''}${q.organization ? ` for ${q.organization}` : ''}.\n\n`
+// Defaults are worded for interactive-screen quotes; other leads pass their own subject/intro.
+export function QuoteReplyButtons({ q, subject: subjectOverride, intro }) {
+  const subject = subjectOverride ?? `Your interactive screen quote — ${q.screenSize} × ${q.quantity}`
+  const greeting = `Hello ${q.name},\n\n${intro ?? `Thank you for your request for ${q.quantity} × ${q.screenSize} interactive screen${q.quantity > 1 ? 's' : ''}${q.organization ? ` for ${q.organization}` : ''}.`}\n\n`
   const wa = `https://wa.me/${waNumber(q.phone)}?text=${encodeURIComponent(`${greeting}This is Blue-Tech. `)}`
   const mail = `mailto:${q.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`${greeting}\n\nBest regards,\nBlue-Tech`)}`
   return (

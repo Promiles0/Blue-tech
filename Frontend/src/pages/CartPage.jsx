@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag, Shield, Truck, Headphones } from 'lucide-react'
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag, Shield, Truck, Headphones, FileText } from 'lucide-react'
+import ProformaModal from '../components/site/ProformaModal'
 import { useCart } from '../context/CartContext'
 import CouponInput from '../components/site/CouponInput'
 import { useState } from 'react'
@@ -10,6 +11,7 @@ export default function Cart() {
   const { formatPrice } = useCurrency()
   const { items, count, total, updateQuantity, removeFromCart, clearCart } = useCart()
   const navigate = useNavigate()
+  const [proformaOpen, setProformaOpen] = useState(false)
 
   if (items.length === 0) return (
     <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, padding: 24 }}>
@@ -109,6 +111,15 @@ export default function Cart() {
               Checkout <ArrowRight size={16} />
             </button>
 
+            <button
+              onClick={() => setProformaOpen(true)}
+              className="noir-btn-outline"
+              style={{ width: '100%', padding: '11px', fontSize: 13.5, marginTop: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+            >
+              <FileText size={15} /> Get a proforma invoice
+            </button>
+            <p style={{ fontSize: 11.5, color: 'var(--text-muted)', textAlign: 'center', marginTop: 6 }}>For schools, companies and tenders — free PDF, no payment.</p>
+
             <Link
               to="/products"
               style={{ display: 'block', textAlign: 'center', marginTop: 14, fontSize: 13, color: 'var(--text-muted)', transition: 'color 0.2s' }}
@@ -120,6 +131,7 @@ export default function Cart() {
           </div>
         </div>
       </div>
+      <ProformaModal open={proformaOpen} onClose={() => setProformaOpen(false)} items={items} />
     </div>
   )
 }

@@ -7,6 +7,7 @@ import api from '../api/axios'
 import { toast } from 'sonner'
 import { useCurrency } from '../context/CurrencyContext'
 import { StarInput } from '../components/site/StarRating'
+import InvoiceButton from '../components/site/InvoiceButton'
 
 const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
 
@@ -156,6 +157,7 @@ export default function OrderDetailPage() {
               )}
               <span style={{ fontSize: 24, fontWeight: 900, color: 'var(--price-color, #f59e0b)' }}>{formatPrice(order.totalAmount)}</span>
               <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Items: {order.items?.length ?? 0}</p>
+              <InvoiceButton order={order} />
             </div>
           </div>
 
