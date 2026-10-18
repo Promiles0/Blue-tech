@@ -86,6 +86,16 @@ const apiService = {
     uploadPhoto: (formData) => api.post('/reviews/photos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   },
 
+  programs: {
+    tradeIn: (data) => api.post('/trade-ins', data, { skipAuthRedirect: true }),
+    instalments: (data) => api.post('/instalments', data, { skipAuthRedirect: true }),
+  },
+
+  rewards: {
+    get: () => api.get('/me/rewards'),
+    studentRequest: (data) => api.post('/me/student-request', data),
+  },
+
   stockAlerts: {
     create: (data) => api.post('/stock-alerts', data, { skipAuthRedirect: true }),
   },
@@ -180,6 +190,11 @@ const apiService = {
       saveBlue: (instructions) => api.put('/admin/settings/blue', { instructions }),
     },
     messages: () => api.get('/admin/messages'),
+    programs: {
+      requests: () => api.get('/admin/programs'),
+      setStatus: (kind, id, status) => api.patch(`/admin/programs/${kind}/${id}`, { status }),
+      saveSettings: (programs) => api.put('/admin/settings/programs', programs),
+    },
     proformas: {
       getAll: () => api.get('/admin/proformas'),
       setStatus: (id, status) => api.patch(`/admin/proformas/${id}`, { status }),

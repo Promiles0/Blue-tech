@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useT } from '../lib/i18n'
 import { useStoreSettings, deliveryWindow, formatWindow } from "../lib/delivery";
+import { usePrograms, useRewards } from "../lib/programs";
 import RwandaAddressFields from "../components/site/RwandaAddressFields";
 import { EMPTY_RW_ADDRESS, addressStreet } from "../lib/rwandaAddress";
 import { useNavigate, Link } from "react-router-dom";
@@ -100,7 +101,17 @@ function CheckoutForm() {
   const deliveryDistrict = showNewAddressForm
     ? newAddress.city
     : addresses.find((a) => a.addressId === selectedAddressId)?.city ?? "";
-  const total = Math.max(0, subtotal - safeDiscount + shippingFee);
+  // Same order as the API: coupon, then student discount, then points (capped).
+  const programs = usePrograms();
+  const { data: rewards } = useRewards(Boolean(programs?.loyalty?.enabled || programs?.student?.enabled));
+  const [usePoints, setUsePoints] = useState(false);
+  const studentDiscount = programs?.student?.enabled && rewards?.studentActive ? Math.round(subtotal * programs.student.percent / 100) : 0;
+  const pointValue = programs?.loyalty?.pointValue ?? 0;
+  const pointsAvailable = programs?.loyalty?.enabled && pointValue > 0 ? (rewards?.points ?? 0) : 0;
+  const pointsDiscount = usePoints && pointsAvailable > 0
+    ? Math.floor(Math.min(pointsAvailable * pointValue, subtotal * programs.loyalty.maxRedeemPercent / 100, Math.max(0, subtotal - safeDiscount - studentDiscount)) / pointValue) * pointValue
+    : 0;
+  const total = Math.max(0, subtotal - safeDiscount - studentDiscount - pointsDiscount + shippingFee);
 
   const buildPayload = () => {
     if (showNewAddressForm) {
@@ -109,7 +120,7 @@ function CheckoutForm() {
         return null;
       }
       const { landmark, ...rest } = newAddress; // eslint-disable-line no-unused-vars
-      return { ...rest, street: addressStreet(newAddress), shippingMethod, paymentMethod, couponCode: coupon?.code ?? null };
+      return { ...rest, street: addressStreet(newAddress), shippingMethod, paymentMethod, couponCode: coupon?.code ?? null, usePoints };
     }
     const addr = addresses.find((a) => a.addressId === selectedAddressId);
     if (!addr) { t_err("Select a delivery address"); return null; }
@@ -117,7 +128,7 @@ function CheckoutForm() {
       street: addressStreet({ street: addr.streetAddress, landmark: addr.landmarks }), city: addr.city,
       state: addr.state ?? "", zipCode: addr.zipCode ?? "",
       country: addr.country, phone: addr.phoneNumber,
-      shippingMethod, paymentMethod, couponCode: coupon?.code ?? null,
+      shippingMethod, paymentMethod, couponCode: coupon?.code ?? null, usePoints,
     };
   };
 
@@ -442,9 +453,22 @@ function CheckoutForm() {
                     <span style={{ color: "var(--brand)" }}>-{formatPrice(safeDiscount)}</span>
                   </div>
                 )}
+                {studentDiscount > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
+                    <span style={{ color: "var(--text-secondary)" }}>{t("Student discount")}</span>
+                    <span style={{ color: "var(--brand)" }}>-{formatPrice(studentDiscount)}</span>
+                  </div>
+                )}
+                {pointsAvailable > 0 && (
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, marginBottom: 8, cursor: "pointer", color: "var(--text-secondary)" }}>
+                    <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} />
+                    {t("Use my points ({n} available)", { n: pointsAvailable })}
+                    {pointsDiscount > 0 && <span style={{ marginLeft: "auto", color: "var(--brand)" }}>-{formatPrice(pointsDiscount)}</span>}
+                  </label>
+                )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 12 }}>
                   <span style={{ color: "var(--text-secondary)" }}>{t("Delivery")}</span>
-                  <span style={{ color: "var(--text-primary)" }}>{shippingFee > 0 ? formatPrice(shippingFee) : "FREE"}</span>
+                  <span style={{ color: "var(--text-primary)" }}>{shippingFee > 0 ? formatPrice(shippingFee) : t("Free")}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, borderTop: "1px dashed var(--card-border)", paddingTop: 12 }}>
                   <span style={{ color: "var(--text-primary)" }}>{t("Total")}</span>

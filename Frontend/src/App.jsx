@@ -50,6 +50,7 @@ const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'))
 const AdminBlue = lazy(() => import('./pages/admin/AdminBlue'))
 const AdminProformas = lazy(() => import('./pages/admin/AdminProformas'))
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'))
+const AdminPrograms = lazy(() => import('./pages/admin/AdminPrograms'))
 
 function PageFallback() {
   return (
@@ -174,6 +175,7 @@ function AdminSection() {
         <Route path="blue"           element={<AdminBlue />} />
         <Route path="proformas"      element={<AdminProformas />} />
         <Route path="messages"       element={<AdminMessages />} />
+        <Route path="programs"       element={<AdminPrograms />} />
       </Route>
     </Routes></Suspense>
   )

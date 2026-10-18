@@ -19,6 +19,7 @@ import ProductSpecs from '../components/site/ProductSpecs'
 import RelatedProducts from '../components/site/RelatedProducts'
 import DeliveryEstimate from '../components/site/DeliveryEstimate'
 import BackInStockForm from '../components/site/BackInStockForm'
+import InstalmentsButton from '../components/site/InstalmentsButton'
 import { Breadcrumb, ProductActions, BuyInfo } from '../components/site/ProductExtras'
 import { usePageMeta } from '../hooks/usePageMeta'
 
@@ -294,6 +295,7 @@ export default function ProductDetail() {
             </a>
 
             {selectedVariant && stockQty === 0 && <BackInStockForm productId={product.productId ?? product.id} />}
+            {stockQty > 0 && <InstalmentsButton product={product} />}
             <ProductActions product={product} />
             <DeliveryEstimate />
             <BuyInfo product={product} />

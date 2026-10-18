@@ -3,7 +3,7 @@ import { Toaster } from 'sonner'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Truck, Users, MessageSquare, BarChart3, ScrollText,
-  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send,
+  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send, Gift,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
@@ -23,6 +23,7 @@ const NAV = [
   { to: '/admin/users',      label: 'Users',       icon: Users },
   { to: '/admin/reviews',    label: 'Reviews',     icon: MessageSquare, badge: 'newReviews7d' },
   { to: '/admin/coupons',      label: 'Coupons',      icon: Tag },
+  { to: '/admin/programs',     label: 'Programs',     icon: Gift },
   { to: '/admin/hero-slides',  label: 'Hero Slides',  icon: Image },
   { to: '/admin/settings',     label: 'Settings',     icon: Settings },
   { to: '/admin/analytics',    label: 'Analytics',    icon: BarChart3 },

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useCurrency } from '../context/CurrencyContext'
+import RewardsCard from '../components/site/RewardsCard'
 import { LANGUAGES, useT } from '../lib/i18n'
 import { openLiveChat } from '../lib/liveChat'
 import { WHATSAPP_NUMBER } from '../lib/helpLinks'
@@ -137,6 +138,8 @@ export default function Account() {
         </motion.div>
 
         {/* ── Section 1: Account Details ── */}
+        <RewardsCard />
+
         <Section title={t('Account details')} delay={0.05}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>

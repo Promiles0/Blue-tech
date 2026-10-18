@@ -327,6 +327,98 @@ function cleanBusinessInfo(body: Record<string, unknown>) {
   };
 }
 
+// ── Programs (trade-in, instalments, loyalty, student) — site_settings.programs, all off by default ──
+const DEFAULT_PROGRAMS = {
+  tradeIn: { enabled: false, baseValues: {} as Record<string, number> },
+  instalments: { enabled: false, depositPercent: 30, months: [3, 6], feePercent: 0, minPrice: 300000 },
+  loyalty: { enabled: false, pointsPer1000: 1, pointValue: 10, maxRedeemPercent: 10 },
+  student: { enabled: false, percent: 5 },
+};
+const TRADE_IN_TYPES = ["laptop", "desktop", "phone", "tablet", "monitor", "printer"];
+
+async function programsSetting() {
+  const raw = await jsonSetting("programs", {} as Record<string, unknown>);
+  return cleanPrograms(raw);
+}
+
+function cleanPrograms(b: Record<string, unknown>) {
+  const num = (v: unknown, def: number, min: number, max: number) => {
+    const n = Number(v); return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : def;
+  };
+  const t = (b.tradeIn ?? {}) as Record<string, unknown>;
+  const i = (b.instalments ?? {}) as Record<string, unknown>;
+  const l = (b.loyalty ?? {}) as Record<string, unknown>;
+  const st = (b.student ?? {}) as Record<string, unknown>;
+  const baseValues: Record<string, number> = {};
+  for (const type of TRADE_IN_TYPES) {
+    const v = Number((t.baseValues as Record<string, unknown> | undefined)?.[type]);
+    if (Number.isFinite(v) && v > 0) baseValues[type] = Math.round(v);
+  }
+  const months = (Array.isArray(i.months) ? i.months : DEFAULT_PROGRAMS.instalments.months)
+    .map(Number).filter((m) => Number.isInteger(m) && m >= 2 && m <= 24).slice(0, 4);
+  return {
+    tradeIn: { enabled: Boolean(t.enabled), baseValues },
+    instalments: {
+      enabled: Boolean(i.enabled),
+      depositPercent: num(i.depositPercent, 30, 0, 90),
+      months: months.length ? months : [3, 6],
+      feePercent: num(i.feePercent, 0, 0, 50),
+      minPrice: num(i.minPrice, 300000, 0, 1e9),
+    },
+    loyalty: {
+      enabled: Boolean(l.enabled),
+      pointsPer1000: num(l.pointsPer1000, 1, 0, 100),
+      pointValue: num(l.pointValue, 10, 0, 10000),
+      maxRedeemPercent: num(l.maxRedeemPercent, 10, 0, 100),
+    },
+    student: { enabled: Boolean(st.enabled), percent: num(st.percent, 5, 0, 50) },
+  };
+}
+
+// Base value = a one-year-old device in good condition; older or worse ones are worth less.
+const CONDITION_FACTOR: Record<string, number> = { excellent: 1.1, good: 1, fair: 0.7, broken: 0.25 };
+function tradeInEstimate(programs: ReturnType<typeof cleanPrograms>, type: string, ageYears: number, condition: string) {
+  const base = programs.tradeIn.baseValues[type];
+  if (!base) return null;
+  const ageFactor = Math.max(0.2, 1 - 0.18 * Math.max(0, ageYears - 1));
+  const mid = base * ageFactor * (CONDITION_FACTOR[condition] ?? 1);
+  const round = (n: number) => Math.round(n / 5000) * 5000;
+  return { low: round(mid * 0.85), high: round(mid * 1.15) };
+}
+
+function instalmentPlan(programs: ReturnType<typeof cleanPrograms>, price: number, months: number) {
+  const p = programs.instalments;
+  const total = price * (1 + p.feePercent / 100);
+  const deposit = Math.round(total * p.depositPercent / 100);
+  const monthly = Math.ceil((total - deposit) / months);
+  return { total: Math.round(total), deposit, monthly };
+}
+
+async function awardOrderPoints(orderId: number | string) {
+  try {
+    const programs = await programsSetting();
+    if (!programs.loyalty.enabled || programs.loyalty.pointsPer1000 <= 0) return;
+    // Claim the order first so a retried webhook can't award twice.
+    const { data: order } = await adminClient.from("orders").update({ points_awarded: true })
+      .eq("id", orderId).eq("points_awarded", false).select("user_id,total_amount").maybeSingle();
+    if (!order?.user_id) return;
+    const points = Math.floor(toNumber(order.total_amount) / 1000 * programs.loyalty.pointsPer1000);
+    if (points <= 0) return;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data: u } = await adminClient.from("users").select("loyalty_points").eq("id", order.user_id).maybeSingle();
+      const current = toNumber(u?.loyalty_points);
+      const { data: ok } = await adminClient.from("users").update({ loyalty_points: current + points })
+        .eq("id", order.user_id).eq("loyalty_points", current).select("id").maybeSingle();
+      if (ok) {
+        await adminClient.from("points_ledger").insert({ user_id: order.user_id, order_id: orderId, delta: points, reason: "earned" });
+        return;
+      }
+    }
+  } catch (e) {
+    console.error("Awarding points failed:", e);
+  }
+}
+
 // VAT split for a gross line total, depending on how the shop prices.
 function vatSplit(amount: number, mode: string, rate: number) {
   if (mode === "included") { const vat = amount - amount / (1 + rate / 100); return { subtotal: amount - vat, vat, total: amount }; }
@@ -983,6 +1075,7 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
   const reduced: { variantId: number; quantity: number }[] = [];
   let itemsTotal = 0;
 
+  let pointsSpent = 0;
   try {
     for (const cartItem of cartItems as Record<string, unknown>[]) {
       const variant = (cartItem.product_variants ?? {}) as Record<string, unknown>;
@@ -1039,9 +1132,39 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
       if (!couponUpdated) throw new Error("Coupon could not be applied — please try again");
     }
 
+    // Student discount (verified students) and loyalty points — both off unless enabled in Programs.
+    const programs = await programsSetting();
+    let studentDiscount = 0;
+    let pointsDiscount = 0;
+    if (programs.student.enabled || (programs.loyalty.enabled && body.usePoints)) {
+      const { data: buyer } = await adminClient.from("users").select("loyalty_points,student_verified_until").eq("id", user.id).maybeSingle();
+      const today = new Date().toISOString().slice(0, 10);
+      if (programs.student.enabled && buyer?.student_verified_until && String(buyer.student_verified_until) >= today) {
+        studentDiscount = Math.round(itemsTotal * programs.student.percent / 100);
+        totalAmount = Math.max(0, totalAmount - studentDiscount);
+      }
+      if (programs.loyalty.enabled && body.usePoints && programs.loyalty.pointValue > 0) {
+        const balance = toNumber(buyer?.loyalty_points);
+        const cap = itemsTotal * programs.loyalty.maxRedeemPercent / 100;
+        const pointsToUse = Math.floor(Math.min(balance * programs.loyalty.pointValue, cap, totalAmount) / programs.loyalty.pointValue);
+        if (pointsToUse > 0) {
+          const { data: deducted } = await adminClient.from("users").update({ loyalty_points: balance - pointsToUse })
+            .eq("id", user.id).eq("loyalty_points", balance).select("id").maybeSingle();
+          if (!deducted) throw new Error("Your points balance changed — please try again");
+          pointsSpent = pointsToUse;
+          pointsDiscount = pointsToUse * programs.loyalty.pointValue;
+          totalAmount = Math.max(0, totalAmount - pointsDiscount);
+          await adminClient.from("points_ledger").insert({ user_id: user.id, order_id: order.id, delta: -pointsToUse, reason: "redeemed" });
+        }
+      }
+    }
+
     totalAmount = Number((totalAmount + shippingFee).toFixed(2));
 
-    const { error: updateError } = await adminClient.from("orders").update({ total_amount: totalAmount, ordered_at: new Date().toISOString() }).eq("id", order.id);
+    const { error: updateError } = await adminClient.from("orders").update({
+      total_amount: totalAmount, ordered_at: new Date().toISOString(),
+      student_discount: studentDiscount, points_used: pointsSpent, points_discount: pointsDiscount,
+    }).eq("id", order.id);
     if (updateError) throw updateError;
 
     const { error: clearCartError } = await adminClient.from("cart_items").delete().eq("cart_id", cartId);
@@ -1051,6 +1174,12 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
 
     return { orderId: order.id, totalAmount, status: "PENDING" };
   } catch (error) {
+    if (pointsSpent > 0) {
+      // Give back points spent on an order that didn't go through.
+      const { data: u } = await adminClient.from("users").select("loyalty_points").eq("id", user.id).maybeSingle();
+      await adminClient.from("users").update({ loyalty_points: toNumber(u?.loyalty_points) + pointsSpent }).eq("id", user.id);
+      await adminClient.from("points_ledger").delete().eq("order_id", order.id).eq("reason", "redeemed");
+    }
     for (const item of reduced) await restoreVariantStock(item.variantId, item.quantity);
     await adminClient.from("order_items").delete().eq("order_id", order.id);
     await adminClient.from("orders").delete().eq("id", order.id);
@@ -1120,6 +1249,7 @@ async function orderResult(order: Record<string, unknown>) {
 
 async function markOrderPaid(orderId: number) {
   const { data: order } = await adminClient.from("orders").update({ status: "paid" }).eq("id", orderId).select("user_id,total_amount").maybeSingle();
+  await awardOrderPoints(orderId);
   if (order?.user_id) {
     await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`, orderId);
   }
@@ -1938,6 +2068,7 @@ async function handle(request: Request) {
       usdToRwfRate: Number(settings[RWF_RATE_KEY]) || RWF_RATE_FALLBACK,
       deliveryConfig: (() => { try { return { ...DEFAULT_DELIVERY, ...JSON.parse(String(settings.delivery_config ?? "{}")) }; } catch { return DEFAULT_DELIVERY; } })(),
       businessInfo: (() => { try { return { ...DEFAULT_BUSINESS, ...JSON.parse(String(settings.business_info ?? "{}")) }; } catch { return DEFAULT_BUSINESS; } })(),
+      programs: (() => { try { return cleanPrograms(JSON.parse(String(settings.programs ?? "{}"))); } catch { return cleanPrograms({}); } })(),
     });
   }
 
@@ -2050,6 +2181,56 @@ async function handle(request: Request) {
     }
 
     return response({ success: true, message: "Quote request received", data: quoteRequestResult(quote) }, 201, request);
+  }
+
+  // Trade-in request; the estimate is computed here from the admin's values, never trusted from the client.
+  if (method === "POST" && path === "/trade-ins") {
+    await enforceRateLimit(rateLimiters?.quoteRequest, `ip:${clientIp(request)}`, request);
+    const programs = await programsSetting();
+    const b = await readJson(request);
+    const name = String(b.name ?? "").trim().slice(0, 120);
+    const phone = String(b.phone ?? "").trim().slice(0, 40);
+    const type = String(b.deviceType ?? "");
+    const condition = String(b.condition ?? "");
+    const age = Math.min(Math.max(Math.round(Number(b.ageYears) || 0), 0), 20);
+    if (!name || !phone) return failure("Name and phone are required", 400, request);
+    if (!TRADE_IN_TYPES.includes(type)) return failure("Choose a device type", 400, request);
+    if (!(condition in CONDITION_FACTOR)) return failure("Choose the condition", 400, request);
+    const estimate = programs.tradeIn.enabled ? tradeInEstimate(programs, type, age, condition) : null;
+    const maybeUser = await getAuthUser(request).catch(() => null);
+    const { error } = await adminClient.from("trade_in_requests").insert({
+      user_id: maybeUser?.id ?? null, name, phone, email: String(b.email ?? "").slice(0, 160) || null,
+      device_type: type, brand: String(b.brand ?? "").slice(0, 60) || null, model: String(b.model ?? "").slice(0, 120) || null,
+      age_years: age, condition, estimate_low: estimate?.low ?? null, estimate_high: estimate?.high ?? null,
+      notes: String(b.notes ?? "").slice(0, 1000) || null,
+    });
+    if (error) return failure(error.message, 400, request);
+    return success("Trade-in request received", { estimate }, request);
+  }
+
+  if (method === "POST" && path === "/instalments") {
+    await enforceRateLimit(rateLimiters?.quoteRequest, `ip:${clientIp(request)}`, request);
+    const programs = await programsSetting();
+    if (!programs.instalments.enabled) return failure("Instalments aren't available right now", 400, request);
+    const b = await readJson(request);
+    const name = String(b.name ?? "").trim().slice(0, 120);
+    const phone = String(b.phone ?? "").trim().slice(0, 40);
+    const months = Number(b.months);
+    if (!name || !phone) return failure("Name and phone are required", 400, request);
+    if (!programs.instalments.months.includes(months)) return failure("Choose a payment period", 400, request);
+    const { data: product } = await adminClient.from("products").select("id,name,price,is_active").eq("id", Number(b.productId)).maybeSingle();
+    if (!product || product.is_active === false) return failure("Product not available", 400, request);
+    const price = toNumber(product.price);
+    if (price < programs.instalments.minPrice) return failure("This product isn't eligible for instalments", 400, request);
+    const plan = instalmentPlan(programs, price, months);
+    const maybeUser = await getAuthUser(request).catch(() => null);
+    const { error } = await adminClient.from("instalment_requests").insert({
+      user_id: maybeUser?.id ?? null, name, phone, email: String(b.email ?? "").slice(0, 160) || null,
+      product_id: product.id, product_name: product.name, price: plan.total, months, deposit: plan.deposit, monthly: plan.monthly,
+      notes: String(b.notes ?? "").slice(0, 1000) || null,
+    });
+    if (error) return failure(error.message, 400, request);
+    return success("Instalment request received", plan, request);
   }
 
   // "Notify me when it's back": saved now, sent when stock returns and a channel is configured.
@@ -2289,6 +2470,36 @@ async function handle(request: Request) {
     }
     if (method !== "POST") await sendStockAlerts(product.id as number);
     return success(method === "POST" ? "Product created successfully" : "Product updated successfully", await productResult(product, { admin: true }));
+  }
+
+  if (method === "GET" && path === "/me/rewards") {
+    const [{ data: u }, { data: ledger }, { data: req }] = await Promise.all([
+      adminClient.from("users").select("loyalty_points,student_verified_until").eq("id", user.id).maybeSingle(),
+      adminClient.from("points_ledger").select("delta,reason,order_id,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+      adminClient.from("student_requests").select("status,school,created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1),
+    ]);
+    const today = new Date().toISOString().slice(0, 10);
+    return success("Rewards", {
+      points: toNumber(u?.loyalty_points),
+      studentVerifiedUntil: u?.student_verified_until ?? null,
+      studentActive: Boolean(u?.student_verified_until && String(u.student_verified_until) >= today),
+      studentRequest: req?.[0] ?? null,
+      ledger: ledger ?? [],
+    }, request);
+  }
+
+  if (method === "POST" && path === "/me/student-request") {
+    const programs = await programsSetting();
+    if (!programs.student.enabled) return failure("The student discount isn't available right now", 400, request);
+    const b = await readJson(request);
+    const school = String(b.school ?? "").trim().slice(0, 160);
+    const schoolEmail = String(b.schoolEmail ?? "").trim().toLowerCase().slice(0, 160);
+    if (!school || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(schoolEmail)) return failure("Enter your school and school email", 400, request);
+    const { data: pending } = await adminClient.from("student_requests").select("id").eq("user_id", user.id).eq("status", "new").maybeSingle();
+    if (pending) return failure("Your request is already being reviewed", 400, request);
+    const { error } = await adminClient.from("student_requests").insert({ user_id: user.id, school, school_email: schoolEmail });
+    if (error) return failure(error.message, 400, request);
+    return success("Student request received", { ok: true }, request);
   }
 
   if (method === "POST" && path === "/reviews/photos") {
@@ -2761,6 +2972,7 @@ async function handle(request: Request) {
       if (paymentError) return failure(paymentError.message, 400, request);
       const { data: updated, error: updateError } = await adminClient.from("orders").update({ status: "paid" }).eq("id", orderId).select().maybeSingle();
       if (updateError) return failure(updateError.message, 400, request);
+      await awardOrderPoints(orderId);
       if (order.user_id) {
         await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`, orderId);
       }
@@ -3045,6 +3257,43 @@ async function handle(request: Request) {
     }, request);
   }
 
+  if (method === "PUT" && path === "/admin/settings/programs") {
+    await requireAdmin(request, user);
+    const value = cleanPrograms(await readJson(request));
+    const { error } = await saveJsonSetting("programs", value);
+    if (error) return failure(error.message, 400, request);
+    return success("Programs saved", value, request);
+  }
+
+  // Requests from the programs, for follow-up.
+  if (method === "GET" && path === "/admin/programs") {
+    await requireAdmin(request, user);
+    const [tradeIns, instalments, students] = await Promise.all([
+      adminClient.from("trade_in_requests").select("*").order("created_at", { ascending: false }).limit(200),
+      adminClient.from("instalment_requests").select("*").order("created_at", { ascending: false }).limit(200),
+      adminClient.from("student_requests").select("*, users(name,email,student_verified_until)").order("created_at", { ascending: false }).limit(200),
+    ]);
+    return success("Program requests", { tradeIns: tradeIns.data ?? [], instalments: instalments.data ?? [], students: students.data ?? [] }, request);
+  }
+
+  if (method === "PATCH" && /^\/admin\/programs\/(trade-ins|instalments|students)\/[^/]+$/.test(path)) {
+    await requireAdmin(request, user);
+    const [, , , kind, id] = path.split("/");
+    const status = String((await readJson(request)).status ?? "");
+    const table = kind === "trade-ins" ? "trade_in_requests" : kind === "instalments" ? "instalment_requests" : "student_requests";
+    const allowed = kind === "trade-ins" ? ["new", "contacted", "accepted", "declined"] : kind === "instalments" ? ["new", "contacted", "approved", "declined"] : ["new", "approved", "declined"];
+    if (!allowed.includes(status)) return failure("Invalid status", 400, request);
+    const { data, error } = await adminClient.from(table).update({ status }).eq("id", id).select().maybeSingle();
+    if (error) return failure(error.message, 400, request);
+    if (!data) return failure("Request not found", 404, request);
+    // Approving a student turns the discount on for a year; declining removes it.
+    if (kind === "students") {
+      const until = status === "approved" ? new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10) : null;
+      await adminClient.from("users").update({ student_verified_until: until }).eq("id", data.user_id);
+    }
+    return success("Updated", data, request);
+  }
+
   if (method === "PUT" && (path === "/admin/settings/delivery" || path === "/admin/settings/business")) {
     await requireAdmin(request, user);
     const body = await readJson(request);
@@ -3080,7 +3329,7 @@ async function handle(request: Request) {
       const [deliveryConfig, businessInfo] = await Promise.all([
         jsonSetting("delivery_config", DEFAULT_DELIVERY), jsonSetting("business_info", DEFAULT_BUSINESS),
       ]);
-      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate(), deliveryConfig, businessInfo }, request);
+      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate(), deliveryConfig, businessInfo, programs: await programsSetting() }, request);
     }
 
     if (method === "PUT" && path === "/admin/settings/exchange-rate") {

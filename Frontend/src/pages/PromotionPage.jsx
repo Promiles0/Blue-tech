@@ -8,6 +8,7 @@ import ProductCard from '../components/ProductCard'
 import { WHATSAPP_NUMBER } from '../lib/helpLinks'
 import { openLiveChat } from '../lib/liveChat'
 import { usePageMeta } from '../hooks/usePageMeta'
+import TradeInForm from '../components/site/TradeInForm'
 
 // What each promotion page shows. Products come from the live catalogue; anything that
 // depends on terms the store sets case by case (trade-in value, care plans, student
@@ -104,6 +105,12 @@ export default function PromotionPage() {
             </div>
           </div>
         </Reveal>
+
+        {slug === 'trade-in' && (
+          <section style={{ marginTop: 40, maxWidth: 720 }}>
+            <TradeInForm />
+          </section>
+        )}
 
         {config?.category && (
           <section style={{ marginTop: 48 }}>
