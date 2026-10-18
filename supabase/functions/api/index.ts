@@ -1489,7 +1489,8 @@ function heroSlideResult(row: Record<string, unknown>) {
 function auditLogResult(row: Record<string, unknown>) {
   return {
     logId: row.id,
-    userId: row.user_id,
+    userId: row.actor_name ?? row.actor_email ?? row.user_id,
+    actorEmail: row.actor_email ?? null,
     action: row.action,
     targetTable: row.target_table,
     targetId: row.target_id,
@@ -3658,8 +3659,77 @@ async function handle(request: Request) {
   return failure(`Endpoint ${method} ${path} has not been migrated yet`, 501);
 }
 
+// ── Audit log ──
+// Every successful staff change (any admin-only write) is recorded here in one place, so a
+// new admin endpoint is covered automatically. Descriptions are written for people.
+const AUDIT_RULES: { re: RegExp; table: string; describe: (m: RegExpMatchArray, method: string, b: Record<string, unknown>) => string }[] = [
+  { re: /^\/products\/?(\d+)?$/, table: "products", describe: (m, method, b) =>
+    method === "POST" ? `Created product "${b.name ?? ""}"` : method === "DELETE" ? `Deleted product #${m[1]}`
+      : `Edited product #${m[1]}${b.name ? ` "${b.name}"` : ""}${b.price != null ? ` · price ${b.price} RWF` : ""}${b.isActive === false ? " · hidden" : b.isActive === true ? " · live" : ""}` },
+  { re: /^\/admin\/products\/bulk$/, table: "products", describe: (_m, _x, b) =>
+    `Bulk ${b.action === "category" ? `moved to category #${b.categoryId}` : b.action === "publish" ? "published" : "hid"} ${Array.isArray(b.ids) ? b.ids.length : 0} product(s)` },
+  { re: /^\/admin\/variants\/(\d+)$/, table: "product_variants", describe: (m, _x, b) => `Set stock of variant #${m[1]} to ${b.stockQuantity}` },
+  { re: /^\/products\/images\/upload$/, table: "product_images", describe: () => "Uploaded an image" },
+  { re: /^\/categories\/?(\d+)?$/, table: "categories", describe: (m, method, b) =>
+    method === "POST" ? `Created category "${b.name ?? ""}"` : method === "DELETE" ? `Deleted category #${m[1]}` : `Edited category #${m[1]}${b.name ? ` "${b.name}"` : ""}` },
+  { re: /^\/admin\/orders\/(\d+)\/status$/, table: "orders", describe: (m, _x, b) => `Changed order #${m[1]} status to ${String(b.status ?? "").toUpperCase()}` },
+  { re: /^\/admin\/orders\/(\d+)\/payments$/, table: "orders", describe: (m) => `Marked order #${m[1]} as paid` },
+  { re: /^\/admin\/orders\/(\d+)\/shipments$/, table: "shipments", describe: (m, _x, b) => `Shipped order #${m[1]}${b.carrier ? ` with ${b.carrier}` : ""}${b.trackingNumber ? ` (tracking ${b.trackingNumber})` : ""}` },
+  { re: /^\/admin\/shipments\/(\d+)$/, table: "shipments", describe: (m, _x, b) => `Updated shipment #${m[1]}${b.status ? ` → ${b.status}` : ""}` },
+  { re: /^\/admin\/users\/([^/]+)\/admin$/, table: "users", describe: (m, _x, b) => `${b.make ? "Gave" : "Removed"} admin rights ${b.make ? "to" : "from"} user ${m[1]}` },
+  { re: /^\/admin\/users\/([^/]+)\/role$/, table: "users", describe: (m, _x, b) => `Set role of user ${m[1]} to ${b.role}` },
+  { re: /^\/admin\/users\/([^/]+)\/suspend$/, table: "users", describe: (m, _x, b) => `${b.suspend ? "Suspended" : "Reactivated"} user ${m[1]}` },
+  { re: /^\/admin\/reviews\/(\d+)$/, table: "reviews", describe: (m, method, b) => method === "DELETE" ? `Deleted review #${m[1]}` : `${b.isHidden ? "Hid" : "Showed"} review #${m[1]}` },
+  { re: /^\/admin\/coupons\/?(\d+)?/, table: "coupons", describe: (m, method, b) =>
+    method === "POST" ? `Created coupon ${b.code ?? ""}` : method === "DELETE" ? `Deleted coupon #${m[1]}` : `Edited coupon #${m[1] ?? ""}${b.code ? ` ${b.code}` : ""}` },
+  { re: /^\/admin\/hero-slides\/?(\d+)?$/, table: "hero_slides", describe: (m, method, b) =>
+    method === "POST" ? `Added home banner "${b.label ?? ""}"` : method === "DELETE" ? `Deleted home banner #${m[1]}` : `Edited home banner #${m[1]}` },
+  { re: /^\/admin\/settings\/exchange-rate$/, table: "site_settings", describe: (_m, _x, b) => `Set exchange rate to ${b.usdToRwfRate} RWF per USD` },
+  { re: /^\/admin\/settings\/(delivery|business|programs|blue)$/, table: "site_settings", describe: (m) => `Changed ${({ delivery: "delivery estimates", business: "invoice business details", programs: "programs (trade-in, instalments, points, student)", blue: "Blue's store notes" } as Record<string, string>)[m[1]]}` },
+  { re: /^\/admin\/quote-requests\/(\d+)$/, table: "quote_requests", describe: (m, _x, b) => b.status ? `Quote #${m[1]} → ${b.status}` : `Edited note on quote #${m[1]}` },
+  { re: /^\/admin\/proformas\/(\d+)$/, table: "proformas", describe: (m, _x, b) => `Proforma #${m[1]} → ${b.status}` },
+  { re: /^\/admin\/programs\/([a-z-]+)\/(\d+)$/, table: "programs", describe: (m, _x, b) => `${m[1]} request #${m[2]} → ${b.status}` },
+  { re: /^\/notifications\/admin\//, table: "", describe: () => "" }, // reading notifications isn't an audit event
+];
+
+async function recordAudit(request: Request, body: Record<string, unknown>, ip: string) {
+  try {
+    const path = new URL(request.url).pathname.replace(/^\/api/, "").replace(/\/$/, "");
+    const rule = AUDIT_RULES.find((r) => r.re.test(path));
+    if (!rule || !rule.table) return;
+    const user = await getAuthUser(request).catch(() => null);
+    if (!user) return;
+    const { data: actor } = await adminClient.from("users").select("name,email,role").eq("id", user.id).maybeSingle();
+    if (!actor || !["admin", "staff", "ADMIN", "STAFF"].includes(String(actor.role))) return;
+    const m = path.match(rule.re)!;
+    await adminClient.from("audit_logs").insert({
+      action: request.method === "POST" ? "CREATE" : request.method === "DELETE" ? "DELETE" : "UPDATE",
+      target_table: rule.table,
+      target_id: m[1] ?? null,
+      description: rule.describe(m, request.method, body).slice(0, 500),
+      ip_address: ip,
+      actor_id: user.id,
+      actor_name: actor.name ?? null,
+      actor_email: actor.email ?? user.email ?? null,
+    });
+  } catch (e) {
+    console.error("audit failed:", e);
+  }
+}
+
+const AUDITED_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 Deno.serve(async (request) => {
-  try { return withCors(await handle(request), request); }
+  // Read a copy of the JSON body up front so the audit can describe the change afterwards.
+  let auditBody: Record<string, unknown> | null = null;
+  if (AUDITED_METHODS.has(request.method) && (request.headers.get("Content-Type") ?? "").includes("application/json")) {
+    auditBody = await request.clone().json().catch(() => ({}));
+  }
+  try {
+    const res = await handle(request);
+    if (AUDITED_METHODS.has(request.method) && res.status < 400) await recordAudit(request, auditBody ?? {}, clientIp(request));
+    return withCors(res, request);
+  }
   catch (error) {
     if (error instanceof Response) return withCors(error, request);
     console.error(error);
