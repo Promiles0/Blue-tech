@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Star, MessageSquare } from 'lucide-react'
+import { Star } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
 import apiService from '../../api/service'
 

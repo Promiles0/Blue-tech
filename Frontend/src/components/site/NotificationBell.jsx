@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { Bell, CheckCheck, X, Inbox, ArrowRight } from 'lucide-react'
+import { Bell, X, Inbox, ArrowRight } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNotifications } from '../../context/NotificationContext'

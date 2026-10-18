@@ -17,7 +17,7 @@ export function NotificationProvider({ children }) {
     try {
       const { data } = await api.get('/notifications/unread-count')
       setUnreadCount(data ?? 0)
-    } catch {}
+    } catch { /* non-fatal: keep the current state */ }
   }, [isAuthenticated])
 
   const fetchAdminUnreadCount = useCallback(async () => {
@@ -25,7 +25,7 @@ export function NotificationProvider({ children }) {
     try {
       const { data } = await api.get('/notifications/admin/unread-count')
       setAdminUnread(data ?? 0)
-    } catch {}
+    } catch { /* non-fatal: keep the current state */ }
   }, [isAdmin])
 
   const fetchNotifications = useCallback(async (limit = 30) => {
@@ -45,7 +45,7 @@ export function NotificationProvider({ children }) {
       await api.post('/notifications/mark-read', { ids })
       setNotifications(prev => prev.map(n => ids.includes(n.notificationId) ? { ...n, isRead: true } : n))
       setUnreadCount(prev => Math.max(0, prev - ids.length))
-    } catch {}
+    } catch { /* non-fatal: keep the current state */ }
   }, [])
 
   const markAllRead = useCallback(async () => {
@@ -53,7 +53,7 @@ export function NotificationProvider({ children }) {
       await api.post('/notifications/mark-all-read')
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
       setUnreadCount(0)
-    } catch {}
+    } catch { /* non-fatal: keep the current state */ }
   }, [])
 
   // Poll unread count every 30 seconds

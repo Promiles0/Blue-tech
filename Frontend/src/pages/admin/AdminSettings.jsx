@@ -10,7 +10,6 @@ export default function AdminSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { fetchSettings() }, [])
 
   const fetchSettings = async () => {
     setLoading(true)
@@ -24,6 +23,8 @@ export default function AdminSettings() {
       setLoading(false)
     }
   }
+
+  useEffect(() => { fetchSettings() }, [])
 
   const save = async () => {
     const parsed = Number(rate)

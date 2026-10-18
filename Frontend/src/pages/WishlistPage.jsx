@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useT } from '../lib/i18n'
 import { Link } from 'react-router-dom'
-import { Heart, ShoppingBag, Trash2, Truck, Shield, Headphones, ExternalLink } from 'lucide-react'
+import { Heart, ShoppingBag, Trash2 } from 'lucide-react'
 import apiService from '../api/service'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'

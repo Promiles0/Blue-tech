@@ -47,6 +47,8 @@ export default function CommandPalette() {
     }
   }, [paletteOpen])
 
+  const go = (id) => { navigate(`/products/${id}`); setPaletteOpen(false) }
+
   // Keyboard navigation
   useEffect(() => {
     if (!paletteOpen) return
@@ -83,7 +85,6 @@ export default function CommandPalette() {
     return () => clearTimeout(timer)
   }, [query])
 
-  const go = (id) => { navigate(`/products/${id}`); setPaletteOpen(false) }
   const goSearch = () => {
     if (query.trim()) { navigate(`/search?q=${encodeURIComponent(query.trim())}`); setPaletteOpen(false) }
   }

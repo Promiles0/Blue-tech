@@ -13,9 +13,6 @@ export default function AdminHeroSlides() {
   const emptyForm = { imageUrl: '', label: '', altText: '', sortOrder: 0, isActive: true }
   const [form, setForm] = useState(emptyForm)
 
-  useEffect(() => {
-    fetchSlides()
-  }, [])
 
   const fetchSlides = async () => {
     setLoading(true)
@@ -28,6 +25,10 @@ export default function AdminHeroSlides() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchSlides()
+  }, [])
 
   const openCreate = () => {
     setEditingId(null)

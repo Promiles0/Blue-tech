@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Eye, Download, CreditCard, Truck, X, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'
-import { money, dateShort, dateTime } from '../../lib/format'
+import { money, dateShort } from '../../lib/format'
 
 const STATUSES = ['all', 'PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
