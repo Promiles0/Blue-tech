@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link, Navigate } from 'react-router-dom'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { LayoutDashboard } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -37,7 +37,6 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'))
 const AdminCategories = lazy(() => import('./pages/admin/AdminCategories'))
 const AdminOrders = lazy(() => import('./pages/admin/AdminOrders'))
-const AdminShipments = lazy(() => import('./pages/admin/AdminShipments'))
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'))
 const AdminReviews = lazy(() => import('./pages/admin/AdminReviews'))
 const AdminQuoteRequests = lazy(() => import('./pages/admin/AdminQuoteRequests'))
@@ -162,7 +161,7 @@ function AdminSection() {
         <Route path="products"   element={<AdminProducts />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="orders"     element={<AdminOrders />} />
-        <Route path="shipments"  element={<AdminShipments />} />
+        <Route path="shipments"  element={<Navigate to="/admin/orders?filter=to-ship" replace />} />
         <Route path="users"      element={<AdminUsers />} />
         <Route path="reviews"    element={<AdminReviews />} />
         <Route path="quote-requests" element={<AdminQuoteRequests />} />

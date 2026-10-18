@@ -6,6 +6,9 @@ import apiService from '../../api/service'
 import { money, dateShort } from '../../lib/format'
 
 const STATUSES = ['all', 'PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+// "To ship" = paid or being prepared, not yet handed to a courier (replaces the old Shipments page).
+const FILTERS = ['all', 'TO_SHIP', ...STATUSES.slice(1)]
+const SHIPMENT_STATUSES = ['IN_TRANSIT', 'OUT_FOR_DELIVERY', 'DELIVERED', 'RETURNED']
 
 const STATUS_COLORS = {
   PENDING:    { bg: 'rgba(245,158,11,0.15)',  color: '#f59e0b' },
@@ -26,7 +29,7 @@ function fetchOrderDetail(id) {
 
 export default function AdminOrders() {
   const qc = useQueryClient()
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState(() => new URLSearchParams(window.location.search).get('filter') === 'to-ship' ? 'TO_SHIP' : 'all')
   const [drawerOrderId, setDrawerOrderId] = useState(null)
   const [search, setSearch] = useState('')
   const [fromDate, setFromDate] = useState('')
@@ -34,7 +37,7 @@ export default function AdminOrders() {
 
   const { data: allOrders = [], isLoading } = useQuery({
     queryKey: ['admin-orders', statusFilter],
-    queryFn: () => fetchOrders(statusFilter),
+    queryFn: () => fetchOrders(statusFilter === 'TO_SHIP' ? 'all' : statusFilter),
   })
 
   const updateStatus = useMutation({
@@ -50,6 +53,7 @@ export default function AdminOrders() {
   const from = fromDate ? new Date(`${fromDate}T00:00:00`) : null
   const to = toDate ? new Date(`${toDate}T23:59:59`) : null
   const orders = allOrders.filter(o => {
+    if (statusFilter === 'TO_SHIP' && !['PAID', 'PROCESSING'].includes(o.status)) return false
     if (needle) {
       const hay = [String(o.orderId), String(o.orderId).padStart(6, '0'), o.customerName ?? '', o.customerEmail ?? ''].join(' ').toLowerCase()
       if (!hay.includes(needle)) return false
@@ -89,7 +93,7 @@ export default function AdminOrders() {
             onChange={e => setStatusFilter(e.target.value)}
             style={selectStyle}
           >
-            {STATUSES.map(s => <option key={s} value={s}>{s === 'all' ? 'All statuses' : s.charAt(0) + s.slice(1).toLowerCase()}</option>)}
+            {FILTERS.map(s => <option key={s} value={s}>{s === 'all' ? 'All statuses' : s === 'TO_SHIP' ? 'To ship' : s.charAt(0) + s.slice(1).toLowerCase()}</option>)}
           </select>
           <button onClick={exportCSV} style={outlineBtn} disabled={!orders.length}>
             <Download size={13} /> Export CSV{filtersActive ? ` (${orders.length})` : ''}
@@ -280,14 +284,9 @@ function OrderDrawer({ orderId, onClose }) {
 
             {/* Shipment */}
             <Section label="Shipment">
-              {order?.shipment && (
-                <div style={{ fontSize: 13, marginBottom: 14, padding: '8px 12px', background: 'var(--glass-bg)', borderRadius: 8 }}>
-                  <span style={{ fontWeight: 500 }}>{order.shipment.carrier}</span>
-                  {order.shipment.trackingNumber && <> · <span style={{ color: 'var(--admin-muted)' }}>{order.shipment.trackingNumber}</span></>}
-                  <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--admin-muted)' }}>{order.shipment.status}</span>
-                </div>
-              )}
-              {/* Add shipment form */}
+              {order?.shipment ? (
+                <ShipmentEditor key={order.shipment.shipmentId} shipment={order.shipment} onSaved={() => { qc.invalidateQueries({ queryKey: ['admin-order-detail', orderId] }); qc.invalidateQueries({ queryKey: ['admin-orders'] }) }} />
+              ) : (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <input placeholder="Carrier" value={carrier} onChange={e => setCarrier(e.target.value)}
                   style={{ ...inputStyle, width: 120 }} />
@@ -301,11 +300,38 @@ function OrderDrawer({ orderId, onClose }) {
                   <Truck size={13} /> {addShipment.isPending ? '…' : 'Ship'}
                 </button>
               </div>
+              )}
             </Section>
           </div>
         )}
       </div>
     </>
+  )
+}
+
+// Carrier, tracking and status of an existing shipment, edited right on the order.
+function ShipmentEditor({ shipment, onSaved }) {
+  const [carrier, setCarrier] = useState(shipment.carrier ?? '')
+  const [tracking, setTracking] = useState(shipment.trackingNumber ?? '')
+  const [status, setStatus] = useState(shipment.status ?? 'IN_TRANSIT')
+  const save = useMutation({
+    mutationFn: () => apiService.admin.shipments.update(shipment.shipmentId, { carrier, trackingNumber: tracking, status }),
+    onSuccess: () => { toast.success('Shipment updated'); onSaved?.() },
+    onError: () => toast.error('Could not update the shipment'),
+  })
+  const dirty = carrier !== (shipment.carrier ?? '') || tracking !== (shipment.trackingNumber ?? '') || status !== shipment.status
+  const options = SHIPMENT_STATUSES.includes(status) ? SHIPMENT_STATUSES : [status, ...SHIPMENT_STATUSES]
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <input placeholder="Carrier" value={carrier} onChange={e => setCarrier(e.target.value)} style={{ ...inputStyle, width: 120 }} />
+      <input placeholder="Tracking #" value={tracking} onChange={e => setTracking(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 120 }} />
+      <select value={status} onChange={e => setStatus(e.target.value)} style={selectStyle}>
+        {options.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ').toLowerCase()}</option>)}
+      </select>
+      <button onClick={() => save.mutate()} disabled={!dirty || save.isPending} style={{ ...primaryBtn, opacity: dirty ? 1 : 0.5 }}>
+        {save.isPending ? '…' : 'Save'}
+      </button>
+    </div>
   )
 }
 
