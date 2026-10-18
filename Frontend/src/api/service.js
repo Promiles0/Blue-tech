@@ -35,6 +35,7 @@ const apiService = {
   // --- REVIEWS ---
   reviews: {
     getRecent: (limit = 8) => api.get(`/reviews/recent?limit=${limit}`),
+    uploadPhoto: (formData) => api.post('/reviews/photos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   },
 
   // --- CART ---
@@ -82,10 +83,6 @@ const apiService = {
   },
 
   // --- AI ASSISTANT ---
-  reviews: {
-    uploadPhoto: (formData) => api.post('/reviews/photos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  },
-
   programs: {
     tradeIn: (data) => api.post('/trade-ins', data, { skipAuthRedirect: true }),
     instalments: (data) => api.post('/instalments', data, { skipAuthRedirect: true }),
