@@ -82,6 +82,10 @@ const apiService = {
   },
 
   // --- AI ASSISTANT ---
+  reviews: {
+    uploadPhoto: (formData) => api.post('/reviews/photos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  },
+
   stockAlerts: {
     create: (data) => api.post('/stock-alerts', data, { skipAuthRedirect: true }),
   },

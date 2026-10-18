@@ -492,4 +492,13 @@ export default {
   "Email or phone number": "Email cyangwa nimero ya telefone",
   "Notify me": "Mbimenyeshe",
   "Done — we'll let you know when it's back.": "Byakunze — tuzakumenyesha nibiboneka.",
+
+  // ── Review photos ──
+  "Photos (optional, up to 3)": "Amafoto (si ngombwa, kugeza kuri 3)",
+  "Add photo": "Ongeramo ifoto",
+  "Remove photo": "Kuramo ifoto",
+  "Photo must be 3 MB or smaller": "Ifoto ntigomba kurenza 3 MB",
+  "Could not upload the photo": "Ntibishobotse kohereza ifoto",
+  "Could not post review.": "Ntibishobotse gushyiraho igitekerezo.",
+  "Open photo": "Fungura ifoto",
 }

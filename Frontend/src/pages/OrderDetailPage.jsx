@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { useCurrency } from '../context/CurrencyContext'
 import { StarInput } from '../components/site/StarRating'
 import InvoiceButton from '../components/site/InvoiceButton'
+import ReviewPhotoPicker from '../components/site/ReviewPhotoPicker'
 import { useStoreSettings, deliveryWindow, formatWindow } from '../lib/delivery'
 
 const DELIVERY_LABELS = { STANDARD: 'Standard delivery', EXPRESS: 'Express', PICKUP: 'Pick up at our shop' }
@@ -83,6 +84,7 @@ export default function OrderDetailPage() {
   const [activeReviewProduct, setActiveReviewProduct] = useState(null)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
+  const [reviewPhotos, setReviewPhotos] = useState([])
   const [submittingReview, setSubmittingReview] = useState(false)
 
   useEffect(() => {
@@ -385,12 +387,18 @@ export default function OrderDetailPage() {
                 />
               </div>
 
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>{t('Photos (optional, up to 3)')}</label>
+                <ReviewPhotoPicker photos={reviewPhotos} onChange={setReviewPhotos} disabled={submittingReview} />
+              </div>
+
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
                 <button
                   onClick={() => {
                     setActiveReviewProduct(null)
                     setRating(0)
                     setComment('')
+                    setReviewPhotos([])
                   }}
                   className="noir-btn-outline"
                   style={{ padding: '8px 16px', fontSize: 13 }}
@@ -406,13 +414,14 @@ export default function OrderDetailPage() {
                     }
                     setSubmittingReview(true)
                     try {
-                      await api.post(`/products/${activeReviewProduct.id}/reviews`, { rating, comment })
+                      await api.post(`/products/${activeReviewProduct.id}/reviews`, { rating, comment, photos: reviewPhotos })
                       toast.success(t('Review posted successfully!'))
                       setActiveReviewProduct(null)
                       setRating(0)
                       setComment('')
+                      setReviewPhotos([])
                     } catch (err) {
-                      toast.error(err.response?.data?.message ?? 'Could not post review.')
+                      toast.error(err.response?.data?.message ?? t('Could not post review.'))
                     } finally {
                       setSubmittingReview(false)
                     }

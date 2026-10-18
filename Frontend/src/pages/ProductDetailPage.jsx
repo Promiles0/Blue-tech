@@ -353,6 +353,16 @@ export default function ProductDetail() {
                     <StarDisplay rating={review.rating} size={12} />
                   </div>
                   {review.comment && <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.65 }}>{review.comment}</p>}
+                  {review.photos?.length > 0 && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                      {review.photos.map(url => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer" aria-label={t('Open photo')}
+                          style={{ width: 72, height: 72, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', display: 'block' }}>
+                          <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {review.createdAt && (
                     <p style={{ fontSize: 11, color: 'var(--muted-dark)', marginTop: 8 }}>
                       {new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}

@@ -1721,6 +1721,36 @@ async function chatReply(messages: { role: string; text: string }[], lang = "en"
   };
 }
 
+// ── Reviews ──
+// Public shape: first name + last initial only, verified-buyer flag, photos.
+function publicReview(row: Record<string, unknown>) {
+  const full = String((row.users as Record<string, unknown> | null)?.name ?? "").trim();
+  const [first, ...rest] = full.split(/\s+/);
+  const last = rest.length ? ` ${rest[rest.length - 1][0]}.` : "";
+  return {
+    reviewId: row.id,
+    rating: row.rating,
+    comment: row.comment,
+    createdAt: row.created_at,
+    userName: first ? `${first}${last}` : null,
+    verifiedBuyer: row.verified_buyer === true,
+    photos: Array.isArray(row.photos) ? row.photos : [],
+  };
+}
+
+// Did this user buy (and pay for) the product?
+async function boughtProduct(userId: string, productId: string | number) {
+  const { data } = await adminClient.from("order_items")
+    .select("id, orders!inner(user_id,status), product_variants!inner(product_id)")
+    .eq("orders.user_id", userId)
+    .eq("product_variants.product_id", productId)
+    .in("orders.status", ["paid", "processing", "shipped", "delivered", "PAID", "PROCESSING", "SHIPPED", "DELIVERED"])
+    .limit(1);
+  return Boolean(data?.length);
+}
+
+const REVIEW_PHOTO_PREFIX = `${supabaseUrl}/storage/v1/object/public/review-photos/`;
+
 async function readJson(request: Request) {
   try { return await request.json(); } catch { return {}; }
 }
@@ -1922,7 +1952,7 @@ async function handle(request: Request) {
     const productId = path.split("/")[2];
     const { data, error } = await adminClient.from("reviews").select("*, users(name)").eq("product_id", productId).eq("hidden", false).order("created_at", { ascending: false });
     if (error) return failure(error.message, 500);
-    return success("Product reviews fetched successfully", data ?? []);
+    return success("Product reviews fetched successfully", ((data ?? []) as Record<string, unknown>[]).map(publicReview));
   }
 
   if (method === "POST" && path === "/payments/webhook/stripe") {
@@ -2261,6 +2291,21 @@ async function handle(request: Request) {
     return success(method === "POST" ? "Product created successfully" : "Product updated successfully", await productResult(product, { admin: true }));
   }
 
+  if (method === "POST" && path === "/reviews/photos") {
+    await enforceRateLimit(rateLimiters?.proforma, `user:${user.id}`, request);
+    const formData = await request.formData();
+    const file = formData.get("file");
+    if (!(file instanceof File)) return failure("A photo is required", 400, request);
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return failure("Use a JPG, PNG or WebP photo", 400, request);
+    if (file.size > 3 * 1024 * 1024) return failure("Photo must be 3 MB or smaller", 400, request);
+    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await adminClient.storage.from("review-photos").upload(filePath, file, { contentType: file.type, upsert: false });
+    if (uploadError) return failure(uploadError.message, 500, request);
+    const { data: url } = adminClient.storage.from("review-photos").getPublicUrl(filePath);
+    return success("Photo uploaded", { url: url.publicUrl }, request);
+  }
+
   if (method === "POST" && path === "/products/images/upload") {
     await requireAdmin(request, user);
     const formData = await request.formData();
@@ -2458,13 +2503,25 @@ async function handle(request: Request) {
     if (method === "GET") {
       const { data, error } = await adminClient.from("reviews").select("*, users(name)").eq("product_id", productId).eq("hidden", false).order("created_at", { ascending: false });
       if (error) return failure(error.message, 500);
-      return success("Product reviews fetched successfully", data ?? []);
+      return success("Product reviews fetched successfully", ((data ?? []) as Record<string, unknown>[]).map(publicReview));
     }
     if (method === "POST") {
       const body = await readJson(request);
-      const { data, error } = await adminClient.from("reviews").insert({ user_id: user.id, product_id: productId, rating: body.rating, comment: body.comment ?? null }).select().single();
-      if (error) return failure(error.message, 400);
-      return success("Review created successfully", data);
+      const rating = Math.round(Number(body.rating));
+      if (!(rating >= 1 && rating <= 5)) return failure("Choose a rating from 1 to 5", 400, request);
+      // Only photos uploaded to our own bucket, at most three.
+      const photos = (Array.isArray(body.photos) ? body.photos : [])
+        .map(String).filter((u: string) => u.startsWith(REVIEW_PHOTO_PREFIX)).slice(0, 3);
+      const { data, error } = await adminClient.from("reviews").insert({
+        user_id: user.id, product_id: productId, rating,
+        comment: body.comment ? String(body.comment).slice(0, 2000) : null,
+        photos,
+        verified_buyer: await boughtProduct(user.id, productId),
+      }).select("*, users(name)").single();
+      if (error) {
+        return failure(/duplicate key/i.test(error.message) ? "You've already reviewed this product" : error.message, 400, request);
+      }
+      return success("Review created successfully", publicReview(data));
     }
   }
 

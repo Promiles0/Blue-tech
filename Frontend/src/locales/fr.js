@@ -491,4 +491,13 @@ export default {
   "Email or phone number": "E-mail ou numéro de téléphone",
   "Notify me": "Me prévenir",
   "Done — we'll let you know when it's back.": "C'est noté — nous vous préviendrons dès son retour.",
+
+  // ── Review photos ──
+  "Photos (optional, up to 3)": "Photos (facultatif, jusqu'à 3)",
+  "Add photo": "Ajouter",
+  "Remove photo": "Retirer la photo",
+  "Photo must be 3 MB or smaller": "La photo doit faire 3 Mo maximum",
+  "Could not upload the photo": "Impossible d'envoyer la photo",
+  "Could not post review.": "Impossible de publier l'avis.",
+  "Open photo": "Ouvrir la photo",
 }
