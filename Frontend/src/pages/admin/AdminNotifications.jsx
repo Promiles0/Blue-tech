@@ -1,12 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import {
-  Bell, Search, RefreshCw, Pause, Play,
-  Check, Filter, Inbox,
-} from 'lucide-react'
+import { Search, RefreshCw, Pause, Play, CheckCheck, Inbox } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
-} from 'recharts'
 import api from '../../api/axios'
 import { useNotifications } from '../../context/NotificationContext'
 
@@ -17,22 +11,15 @@ const SEV_COLOR = {
   info: 'var(--accent)',
 }
 
-const CATEGORIES = ['all', 'shopping', 'account', 'community', 'order', 'system', 'security', 'business']
+// Matches the events the API raises (see notifyAdmins in the edge function).
+const CATEGORIES = ['all', 'order', 'business', 'community', 'shopping', 'account', 'system']
 const SEVERITIES = ['all', 'info', 'success', 'warning', 'error']
 
 const CAT_LABEL = {
-  all: 'All', shopping: 'Shopping', account: 'Account',
-  community: 'Community', order: 'Order', system: 'System',
-  security: 'Security', business: 'Business',
+  all: 'All', order: 'Orders & payments', business: 'Quotes & leads', community: 'Reviews',
+  shopping: 'Stock', account: 'Customers', system: 'System',
 }
-
-const tooltipStyle = {
-  contentStyle: {
-    background: 'var(--admin-card)', border: '1px solid var(--admin-border)',
-    borderRadius: 8, fontSize: 12,
-  },
-  labelStyle: { color: 'var(--admin-muted)', marginBottom: 4 },
-}
+const SEV_LABEL = { all: 'Any level', info: 'Info', success: 'Good news', warning: 'Needs attention', error: 'Urgent' }
 
 function timeAgo(dateStr) {
   const diff = Date.now() - new Date(dateStr).getTime()
@@ -75,7 +62,7 @@ export default function AdminNotifications() {
   }
 
   const markOne = async (id) => {
-    await api.post('/notifications/mark-read', { ids: [id] })
+    await api.post(`/notifications/admin/${id}/read`)
     setItems(prev => prev.map(n => n.notificationId === id ? { ...n, isRead: true } : n))
     fetchAdminUnreadCount()
   }
@@ -101,19 +88,6 @@ export default function AdminNotifications() {
 
   const unreadCount = items.filter(n => !n.isRead).length
 
-  // Analytics: counts by severity and category
-  const bySev = Object.entries(
-    items.reduce((acc, n) => { acc[n.severity] = (acc[n.severity] ?? 0) + 1; return acc }, {})
-  ).map(([name, value]) => ({ name, value }))
-
-  const byCat = Object.entries(
-    items.reduce((acc, n) => { acc[n.category] = (acc[n.category] ?? 0) + 1; return acc }, {})
-  ).map(([name, value]) => ({ name: CAT_LABEL[name] ?? name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 6)
-
-  const PIE_COLORS = ['#354380', '#10b981', '#6366f1', '#0d9488', '#f59e0b', '#ec4899']
-
   return (
     <div style={{ padding: 40 }}>
       {/* Header */}
@@ -123,7 +97,7 @@ export default function AdminNotifications() {
             Notifications
           </h1>
           <p style={{ color: 'var(--admin-muted)', fontSize: 13, marginTop: 4 }}>
-            Live admin event stream
+            Orders, payments, quotes, reviews, stock and customer requests — newest first
             {lastRefresh && <span style={{ marginLeft: 8 }}>· refreshed {timeAgo(lastRefresh)}</span>}
           </p>
         </div>
@@ -155,6 +129,18 @@ export default function AdminNotifications() {
             <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
             Refresh
           </button>
+          <button
+            onClick={markAllRead}
+            disabled={!unreadCount}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontSize: 12, padding: '7px 13px', borderRadius: 8, cursor: unreadCount ? 'pointer' : 'default',
+              background: 'var(--glass-bg2)', border: '1px solid var(--admin-border)',
+              color: unreadCount ? 'var(--text)' : 'var(--admin-muted)', opacity: unreadCount ? 1 : 0.5,
+            }}
+          >
+            <CheckCheck size={13} /> Mark all read{unreadCount ? ` (${unreadCount})` : ''}
+          </button>
 
         </div>
       </div>
@@ -177,6 +163,11 @@ export default function AdminNotifications() {
             }}
           />
         </div>
+
+        <select value={sevFilter} onChange={e => setSev(e.target.value)} aria-label="Filter by level"
+          style={{ background: 'var(--admin-card)', border: '1px solid var(--admin-border)', borderRadius: 8, padding: '7px 10px', fontSize: 12, color: 'var(--text)' }}>
+          {SEVERITIES.map(v => <option key={v} value={v}>{SEV_LABEL[v]}</option>)}
+        </select>
 
         {/* Category chips */}
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -208,7 +199,7 @@ export default function AdminNotifications() {
         ) : displayed.length === 0 ? (
           <div style={{ padding: 56, textAlign: 'center', color: 'var(--admin-muted)' }}>
             <Inbox size={28} style={{ marginBottom: 10, opacity: 0.3 }} />
-            <div style={{ fontSize: 13 }}>No notifications match your filters</div>
+            <div style={{ fontSize: 13 }}>{items.length ? 'No notifications match your filters' : 'No shop events yet — new orders, payments, quotes and reviews will appear here.'}</div>
           </div>
         ) : (
           displayed.map((n, i) => (
@@ -273,7 +264,7 @@ export default function AdminNotifications() {
                   )}
                   {n.href && (
                     <button
-                      onClick={() => navigate(n.href)}
+                      onClick={() => { if (!n.isRead) markOne(n.notificationId); navigate(n.href) }}
                       style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                     >
                       View →

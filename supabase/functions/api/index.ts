@@ -486,6 +486,25 @@ async function getOrderRows() {
 // The live `notifications` table only stores {id, user_id, message, read, created_at}, but the
 // frontend (NotificationBell, NotificationsPage, AdminNotifications) was built against a richer
 // shape — map the DB row into that shape here rather than teaching every consumer the raw columns.
+// Shop events for the admin team (separate from customers' notifications). Never throws —
+// a notification failing must not break the order, review or request that caused it.
+async function notifyAdmins(title: string, body: string | null, opts: { severity?: string; category?: string; href?: string } = {}) {
+  const { error } = await adminClient.from("admin_notifications").insert({
+    title: title.slice(0, 200), body: body?.slice(0, 500) ?? null,
+    severity: opts.severity ?? "info", category: opts.category ?? "system", href: opts.href ?? null,
+  });
+  if (error) console.error("admin notification failed:", error.message);
+}
+
+const rwfText = (n: unknown) => `${Math.round(toNumber(n)).toLocaleString("en-US")} RWF`;
+
+function mapAdminNotification(row: Record<string, unknown>) {
+  return {
+    notificationId: row.id, title: row.title, body: row.body, message: row.body ?? row.title,
+    severity: row.severity, category: row.category, href: row.href, isRead: row.read, createdAt: row.created_at,
+  };
+}
+
 function mapNotification(row: Record<string, unknown>) {
   return {
     notificationId: row.id,
@@ -1171,6 +1190,19 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
     if (clearCartError) throw clearCartError;
 
     await notifyUser(user.id, `Your order #${order.id} has been placed for ${Math.round(totalAmount).toLocaleString("en-US")} RWF.`, order.id as number);
+    const { data: buyer } = await adminClient.from("users").select("name,email").eq("id", user.id).maybeSingle();
+    await notifyAdmins(`New order #${order.id} — ${rwfText(totalAmount)}`,
+      `${buyer?.name ?? buyer?.email ?? "A customer"} · ${reduced.length} item${reduced.length === 1 ? "" : "s"} · ${paymentMethod} · ${shippingMethod}`,
+      { severity: "info", category: "order", href: "/admin/orders" });
+    // Stock that just dropped low because of this order.
+    const { data: lowNow } = await adminClient.from("product_variants").select("stock_quantity,products(name)")
+      .in("id", reduced.map((r) => r.variantId)).lt("stock_quantity", 5);
+    for (const v of (lowNow ?? []) as Record<string, unknown>[]) {
+      const left = toNumber(v.stock_quantity);
+      await notifyAdmins(`${left === 0 ? "Sold out" : "Low stock"}: ${(v.products as Record<string, unknown> | null)?.name ?? "product"}`,
+        left === 0 ? "No units left — restock or hide it." : `${left} left after order #${order.id}.`,
+        { severity: left === 0 ? "error" : "warning", category: "shopping", href: "/admin/products?lowStock=1" });
+    }
 
     return { orderId: order.id, totalAmount, status: "PENDING" };
   } catch (error) {
@@ -1250,6 +1282,7 @@ async function orderResult(order: Record<string, unknown>) {
 async function markOrderPaid(orderId: number) {
   const { data: order } = await adminClient.from("orders").update({ status: "paid" }).eq("id", orderId).select("user_id,total_amount").maybeSingle();
   await awardOrderPoints(orderId);
+  if (order) await notifyAdmins(`Payment received — order #${orderId}`, `${rwfText(order.total_amount)} paid. Ready to prepare.`, { severity: "success", category: "order", href: "/admin/orders" });
   if (order?.user_id) {
     await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`, orderId);
   }
@@ -1725,6 +1758,7 @@ async function settlePayment(recordId: number, orderId: number, paid: boolean) {
     const { data: order } = await adminClient.from("orders").select("user_id").eq("id", orderId).maybeSingle();
     if (order?.user_id) {
       await notifyUser(order.user_id as string, `Your payment for order #${orderId} failed. Please try again.`, orderId);
+      await notifyAdmins(`Payment failed — order #${orderId}`, "The customer's payment didn't go through. They may retry or need help.", { severity: "warning", category: "order", href: "/admin/orders" });
     }
   }
 }
@@ -1972,6 +2006,7 @@ async function handle(request: Request) {
     const { data: session, error: signInError } = await adminClient.auth.signInWithPassword({ email, password });
     if (signInError || !session.session) return failure(signInError?.message ?? "Registration succeeded; sign in required", 201);
     await adminClient.from("users").upsert({ id: data.user.id, email, role: "user" }, { onConflict: "id" });
+    await notifyAdmins("New customer account", `${name ?? ""} ${email}`.trim(), { severity: "success", category: "account", href: "/admin/users" });
     return success("User registered successfully!", { token: session.session.access_token, user: { id: data.user.id, name, email, role: "user" } });
   }
 
@@ -2245,6 +2280,7 @@ async function handle(request: Request) {
       console.error("Quote request email dispatch failed:", emailError);
     }
 
+    await notifyAdmins(`New quote request — ${quantity} × ${screenSize}`, `${name}${organization ? ` · ${organization}` : ""} · ${phone}`, { severity: "info", category: "business", href: "/admin/quote-requests" });
     return response({ success: true, message: "Quote request received", data: quoteRequestResult(quote) }, 201, request);
   }
 
@@ -2270,6 +2306,7 @@ async function handle(request: Request) {
       notes: String(b.notes ?? "").slice(0, 1000) || null,
     });
     if (error) return failure(error.message, 400, request);
+    await notifyAdmins(`Trade-in request — ${type}`, `${name} · ${phone} · ${condition}, ${age} yr${estimate ? ` · est. ${rwfText(estimate.low)}–${rwfText(estimate.high)}` : ""}`, { category: "business", href: "/admin/programs" });
     return success("Trade-in request received", { estimate }, request);
   }
 
@@ -2295,6 +2332,7 @@ async function handle(request: Request) {
       notes: String(b.notes ?? "").slice(0, 1000) || null,
     });
     if (error) return failure(error.message, 400, request);
+    await notifyAdmins(`Instalment request — ${product.name}`, `${name} · ${phone} · ${months} months, deposit ${rwfText(plan.deposit)}`, { category: "business", href: "/admin/programs" });
     return success("Instalment request received", plan, request);
   }
 
@@ -2314,6 +2352,10 @@ async function handle(request: Request) {
     });
     // A duplicate request for the same product and contact is fine — they're already on the list.
     if (error && !/duplicate key/i.test(error.message)) return failure(error.message, 400, request);
+    if (!error) {
+      const { data: wanted } = await adminClient.from("products").select("name").eq("id", productId).maybeSingle();
+      await notifyAdmins(`Restock wanted: ${wanted?.name ?? `product #${productId}`}`, `A customer asked to be told when it's back (${email ?? phone}).`, { category: "shopping", href: "/admin/messages" });
+    }
     return success("We'll let you know", { ok: true }, request);
   }
 
@@ -2361,6 +2403,7 @@ async function handle(request: Request) {
       user_id: maybeUser?.id ?? null,
     }).select().single();
     if (error) return failure(error.message, 400, request);
+    await notifyAdmins(`Proforma ${proformaResult(row).number} — ${organization}`, `${rwfText(total)}${row.phone ? ` · ${row.phone}` : ""}. A business lead to follow up.`, { category: "business", href: "/admin/proformas" });
     return success("Proforma created", { ...proformaResult(row), business }, request);
   }
 
@@ -2588,6 +2631,7 @@ async function handle(request: Request) {
     if (pending) return failure("Your request is already being reviewed", 400, request);
     const { error } = await adminClient.from("student_requests").insert({ user_id: user.id, school, school_email: schoolEmail });
     if (error) return failure(error.message, 400, request);
+    await notifyAdmins("Student discount request", `${school} · ${schoolEmail}`, { category: "account", href: "/admin/programs" });
     return success("Student request received", { ok: true }, request);
   }
 
@@ -2771,22 +2815,29 @@ async function handle(request: Request) {
 
   if (method === "GET" && path === "/notifications/admin/unread-count") {
     await requireAdmin(request, user);
-    const { count, error } = await adminClient.from("notifications").select("id", { count: "exact", head: true }).eq("read", false);
+    const { count, error } = await adminClient.from("admin_notifications").select("id", { count: "exact", head: true }).eq("read", false);
     if (error) return failure(error.message, 500);
     return success("Admin unread notification count fetched", count ?? 0);
   }
 
   if (method === "GET" && path === "/notifications/admin") {
     await requireAdmin(request, user);
-    const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 100);
-    const { data, error } = await adminClient.from("notifications").select("*").order("created_at", { ascending: false }).limit(limit);
+    const limit = Math.min(Number(url.searchParams.get("limit") ?? 50), 200);
+    const { data, error } = await adminClient.from("admin_notifications").select("*").order("created_at", { ascending: false }).limit(limit);
     if (error) return failure(error.message, 500);
-    return success("Admin notifications fetched successfully", (data ?? []).map(mapNotification));
+    return success("Admin notifications fetched successfully", (data ?? []).map(mapAdminNotification));
+  }
+
+  if (method === "POST" && /^\/notifications\/admin\/[0-9]+\/read$/.test(path)) {
+    await requireAdmin(request, user);
+    const { error } = await adminClient.from("admin_notifications").update({ read: true }).eq("id", path.split("/")[3]);
+    if (error) return failure(error.message, 400, request);
+    return success("Marked as read", null, request);
   }
 
   if (method === "POST" && path === "/notifications/admin/mark-all-read") {
     await requireAdmin(request, user);
-    const { error } = await adminClient.from("notifications").update({ read: true }).eq("read", false);
+    const { error } = await adminClient.from("admin_notifications").update({ read: true }).eq("read", false);
     if (error) return failure(error.message, 400);
     return success("Admin notifications marked as read", null);
   }
@@ -2821,6 +2872,9 @@ async function handle(request: Request) {
       if (error) {
         return failure(/duplicate key/i.test(error.message) ? "You've already reviewed this product" : error.message, 400, request);
       }
+      const { data: reviewed } = await adminClient.from("products").select("name").eq("id", productId).maybeSingle();
+      await notifyAdmins(`New ${rating}★ review — ${reviewed?.name ?? "product"}`, data.comment ? String(data.comment).slice(0, 140) : "No comment.",
+        { severity: rating <= 2 ? "warning" : "info", category: "community", href: "/admin/reviews" });
       return success("Review created successfully", publicReview(data));
     }
   }

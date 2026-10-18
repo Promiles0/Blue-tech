@@ -57,7 +57,7 @@ export default function AdminNotificationBell() {
 
   const markAllRead = useCallback(async () => {
     try {
-      await api.post('/notifications/admin/markAllRead')
+      await api.post('/notifications/admin/mark-all-read')
       setItems(prev => prev.map(i => ({ ...i, isRead: true })))
       fetchAdminUnreadCount()
     } catch (err) { console.error('markAllRead failed', err) }
@@ -66,7 +66,7 @@ export default function AdminNotificationBell() {
   const handleItemClick = useCallback(async (n) => {
     try {
       if (!n.isRead) {
-        await api.post(`/notifications/${n.notificationId}/markRead`)
+        await api.post(`/notifications/admin/${n.notificationId}/read`)
         setItems(prev => prev.map(i => i.notificationId === n.notificationId ? { ...i, isRead: true } : i))
         fetchAdminUnreadCount()
       }
