@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useT } from '../lib/i18n'
 import { useStoreSettings, deliveryWindow, formatWindow } from "../lib/delivery";
 import RwandaAddressFields from "../components/site/RwandaAddressFields";
 import { EMPTY_RW_ADDRESS, addressStreet } from "../lib/rwandaAddress";
@@ -46,6 +47,8 @@ const CARD_ELEMENT_OPTIONS = {
 };
 
 function CheckoutForm() {
+  const { t, intlLocale } = useT()
+  const t_err = (msg) => toast.error(t(msg))
   const { user } = useAuth();
   const { cart, clearCart } = useCart();
   const navigate = useNavigate();
@@ -102,14 +105,14 @@ function CheckoutForm() {
   const buildPayload = () => {
     if (showNewAddressForm) {
       if (!newAddress.city || !newAddress.street.trim() || !newAddress.phone.trim()) {
-        toast.error("Please choose your district and add your street and phone number");
+        t_err("Please choose your district and add your street and phone number");
         return null;
       }
       const { landmark, ...rest } = newAddress; // eslint-disable-line no-unused-vars
       return { ...rest, street: addressStreet(newAddress), shippingMethod, paymentMethod, couponCode: coupon?.code ?? null };
     }
     const addr = addresses.find((a) => a.addressId === selectedAddressId);
-    if (!addr) { toast.error("Select a shipping address"); return null; }
+    if (!addr) { t_err("Select a delivery address"); return null; }
     return {
       street: addressStreet({ street: addr.streetAddress, landmark: addr.landmarks }), city: addr.city,
       state: addr.state ?? "", zipCode: addr.zipCode ?? "",
@@ -138,7 +141,7 @@ function CheckoutForm() {
           return;
         }
         if (data?.paymentStatus === "FAILED") {
-          toast.error("The mobile money payment was declined or cancelled.");
+          t_err("The mobile money payment was declined or cancelled.");
           setStep("shipping");
           return;
         }
@@ -162,20 +165,20 @@ function CheckoutForm() {
 
     if (isMomo) {
       if (!momoPhone) {
-        toast.error("Please provide your mobile money number");
+        t_err("Please provide your mobile money number");
         return;
       }
       normalizedPhone = normalizeRwandaPhone(momoPhone);
       if (!normalizedPhone) {
-        toast.error("Enter a valid Rwandan number, e.g. 0788123456 or +250788123456");
+        t_err("Enter a valid Rwandan number, e.g. 0788123456 or +250788123456");
         return;
       }
       // Paypack routes on the prefix alone, so a mismatch would charge the other network.
       if (momoProviderFor(normalizedPhone) !== paymentMethod) {
         toast.error(
           paymentMethod === "MOMO"
-            ? "That is an Airtel number. Use an MTN number (078/079) or switch to Airtel Money."
-            : "That is an MTN number. Use an Airtel number (072/073) or switch to MTN Mobile Money."
+            ? t("That is an Airtel number. Use an MTN number (078/079) or switch to Airtel Money.")
+            : t("That is an MTN number. Use an Airtel number (072/073) or switch to MTN Mobile Money.")
         );
         return;
       }
@@ -206,7 +209,7 @@ function CheckoutForm() {
           },
         });
 
-        if (error) { toast.error(error.message || "Card payment failed"); return; }
+        if (error) { toast.error(error.message || t("Card payment failed")); return; }
         if (paymentIntent.status === "succeeded") {
           clearCart();
           setStep("success");
@@ -232,7 +235,7 @@ function CheckoutForm() {
       setStep("success");
 
     } catch (err) {
-      toast.error(err.response?.data?.message || err.message || "Failed to place order");
+      toast.error(err.response?.data?.message || err.message || t("Failed to place order"));
     } finally {
       setLoading(false);
     }
@@ -245,12 +248,12 @@ function CheckoutForm() {
           <div style={{ width: 80, height: 80, borderRadius: "50%", background: "var(--success-soft)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", color: "var(--success)" }}>
             <CheckCircle size={40} />
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 900, color: "var(--text-primary)", marginBottom: 12 }}>Order Confirmed</h1>
+          <h1 style={{ fontSize: 32, fontWeight: 900, color: "var(--text-primary)", marginBottom: 12 }}>{t("Order confirmed")}</h1>
           <p style={{ color: "var(--text-secondary)", fontSize: 16, lineHeight: 1.6, marginBottom: 32 }}>
-            Thank you for your purchase. We've received your order and will start preparing it for delivery immediately.
+            {t("Thank you for your purchase. We've received your order and will start preparing it for delivery immediately.")}
           </p>
           <Link to="/orders" className="noir-btn-primary" style={{ padding: "14px 32px" }}>
-            Track my order
+            {t("Track my order")}
           </Link>
         </div>
       </div>
@@ -264,26 +267,26 @@ function CheckoutForm() {
           <div style={{ width: 80, height: 80, borderRadius: "50%", background: "var(--warning-soft, #fff8e1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", color: "var(--warning, #f59e0b)" }}>
             <Clock size={40} />
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", marginBottom: 12 }}>Awaiting Payment</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", marginBottom: 12 }}>{t("Awaiting payment")}</h1>
           <p style={{ color: "var(--text-secondary)", fontSize: 15, lineHeight: 1.7, marginBottom: 12 }}>
-            A payment prompt has been sent to <strong>{momoPhone}</strong>.
+            {t("A payment prompt has been sent to")} <strong>{momoPhone}</strong>.
           </p>
           {momoOutcome === "waiting" ? (
             <>
               <p style={{ color: "var(--text-secondary)", fontSize: 15, lineHeight: 1.7, marginBottom: 24 }}>
-                Please check your phone and <strong>approve the payment</strong> to complete your order. This page updates on its own — keep it open.
+                {t("Please check your phone and approve the payment to complete your order. This page updates on its own — keep it open.")}
               </p>
               <p style={{ color: "var(--text-muted)", fontSize: 13, marginBottom: 32 }}>
-                Waiting for confirmation…
+                {t("Waiting for confirmation…")}
               </p>
             </>
           ) : (
             <p style={{ color: "var(--text-secondary)", fontSize: 15, lineHeight: 1.7, marginBottom: 32 }}>
-              We haven't received confirmation yet. If you approved the prompt, the payment may still be settling — your order is reserved and will update automatically. You can check its status on the orders page.
+              {t("We haven't received confirmation yet. If you approved the prompt, the payment may still be settling — your order is reserved and will update automatically. You can check its status on the orders page.")}
             </p>
           )}
           <Link to="/orders" className="noir-btn-primary" style={{ padding: "14px 32px" }}>
-            View my orders
+            {t("View my orders")}
           </Link>
         </div>
       </div>
@@ -294,23 +297,23 @@ function CheckoutForm() {
     <div style={{ padding: "44px 0 100px" }}>
       <div className="container-noir">
         <Link to="/cart" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--text-muted)", marginBottom: 32 }}>
-          <ArrowLeft size={14} /> Back to cart
+          <ArrowLeft size={14} /> {t("Back to cart")}
         </Link>
 
         <div className="checkout-layout-grid">
           <div>
-            <h1 style={{ fontSize: 32, fontWeight: 900, color: "var(--text-primary)", marginBottom: 40, letterSpacing: "-0.02em" }}>Checkout</h1>
+            <h1 style={{ fontSize: 32, fontWeight: 900, color: "var(--text-primary)", marginBottom: 40, letterSpacing: "-0.02em" }}>{t("Checkout")}</h1>
 
             {/* Shipping Address */}
             <section style={{ marginBottom: 48 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
-                  <MapPin size={18} style={{ color: "var(--brand)" }} /> Shipping Address
+                  <MapPin size={18} style={{ color: "var(--brand)" }} /> {t("Delivery address")}
                 </h2>
                 {addresses.length > 0 && (
                   <button onClick={() => setShowNewAddressForm((v) => !v)}
                     style={{ background: "none", border: "none", color: "var(--brand)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                    {showNewAddressForm ? "Use saved address" : "+ Use new address"}
+                    {showNewAddressForm ? t("Use saved address") : `+ ${t("Use new address")}`}
                   </button>
                 )}
               </div>
@@ -335,7 +338,7 @@ function CheckoutForm() {
             {/* Shipping Method */}
             <section style={{ marginBottom: 32 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                <Truck size={18} style={{ color: "var(--brand)" }} /> Shipping Method
+                <Truck size={18} style={{ color: "var(--brand)" }} /> {t("Delivery method")}
               </h2>
               <select value={shippingMethod}
                 onChange={(e) => {
@@ -345,33 +348,33 @@ function CheckoutForm() {
                 }}
                 className="noir-input"
                 style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", color: "var(--text-primary)", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none", width: "100%", cursor: "pointer", appearance: "none" }}>
-                <option value="STANDARD">Standard delivery — FREE{deliveryConfig ? ` · ${formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'STANDARD'))}` : ''}</option>
-                <option value="EXPRESS">Express — +{formatPrice(EXPRESS_SHIPPING_FEE_RWF)}{deliveryConfig ? ` · ${formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'EXPRESS'))}` : ''}</option>
+                <option value="STANDARD">{t("Standard delivery — FREE")}{deliveryConfig ? ` · ${formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'STANDARD'), intlLocale)}` : ''}</option>
+                <option value="EXPRESS">{t("Express")} — +{formatPrice(EXPRESS_SHIPPING_FEE_RWF)}{deliveryConfig ? ` · ${formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'EXPRESS'), intlLocale)}` : ''}</option>
                 {deliveryConfig?.pickupEnabled && (
-                  <option value="PICKUP">Pick up at our shop — FREE · from {formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'PICKUP'))}</option>
+                  <option value="PICKUP">{t("Pick up at our shop — FREE")} · {formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'PICKUP'), intlLocale)}</option>
                 )}
               </select>
               <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 8 }}>
                 {shippingMethod === "PICKUP" && deliveryConfig
-                  ? `Pick up at ${deliveryConfig.pickupAddress}. We'll call you when it's ready.`
+                  ? t("Pick up at {address}. We'll call you when it's ready.", { address: deliveryConfig.pickupAddress })
                   : deliveryDistrict
-                    ? `Estimated for ${deliveryDistrict}. Orders after ${String(deliveryConfig?.cutoffHour ?? 15).padStart(2, '0')}:00 are handled the next day.`
-                    : "Choose your district above to see the delivery date."}
+                    ? t("Estimated for {district}. Orders after {time} are handled the next day.", { district: deliveryDistrict, time: `${String(deliveryConfig?.cutoffHour ?? 15).padStart(2, '0')}:00` })
+                    : t("Choose your district above to see the delivery date.")}
               </p>
             </section>
 
             {/* Payment Method */}
             <section style={{ marginBottom: 32 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                <Wallet size={18} style={{ color: "var(--brand)" }} /> Payment Method
+                <Wallet size={18} style={{ color: "var(--brand)" }} /> {t("Payment method")}
               </h2>
               <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
                 className="noir-input"
                 style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", color: "var(--text-primary)", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none", width: "100%", cursor: "pointer", appearance: "none" }}>
-                <option value="CARD">Credit / Debit Card</option>
+                <option value="CARD">{t("Credit / debit card")}</option>
                 <option value="MOMO">MTN Mobile Money</option>
                 <option value="AIRTEL_MONEY">Airtel Money</option>
-                {shippingMethod === "PICKUP" && <option value="CASH">Cash / Cheque on Pickup</option>}
+                {shippingMethod === "PICKUP" && <option value="CASH">{t("Cash / cheque on pickup")}</option>}
               </select>
 
               {/* Stripe Card Element */}
@@ -390,7 +393,7 @@ function CheckoutForm() {
               {(paymentMethod === "MOMO" || paymentMethod === "AIRTEL_MONEY") && (
                 <div style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", borderRadius: 16, padding: "24px", marginTop: 20 }}>
                   <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>
-                    {paymentMethod === "MOMO" ? "MTN MoMo Number" : "Airtel Money Number"}
+                    {paymentMethod === "MOMO" ? t("MTN MoMo number") : t("Airtel Money number")}
                   </h3>
                   <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>MOBILE NUMBER</label>
                   <input className="noir-input" value={momoPhone} onChange={(e) => setMomoPhone(e.target.value)} placeholder="0788123456" />
@@ -418,33 +421,33 @@ function CheckoutForm() {
 
               <div className="mt-8 pt-6 flex flex-col gap-4" style={{ borderTop: "1px solid var(--border)", marginBottom: 24 }}>
                 <div>
-                  <label className="block text-[12px] mb-2 tracking-wide" style={{ color: "var(--text-muted)" }}>Coupon code</label>
+                  <label className="block text-[12px] mb-2 tracking-wide" style={{ color: "var(--text-muted)" }}>{t("Coupon code")}</label>
                   <CouponInput applied={coupon} onApply={setCoupon} onRemove={() => setCoupon(null)} />
                 </div>
                 {coupon && (
                   <p className="text-[13px]" style={{ color: "var(--brand)" }}>
-                    Discount applied: {coupon.kind === "PERCENT" ? `${coupon.value}% off` : `${formatPrice(coupon.value)} off`}
+                    {t("Discount applied:")} {coupon.kind === "PERCENT" ? t("{v}% off", { v: coupon.value }) : t("{v} off", { v: formatPrice(coupon.value) })}
                   </p>
                 )}
               </div>
 
               <div style={{ borderTop: "1px solid var(--card-border)", paddingTop: 20, marginBottom: 28 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
-                  <span style={{ color: "var(--text-secondary)" }}>Subtotal</span>
+                  <span style={{ color: "var(--text-secondary)" }}>{t("Subtotal")}</span>
                   <span style={{ color: "var(--text-primary)" }}>{formatPrice(subtotal)}</span>
                 </div>
                 {safeDiscount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
-                    <span style={{ color: "var(--text-secondary)" }}>Discount</span>
+                    <span style={{ color: "var(--text-secondary)" }}>{t("Discount")}</span>
                     <span style={{ color: "var(--brand)" }}>-{formatPrice(safeDiscount)}</span>
                   </div>
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 12 }}>
-                  <span style={{ color: "var(--text-secondary)" }}>Shipping</span>
+                  <span style={{ color: "var(--text-secondary)" }}>{t("Delivery")}</span>
                   <span style={{ color: "var(--text-primary)" }}>{shippingFee > 0 ? formatPrice(shippingFee) : "FREE"}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, borderTop: "1px dashed var(--card-border)", paddingTop: 12 }}>
-                  <span style={{ color: "var(--text-primary)" }}>Total</span>
+                  <span style={{ color: "var(--text-primary)" }}>{t("Total")}</span>
                   <span style={{ color: "var(--price-color)" }}>{formatPrice(total)}</span>
                 </div>
               </div>
@@ -466,7 +469,7 @@ function CheckoutForm() {
               <button onClick={handlePlaceOrder} disabled={loading || !cart?.items?.length || (paymentMethod === "CARD" && !stripe)}
                 className="noir-btn-cta shine"
                 style={{ width: "100%", padding: "14px", fontSize: 15, opacity: loading ? 0.7 : 1 }}>
-                {loading ? "Processing…" : "Confirm & Pay"}
+                {loading ? t("Processing…") : t("Confirm & pay")}
               </button>
             </div>
           </aside>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../../lib/i18n'
 import { Truck, Zap, Store } from 'lucide-react'
 import { RWANDA } from '../../lib/rwandaAddress'
 import { useStoreSettings, deliveryWindow, formatWindow, savedDistrict, saveDistrict } from '../../lib/delivery'
@@ -7,6 +8,7 @@ const EXPRESS_FEE = '7,500 RWF'
 
 // Product page: "Delivered to Gasabo by Tue 20 – Wed 21 Oct · free", with a district picker.
 export default function DeliveryEstimate() {
+  const { t, intlLocale } = useT()
   const { deliveryConfig: config } = useStoreSettings()
   const [district, setDistrict] = useState(savedDistrict)
   if (!config) return null
@@ -19,8 +21,8 @@ export default function DeliveryEstimate() {
   return (
     <div style={{ marginTop: 16, border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', fontSize: 13, color: 'var(--muted)', display: 'grid', gap: 8 }}>
       <label style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        Deliver to
-        <select value={district} onChange={change} aria-label="Your district" style={{
+        {t('Deliver to')}
+        <select value={district} onChange={change} aria-label={t('Your district')} style={{
           padding: '4px 8px', borderRadius: 7, border: '1px solid var(--border)', background: 'var(--surface)',
           color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
         }}>
@@ -31,10 +33,10 @@ export default function DeliveryEstimate() {
           ))}
         </select>
       </label>
-      <Row icon={Truck} strong={formatWindow(standard)} note="free standard delivery" />
-      <Row icon={Zap} strong={formatWindow(express)} note={`express · ${EXPRESS_FEE}`} />
-      {pickup && <Row icon={Store} strong={formatWindow(pickup)} note={`pick up at ${config.pickupAddress}`} />}
-      <span style={{ fontSize: 11.5, color: 'var(--muted-dark)' }}>Estimated · order before {String(config.cutoffHour).padStart(2, '0')}:00 to count as today</span>
+      <Row icon={Truck} strong={formatWindow(standard, intlLocale)} note={t('free standard delivery')} />
+      <Row icon={Zap} strong={formatWindow(express, intlLocale)} note={`${t('express')} · ${EXPRESS_FEE}`} />
+      {pickup && <Row icon={Store} strong={formatWindow(pickup, intlLocale)} note={t('pick up at {address}', { address: config.pickupAddress })} />}
+      <span style={{ fontSize: 11.5, color: 'var(--muted-dark)' }}>{t('Estimated · order before {time} to count as today', { time: `${String(config.cutoffHour).padStart(2, '0')}:00` })}</span>
     </div>
   )
 }

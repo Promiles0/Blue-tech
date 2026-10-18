@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../lib/i18n'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -6,6 +7,7 @@ import GoogleLogin from '../components/GoogleLogin'
 import Logo from '../components/site/Logo'
 
 export default function Login() {
+  const { t } = useT()
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -24,7 +26,7 @@ export default function Login() {
       await login(email, password)
       navigate(from, { replace: true })
     } catch (err) {
-      setError(err.response?.data?.message ?? 'Invalid email or password.')
+      setError(err.response?.data?.message ?? t('Invalid email or password.'))
     } finally {
       setLoading(false)
     }
@@ -71,8 +73,8 @@ export default function Login() {
           <Logo height={17} />
         </Link>
 
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>Welcome back</p>
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>Sign in</h1>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>{t('Welcome back')}</p>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>{t('Sign in')}</h1>
 
         {error && (
           <div style={{ background: 'var(--error-dim)', border: '1px solid var(--danger-border)', borderRadius: 8, padding: '11px 14px', fontSize: 13, color: 'var(--error)', marginBottom: 20 }}>
@@ -81,12 +83,12 @@ export default function Login() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <Field label="Email">
+          <Field label={t('Email')}>
             <input type="email" value={email} required onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com" className="noir-input auth-input" />
           </Field>
 
-          <Field label="Password" style={{ marginBottom: 28 }}>
+          <Field label={t('Password')} style={{ marginBottom: 28 }}>
             <div style={{ position: 'relative' }}>
               <input
                 type={showPass ? 'text' : 'password'} value={password} required
@@ -101,7 +103,7 @@ export default function Login() {
           </Field>
 
           <button type="submit" disabled={loading} className="noir-btn-primary auth-submit-btn" style={{ width: '100%', padding: '13px', fontSize: 15 }}>
-            {loading ? 'Signing in…' : 'Sign in'}
+            {loading ? t('Signing in…') : t('Sign in')}
           </button>
         </form>
 
@@ -110,8 +112,8 @@ export default function Login() {
         </div>
 
         <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: 'var(--muted)' }}>
-          Don't have an account?{' '}
-          <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 500 }}>Create one</Link>
+          {t("Don't have an account?")}{' '}
+          <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 500 }}>{t('Create one')}</Link>
         </p>
       </div>
 

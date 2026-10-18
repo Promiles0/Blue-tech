@@ -1,4 +1,5 @@
 import { useSearchParams, Link } from 'react-router-dom'
+import { useT } from '../lib/i18n'
 import { useEffect } from 'react'
 import { MessageCircle, Mail, Phone, Sparkles, MapPin } from 'lucide-react'
 import { Reveal } from '../lib/motion'
@@ -103,7 +104,9 @@ const SECTIONS = {
 
 const ORDER = ['faq', 'shipping', 'returns', 'warranty', 'payments', 'privacy', 'terms', 'cookies']
 
-function Paragraph({ text }) {
+function Paragraph({ text: source, translate = true }) {
+  const { t } = useT()
+  const text = translate ? t(source) : source
   const [first, ...rest] = text.split('\n')
   const isHeading = rest.length > 0 && !first.startsWith('•')
   const lines = isHeading ? rest : text.split('\n')
@@ -118,21 +121,22 @@ function Paragraph({ text }) {
 }
 
 export default function HelpPage() {
+  const { t, lang } = useT()
   const [searchParams, setSearchParams] = useSearchParams()
   const sectionKey = SECTIONS[searchParams.get('v')] ? searchParams.get('v') : 'faq'
   const section = SECTIONS[sectionKey]
-  usePageMeta({ title: `${section.title} | Blue-Tech`, description: `${section.title} — Blue-Tech, Kigali.` })
+  usePageMeta({ title: `${t(section.title)} | Blue-Tech`, description: `${t(section.title)} — Blue-Tech, Kigali.` })
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }) }, [sectionKey])
 
   return (
     <div style={{ padding: '56px 0 80px' }}>
       <div className="container-noir help-layout">
-        <nav aria-label="Help sections" className="help-nav">
+        <nav aria-label={t('Help sections')} className="help-nav">
           {ORDER.map(key => (
             <button key={key} onClick={() => setSearchParams({ v: key })}
               className={`help-nav-item ${key === sectionKey ? 'on' : ''}`} aria-current={key === sectionKey ? 'page' : undefined}>
-              {SECTIONS[key].nav}
+              {t(SECTIONS[key].nav)}
             </button>
           ))}
         </nav>
@@ -140,7 +144,7 @@ export default function HelpPage() {
         <div>
           <Reveal>
             <h1 style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 900, marginBottom: 12, letterSpacing: '-0.03em', color: 'var(--text)' }}>
-              {section.title}
+              {t(section.title)}
             </h1>
             <div style={{ width: 40, height: 2, background: 'var(--accent)', marginBottom: 32 }} />
           </Reveal>
@@ -148,22 +152,25 @@ export default function HelpPage() {
           <div style={{ color: 'var(--muted)', fontSize: 15.5, lineHeight: 1.75, display: 'flex', flexDirection: 'column', gap: 22 }}>
             {section.qa?.map(([q, a]) => (
               <div key={q}>
-                <h3 style={{ color: 'var(--text)', fontSize: 17, fontWeight: 700, marginBottom: 6 }}>{q}</h3>
-                <p style={{ margin: 0 }}>{a}</p>
+                <h3 style={{ color: 'var(--text)', fontSize: 17, fontWeight: 700, marginBottom: 6 }}>{t(q)}</h3>
+                <p style={{ margin: 0 }}>{t(a)}</p>
               </div>
             ))}
-            {section.paras?.map((p, i) => <Paragraph key={i} text={p} />)}
+            {section.draft && lang !== 'en' && (
+              <p style={{ fontSize: 13, color: 'var(--muted-dark)', margin: 0 }}>{t('This page is currently available in English only.')}</p>
+            )}
+            {section.paras?.map((p, i) => <Paragraph key={i} text={p} translate={!section.draft} />)}
             {section.draft && (
-              <p style={{ fontSize: 12.5, color: 'var(--muted-dark)', margin: 0 }}>Last updated October 2026.</p>
+              <p style={{ fontSize: 12.5, color: 'var(--muted-dark)', margin: 0 }}>{t('Last updated October 2026.')}</p>
             )}
           </div>
 
           <div style={{ marginTop: 56, padding: 28, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16 }}>
-            <h2 style={{ color: 'var(--text)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>Still have questions?</h2>
-            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 18 }}>Ask Blue any time, or reach the team directly.</p>
+            <h2 style={{ color: 'var(--text)', fontSize: 18, fontWeight: 800, marginBottom: 6 }}>{t('Still have questions?')}</h2>
+            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 18 }}>{t('Ask Blue any time, or reach the team directly.')}</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button onClick={() => openLiveChat()} className="noir-btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13.5, padding: '10px 16px' }}>
-                <Sparkles size={15} /> Ask Blue
+                <Sparkles size={15} /> {t('Ask Blue')}
               </button>
               <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" className="help-contact"><MessageCircle size={15} /> WhatsApp</a>
               <a href="tel:+250788304366" className="help-contact"><Phone size={15} /> +250 788 304 366</a>
@@ -174,7 +181,7 @@ export default function HelpPage() {
             </p>
           </div>
           <p style={{ fontSize: 13, color: 'var(--muted-dark)', marginTop: 18 }}>
-            Looking for an order? <Link to="/orders" style={{ color: 'var(--accent-light, var(--accent))' }}>Go to My orders</Link>
+            {t('Looking for an order?')} <Link to="/orders" style={{ color: 'var(--accent-light, var(--accent))' }}>{t('Go to My orders')}</Link>
           </p>
         </div>
       </div>

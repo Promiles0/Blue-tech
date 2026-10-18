@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../../lib/i18n'
 import { FileDown, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '../../context/AuthContext'
@@ -7,6 +8,7 @@ import { downloadInvoicePdf, orderInvoiceDoc } from '../../lib/invoicePdf'
 
 // "Download invoice" on an order — a PDF with the shop's current invoice details.
 export default function InvoiceButton({ order }) {
+  const { t } = useT()
   const { businessInfo } = useStoreSettings()
   const { user } = useAuth()
   const [busy, setBusy] = useState(false)
@@ -17,7 +19,7 @@ export default function InvoiceButton({ order }) {
     try {
       await downloadInvoicePdf(orderInvoiceDoc(order, businessInfo, user?.name))
     } catch {
-      toast.error('Could not create the invoice')
+      toast.error(t('Could not create the invoice'))
     } finally {
       setBusy(false)
     }
@@ -29,7 +31,7 @@ export default function InvoiceButton({ order }) {
       border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-primary, var(--text))',
       fontSize: 13, fontWeight: 600, cursor: 'pointer',
     }}>
-      {busy ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} Download invoice
+      {busy ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} {t('Download invoice')}
     </button>
   )
 }

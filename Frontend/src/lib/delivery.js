@@ -55,9 +55,18 @@ export function deliveryWindow(config, district, method = 'STANDARD', now) {
   return { from: addDeliveryDays(start, a, config.deliverSunday), to: addDeliveryDays(start, b, config.deliverSunday) }
 }
 
+// Browsers don't ship Kinyarwanda calendar names, so these are spelled out here.
+const RW_DAYS = ['Ku cyumweru', 'Kuwa mbere', 'Kuwa kabiri', 'Kuwa gatatu', 'Kuwa kane', 'Kuwa gatanu', 'Kuwa gatandatu']
+const RW_MONTHS = ['Mutarama', 'Gashyantare', 'Werurwe', 'Mata', 'Gicurasi', 'Kamena', 'Nyakanga', 'Kanama', 'Nzeri', 'Ukwakira', 'Ugushyingo', 'Ukuboza']
+const rwDay = (d, withMonth) => `${RW_DAYS[d.getUTCDay()]} ${d.getUTCDate()}${withMonth ? ` ${RW_MONTHS[d.getUTCMonth()]}` : ''}`
+
 // "Tue 20 Oct" or "Tue 20 – Thu 22 Oct", in the shopper's language.
 export function formatWindow(win, locale = 'en-GB') {
   if (!win) return ''
+  if (locale.startsWith('rw')) {
+    const same = win.from.getTime() === win.to.getTime()
+    return same ? rwDay(win.from, true) : `${rwDay(win.from, win.from.getUTCMonth() !== win.to.getUTCMonth())} – ${rwDay(win.to, true)}`
+  }
   const fmt = (d, opts) => new Intl.DateTimeFormat(locale, { timeZone: 'UTC', ...opts }).format(d)
   if (win.from.getTime() === win.to.getTime()) return fmt(win.from, { weekday: 'short', day: 'numeric', month: 'short' })
   return `${fmt(win.from, { weekday: 'short', day: 'numeric' })} – ${fmt(win.to, { weekday: 'short', day: 'numeric', month: 'short' })}`

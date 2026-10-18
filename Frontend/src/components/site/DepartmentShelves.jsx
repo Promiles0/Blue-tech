@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useT } from '../../lib/i18n'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
 import { getProductImage, handleProductImageError } from '../../lib/productImage'
@@ -33,6 +34,7 @@ async function fetchDepartments() {
 }
 
 function DepartmentTile({ department }) {
+  const { t } = useT()
   const { category, products, total } = department
   const cover = products.find(p => getProductImage(p))
   return (
@@ -41,8 +43,8 @@ function DepartmentTile({ department }) {
         {cover && <img src={getProductImage(cover)} alt="" loading="lazy" onError={handleProductImageError} />}
       </div>
       <div className="dept-tile-text">
-        <span className="dept-tile-name" title={categoryName(category)}>{tileLabel(category)}</span>
-        <span className="dept-tile-count">{total} {total === 1 ? 'product' : 'products'}</span>
+        <span className="dept-tile-name" title={t(categoryName(category))}>{t(tileLabel(category))}</span>
+        <span className="dept-tile-count">{total === 1 ? t('1 product') : t('{n} products', { n: total })}</span>
       </div>
     </Link>
   )

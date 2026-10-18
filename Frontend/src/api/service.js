@@ -87,7 +87,7 @@ const apiService = {
   },
 
   chat: {
-    send: (messages, sessionId) => api.post('/chat', { messages, sessionId }, { skipAuthRedirect: true }),
+    send: (messages, sessionId, lang) => api.post('/chat', { messages, sessionId, lang }, { skipAuthRedirect: true }),
   },
 
   // --- PAYMENTS ---

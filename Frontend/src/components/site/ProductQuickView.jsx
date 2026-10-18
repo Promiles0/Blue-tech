@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useT } from '../../lib/i18n'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ShoppingBag, Heart, Truck, Plus, Minus, ArrowRight, Check, MessageCircle } from 'lucide-react'
@@ -14,6 +15,7 @@ import { useCurrency } from '../../context/CurrencyContext'
 import ProductSpecs from './ProductSpecs'
 
 export default function ProductQuickView() {
+  const { t } = useT()
   const { formatPrice } = useCurrency()
   const { quickViewProduct, setQuickViewProduct } = useUI()
   const { addToCart, isInCart } = useCart()
@@ -115,7 +117,7 @@ export default function ProductQuickView() {
             >
               <button
                 onClick={close}
-                aria-label="Close"
+                aria-label={t('Close')}
                 style={{ position: 'absolute', top: 12, right: 12, background: 'var(--glass-bg2)', backdropFilter: 'blur(8px)', border: '1px solid var(--border)', borderRadius: '50%', width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', cursor: 'pointer', zIndex: 2, transition: 'color 0.15s, background 0.15s' }}
                 onMouseEnter={e => { e.currentTarget.style.color = 'var(--text)'; e.currentTarget.style.background = 'var(--border)' }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.background = 'var(--glass-bg2)' }}
@@ -195,7 +197,7 @@ export default function ProductQuickView() {
 
                     {product.variants?.length > 0 && (
                       <div style={{ marginBottom: 18 }}>
-                        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>Options</p>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>{t('Options')}</p>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                           {product.variants.map(variant => {
                             const variantId = variant.variantId ?? variant.id
@@ -215,7 +217,7 @@ export default function ProductQuickView() {
                     )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Qty</p>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>{t('Qty')}</p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px' }}>
                         <button onClick={() => setQty(value => Math.max(1, value - 1))} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
                           <Minus size={14} />
@@ -233,7 +235,7 @@ export default function ProductQuickView() {
 
                     {selectedVariant && (
                       <p style={{ fontSize: 12, color: stockQty > 0 ? 'var(--success)' : 'var(--error)', marginBottom: 18 }}>
-                        {stockQty === 0 ? 'Out of stock' : stockQty <= 5 ? `Only ${stockQty} left` : `${stockQty} in stock`}
+                        {stockQty === 0 ? t('Out of stock') : stockQty <= 5 ? t('Only {n} left', { n: stockQty }) : t('{n} in stock', { n: stockQty })}
                       </p>
                     )}
 
@@ -245,7 +247,7 @@ export default function ProductQuickView() {
                           style={{ flex: 1, padding: '13px', fontSize: 14, color: 'var(--success)', borderColor: 'var(--success-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                         >
                           <Check size={15} />
-                          View in cart
+                          {t('View in cart')}
                         </button>
                       ) : (
                         <button
@@ -255,7 +257,7 @@ export default function ProductQuickView() {
                           style={{ flex: 1, padding: '13px', fontSize: 14 }}
                         >
                           <ShoppingBag size={15} />
-                          {adding ? 'Adding…' : 'Add to cart'}
+                          {adding ? t('Adding…') : t('Add to cart')}
                         </button>
                       )}
                       <button
@@ -263,7 +265,7 @@ export default function ProductQuickView() {
                         onClick={e => { e.preventDefault(); e.stopPropagation(); if (user) toggle(pid, product?.name) }}
                         className="noir-btn-outline"
                         style={{ padding: '13px 14px', color: wishlisted ? 'var(--brand)' : undefined, borderColor: wishlisted ? 'var(--brand-border)' : undefined }}
-                        title={wishlisted ? 'Remove from wishlist' : 'Save to wishlist'}
+                        title={wishlisted ? t('Remove from wishlist') : t('Save to wishlist')}
                       >
                         <Heart size={17} fill={wishlisted ? 'currentColor' : 'none'} />
                       </button>
@@ -288,13 +290,13 @@ export default function ProductQuickView() {
                       }}
                     >
                       <MessageCircle size={15} />
-                      Chat on WhatsApp
+                      {t('Chat on WhatsApp')}
                     </a>
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted-dark)', fontSize: 12 }}>
                         <Truck size={13} />
-                        Free shipping on orders over $200
+                        {t('Free delivery across Rwanda')}
                       </div>
                       <Link
                         to={`/products/${pid}`}

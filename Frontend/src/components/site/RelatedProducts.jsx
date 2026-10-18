@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useT } from '../../lib/i18n'
 import apiService from '../../api/service'
 import ProductCard from '../ProductCard'
 import { Reveal } from '../../lib/motion'
 
 // "You may also like": same category, closest in price to the product being viewed.
 export default function RelatedProducts({ product }) {
+  const { t } = useT()
   const [items, setItems] = useState([])
   const id = product.productId ?? product.id
   const categoryId = product.categoryId ?? product.category?.id
@@ -29,7 +31,7 @@ export default function RelatedProducts({ product }) {
 
   return (
     <section style={{ marginTop: 72 }}>
-      <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>You may also like</h2>
+      <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>{t('You may also like')}</h2>
       <div className="grid-4">
         {items.map((p, i) => (
           <Reveal key={p.productId ?? p.id} delay={i * 0.05}>

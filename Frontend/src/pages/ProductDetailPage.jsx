@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useT } from '../lib/i18n'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ShoppingBag, Heart, Check, BadgeCheck, Plus, Minus, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -22,6 +23,7 @@ import { Breadcrumb, ProductActions, BuyInfo } from '../components/site/ProductE
 import { usePageMeta } from '../hooks/usePageMeta'
 
 export default function ProductDetail() {
+  const { t } = useT()
   const { id } = useParams()
   const { addToCart } = useCart()
   const { user } = useAuth()
@@ -180,7 +182,7 @@ export default function ProductDetail() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
                 <StarDisplay rating={Number(avgRating)} size={14} />
                 <span style={{ fontSize: 13, color: 'var(--muted)' }}>
-                  {avgRating} ({reviews.length} review{reviews.length !== 1 ? 's' : ''})
+                  {avgRating} ({reviews.length === 1 ? t('1 review') : t('{n} reviews', { n: reviews.length })})
                 </span>
               </div>
             )}
@@ -197,7 +199,7 @@ export default function ProductDetail() {
 
             {product.variants?.length > 1 && (
               <div style={{ marginBottom: 24 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10 }}>Options</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10 }}>{t('Options')}</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {product.variants.map(variant => {
                     const variantId = variant.variantId ?? variant.id
@@ -228,13 +230,13 @@ export default function ProductDetail() {
 
             {selectedVariant && (
               <p style={{ fontSize: 13, color: stockQty > 0 ? 'var(--success)' : 'var(--error)', marginBottom: 16 }}>
-                {stockQty === 0 ? 'Out of stock' : stockQty <= 5 ? `Only ${stockQty} left` : `${stockQty} in stock`}
+                {stockQty === 0 ? t('Out of stock') : stockQty <= 5 ? t('Only {n} left', { n: stockQty }) : t('{n} in stock', { n: stockQty })}
               </p>
             )}
 
             {selectedVariant && stockQty > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: '#ccc' }}>Qty</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#ccc' }}>{t('Qty')}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px', width: 'fit-content' }}>
                   <button onClick={() => setQty(value => Math.max(1, value - 1))} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
                     <Minus size={14} />
@@ -258,7 +260,7 @@ export default function ProductDetail() {
                 className="noir-btn-cta"
                 style={{ flex: 1, padding: '14px', fontSize: 15 }}
               >
-                {added ? <><Check size={16} /> Added!</> : adding ? 'Adding…' : <><ShoppingBag size={16} /> Add to cart</>}
+                {added ? <><Check size={16} /> {t('Added!')}</> : adding ? t('Adding…') : <><ShoppingBag size={16} /> {t('Add to cart')}</>}
               </button>
               <button
                 onClick={() => user ? toggleWishlist(pid, product.name) : navigate('/login', { state: { from: `/products/${id}` } })}
@@ -288,7 +290,7 @@ export default function ProductDetail() {
               }}
             >
               <MessageCircle size={16} />
-              Quick WhatsApp Help – About This Product
+              {t('Quick WhatsApp Help – About This Product')}
             </a>
 
             <ProductActions product={product} />
@@ -297,7 +299,7 @@ export default function ProductDetail() {
 
             {product.inTheBox && (
               <p style={{ marginTop: 14, fontSize: 13, color: 'var(--muted)' }}>
-                <strong style={{ color: 'var(--text)' }}>In the box:</strong> {product.inTheBox}
+                <strong style={{ color: 'var(--text)' }}>{t('In the box:')}</strong> {product.inTheBox}
               </p>
             )}
           </div>
@@ -308,12 +310,12 @@ export default function ProductDetail() {
             {/* The short description already opens the page; repeat the full one only when it adds something. */}
             {product.description && product.description !== product.shortDescription && (
               <section>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 14 }}>Overview</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 14 }}>{t('Overview')}</h2>
                 <p style={{ fontSize: 15, color: 'var(--muted)', lineHeight: 1.75, whiteSpace: 'pre-line' }}>{product.description}</p>
               </section>
             )}
             <section>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 14 }}>Specifications</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 14 }}>{t('Specifications')}</h2>
               <ProductSpecs product={product} />
             </section>
           </div>
@@ -322,7 +324,7 @@ export default function ProductDetail() {
         <div style={{ marginTop: 72 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
             <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>
-              Reviews {reviews.length > 0 && <span style={{ fontSize: 15, color: 'var(--muted-dark)', fontWeight: 400 }}>({reviews.length})</span>}
+              {t('Reviews')} {reviews.length > 0 && <span style={{ fontSize: 15, color: 'var(--muted-dark)', fontWeight: 400 }}>({reviews.length})</span>}
             </h2>
           </div>
 
@@ -330,9 +332,9 @@ export default function ProductDetail() {
 
           {reviews.length === 0 ? (
             <p style={{ fontSize: 14, color: 'var(--muted-dark)' }}>
-              No reviews yet. Bought this?{' '}
-              <Link to="/orders" style={{ color: 'var(--accent-light, var(--accent))', fontWeight: 600 }}>Review it from your orders</Link>
-              {' '}once it's delivered.
+              {t('No reviews yet. Bought this?')}{' '}
+              <Link to="/orders" style={{ color: 'var(--accent-light, var(--accent))', fontWeight: 600 }}>{t('Review it from your orders')}</Link>
+              {' '}{t("once it's delivered.")}
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -340,10 +342,10 @@ export default function ProductDetail() {
                 <div key={review.reviewId ?? review.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '18px 22px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8, gap: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{review.user?.name ?? review.userName ?? 'Anonymous'}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{review.user?.name ?? review.userName ?? t('Anonymous')}</span>
                       {review.verifiedBuyer && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: '#34d399' }}>
-                          <BadgeCheck size={12} /> Verified
+                          <BadgeCheck size={12} /> {t('Verified')}
                         </span>
                       )}
                     </div>

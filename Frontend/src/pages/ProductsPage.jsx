@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useT } from '../lib/i18n'
 import { useSearchParams } from 'react-router-dom'
 import NoResultsHelp from '../components/site/NoResultsHelp'
 import { useQuery } from '@tanstack/react-query'
@@ -17,6 +18,7 @@ const SORT_OPTIONS = [
 ]
 
 export default function Products() {
+  const { t } = useT()
   const [searchParams, setSearchParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [loading, setLoading]   = useState(true)
@@ -105,12 +107,12 @@ export default function Products() {
         {/* Header */}
         <div style={{ marginBottom: 36 }}>
           <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 6, letterSpacing: '-0.02em' }}>
-            {searchQ ? `Results for "${searchQ}"` : [brand, category !== 'All' ? category : (brand ? 'Products' : 'All Products')].filter(Boolean).join(' ')}
+            {searchQ ? t('Results for "{q}"', { q: searchQ }) : [brand, category !== 'All' ? t(category) : (brand ? t('Products') : t('All products'))].filter(Boolean).join(' ')}
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: 14 }}>
             {totalItems === 0
-              ? 'No products found'
-              : `Showing ${totalItems ? page * PRODUCTS_PER_PAGE + 1 : 0}-${Math.min(totalItems, (page + 1) * PRODUCTS_PER_PAGE)} of ${totalItems} products`}
+              ? t('No products found')
+              : t('Showing {from}–{to} of {total} products', { from: totalItems ? page * PRODUCTS_PER_PAGE + 1 : 0, to: Math.min(totalItems, (page + 1) * PRODUCTS_PER_PAGE), total: totalItems })}
           </p>
         </div>
 
@@ -122,7 +124,7 @@ export default function Products() {
             <input
               value={searchQ}
               onChange={e => setParam('search', e.target.value)}
-              placeholder="Search products…"
+              placeholder={t('Search products…')}
               style={{
                 width: '100%', height: 40,
                 paddingLeft: 36, paddingRight: searchQ ? 36 : 14,
@@ -172,7 +174,7 @@ export default function Products() {
                         transition={{ type: 'spring', stiffness: 380, damping: 34 }}
                       />
                     )}
-                    <span style={{ position: 'relative', zIndex: 1 }}>{cat}</span>
+                    <span style={{ position: 'relative', zIndex: 1 }}>{t(cat)}</span>
                   </button>
                 )
               })}
@@ -192,7 +194,7 @@ export default function Products() {
                 {SORT_OPTIONS.map(opt => (
                   <button key={opt.value} onClick={() => { setParam('sort', opt.value); setSortOpen(false) }}
                     style={{ width: '100%', padding: '10px 16px', fontSize: 13, background: opt.value === sort ? 'var(--accent-dim)' : 'none', color: opt.value === sort ? 'var(--accent)' : 'var(--text-secondary)', border: 'none', textAlign: 'left', cursor: 'pointer', display: 'block' }}>
-                    {opt.label}
+                    {t(opt.label)}
                   </button>
                 ))}
               </div>
@@ -207,7 +209,7 @@ export default function Products() {
           </div>
         ) : displayProducts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <p style={{ fontSize: 16, color: 'var(--muted)' }}>No products found{searchQ ? <> for <span style={{ color: 'var(--text)' }}>"{searchQ}"</span></> : ''}.</p>
+            <p style={{ fontSize: 16, color: 'var(--muted)' }}>{t('No products found')}{searchQ ? <> — <span style={{ color: 'var(--text)' }}>"{searchQ}"</span></> : ''}.</p>
             <NoResultsHelp query={searchQ} />
           </div>
         ) : (

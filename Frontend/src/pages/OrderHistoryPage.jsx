@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useT } from '../lib/i18n'
 import { Link } from 'react-router-dom'
 import { Package, Search, ChevronRight, ShoppingBag, Clock, Loader2, SendHorizonal, BadgeCheck, Undo2, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -26,6 +27,7 @@ const fmt = (v) => `$${Number(v ?? 0).toFixed(2)}`
 const fmtDate = (v) => v ? new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
 export default function OrderHistoryPage() {
+  const { t } = useT()
   const [orders, setOrders]   = useState([])
   const [loading, setLoading] = useState(true)
   const [tab, setTab]         = useState('all')
@@ -54,7 +56,7 @@ export default function OrderHistoryPage() {
 
   const counts = useMemo(() => {
     const c = { all: orders.length }
-    TABS.slice(1).forEach(t => { c[t.id] = orders.filter(o => o.status === t.id).length })
+    TABS.slice(1).forEach(tb => { c[tb.id] = orders.filter(o => o.status === tb.id).length })
     return c
   }, [orders])
 
@@ -71,8 +73,8 @@ export default function OrderHistoryPage() {
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 40 }}>
-          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: 6 }}>My Orders</h1>
-          <p style={{ color: 'var(--muted)', fontSize: 15 }}>Track and manage all your purchases.</p>
+          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-primary)', marginBottom: 6 }}>{t('My orders')}</h1>
+          <p style={{ color: 'var(--muted)', fontSize: 15 }}>{t('Track and manage all your purchases.')}</p>
         </motion.div>
 
         {/* Stats */}
@@ -84,7 +86,7 @@ export default function OrderHistoryPage() {
             { label: 'Delivered',     value: deliveredCount },
           ].map(s => (
             <div key={s.label} style={{ background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: '20px 24px' }}>
-              <p className="label-muted" style={{ fontSize: 10, marginBottom: 10 }}>{s.label}</p>
+              <p className="label-muted" style={{ fontSize: 10, marginBottom: 10 }}>{t(s.label)}</p>
               <p style={{ fontSize: 26, fontWeight: 800, color: s.highlight ? 'var(--price)' : 'var(--text-primary)' }}>{s.value}</p>
             </div>
           ))}
@@ -99,7 +101,7 @@ export default function OrderHistoryPage() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search by order number or product name…"
+              placeholder={t('Search by order number or product name…')}
               className="noir-input"
               style={{ paddingLeft: 44, paddingRight: search ? 40 : 16, borderRadius: 12, fontSize: 14 }}
             />
@@ -112,13 +114,13 @@ export default function OrderHistoryPage() {
 
           {/* Filter tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--glass-border)', marginBottom: 32 }}>
-            {TABS.map(t => {
-              const active = tab === t.id
-              const count  = counts[t.id]
+            {TABS.map(tb => {
+              const active = tab === tb.id
+              const count  = counts[tb.id]
               return (
                 <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
+                  key={tb.id}
+                  onClick={() => setTab(tb.id)}
                   style={{
                     flex: 1,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -133,8 +135,8 @@ export default function OrderHistoryPage() {
                   onMouseEnter={e => { if (!active) e.currentTarget.style.color = 'var(--text-secondary)' }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.color = 'var(--text-muted)' }}
                 >
-                  <t.icon size={16} style={{ flexShrink: 0 }} />
-                  <span>{t.label}</span>
+                  <tb.icon size={16} style={{ flexShrink: 0 }} />
+                  <span>{t(tb.label)}</span>
                   {count > 0 && (
                     <span style={{
                       fontSize: 10, fontWeight: 700, lineHeight: 1,
@@ -165,14 +167,14 @@ export default function OrderHistoryPage() {
               <Package size={28} />
             </div>
             <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
-              {search ? 'No orders match your search' : tab === 'all' ? 'No orders yet' : `No ${TABS.find(t => t.id === tab)?.label.toLowerCase()} orders`}
+              {search ? t('No orders match your search') : tab === 'all' ? t('No orders yet') : t('No orders in this list')}
             </p>
             <p style={{ fontSize: 14, color: 'var(--muted)', maxWidth: 300, margin: '0 auto' }}>
-              {search ? 'Try a different order number or product name.' : 'Once you place an order it will appear here.'}
+              {search ? t('Try a different order number or product name.') : t('Once you place an order it will appear here.')}
             </p>
             {search && (
               <button onClick={() => setSearch('')} className="noir-btn-outline" style={{ marginTop: 24, borderRadius: 10, fontSize: 13 }}>
-                Clear search
+                {t('Clear search')}
               </button>
             )}
           </motion.div>
@@ -214,7 +216,7 @@ export default function OrderHistoryPage() {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}`, borderRadius: 999, padding: '4px 12px' }}>
-                              {cfg.label}
+                              {t(cfg.label)}
                             </span>
                             <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--price)' }}>{fmt(order.totalAmount ?? order.total)}</p>
                             <ChevronRight size={16} style={{ color: 'var(--accent)' }} />
@@ -255,7 +257,7 @@ export default function OrderHistoryPage() {
                             <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
                               <Package size={20} />
                             </div>
-                            <p style={{ fontSize: 13, color: 'var(--muted)' }}>No item details available</p>
+                            <p style={{ fontSize: 13, color: 'var(--muted)' }}>{t('No item details available')}</p>
                           </div>
                         )}
                       </div>

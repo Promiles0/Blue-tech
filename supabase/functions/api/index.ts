@@ -1505,17 +1505,21 @@ async function blueInstructions() {
   return blueInstructionsCache.text;
 }
 
-async function chatReply(messages: { role: string; text: string }[]) {
+const CHAT_LANGUAGES: Record<string, string> = { en: "English", rw: "Kinyarwanda", fr: "French" };
+
+async function chatReply(messages: { role: string; text: string }[], lang = "en") {
   if (!geminiApiKey) throw new Error("GEMINI_API_KEY is not configured");
   const [catalog, extra] = await Promise.all([chatCatalog(), blueInstructions()]);
   const ownerNotes = extra ? `\n\nSTORE NOTES FROM THE OWNER (facts to rely on; still follow the rules above):\n${extra}` : "";
+  // The site language the shopper picked; the language they actually write in still wins.
+  const langNote = `\n\nThe customer is browsing the site in ${CHAT_LANGUAGES[lang] ?? "English"}. Reply in that language unless they write to you in a different one.`;
   // The free tier rate-limits and occasionally reports overload, so one quick retry
   // turns most transient 429/5xx responses into an answer instead of the fallback.
   const callGemini = () => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: `${CHAT_SYSTEM_PROMPT}${ownerNotes}\n\nCATALOGUE:\n${catalog.text}` }] },
+      systemInstruction: { parts: [{ text: `${CHAT_SYSTEM_PROMPT}${ownerNotes}${langNote}\n\nCATALOGUE:\n${catalog.text}` }] },
       contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.text }] })),
       generationConfig: {
         temperature: 0.4,
@@ -1936,7 +1940,7 @@ async function handle(request: Request) {
       .map((m: { role: string; text: string }) => ({ role: m.role, text: m.text.slice(0, 1000) }));
     if (!messages.length || messages[messages.length - 1].role !== "user") return failure("A user message is required", 400, request);
     try {
-      const { topic, noMatch, ...result } = await chatReply(messages);
+      const { topic, noMatch, ...result } = await chatReply(messages, String(body.lang ?? "en").slice(0, 2));
       // Best-effort log for Admin → Blue insights; a logging failure never blocks the reply.
       const sessionId = String(body.sessionId ?? "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64) || "anonymous";
       adminClient.from("chat_logs").insert({

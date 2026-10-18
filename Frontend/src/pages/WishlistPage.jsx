@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useT } from '../lib/i18n'
 import { Link } from 'react-router-dom'
 import { Heart, ShoppingBag, Trash2, Truck, Shield, Headphones, ExternalLink } from 'lucide-react'
 import apiService from '../api/service'
@@ -9,6 +10,7 @@ import { getProductImage, handleProductImageError } from '../lib/productImage'
 import { useCurrency } from '../context/CurrencyContext'
 
 export default function Wishlist() {
+  const { t } = useT()
   const { formatPrice } = useCurrency()
   const { user } = useAuth()
   const { addToCart } = useCart()
@@ -41,7 +43,7 @@ export default function Wishlist() {
   const handleAddToCart = async (item) => {
     const pid = Number(item.productId)
     if (!item.variants?.length) {
-      toast.error('No variant available')
+      toast.error(t('No variant available'))
       return
     }
     setAddingToCart(prev => ({ ...prev, [pid]: true }))
@@ -55,15 +57,15 @@ export default function Wishlist() {
   if (!user) return (
     <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, padding: 24 }}>
       <Heart size={48} style={{ color: 'var(--border)' }} />
-      <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>Sign in to view your wishlist</p>
-      <Link to="/login" className="noir-btn-primary" style={{ padding: '12px 24px' }}>Sign in</Link>
+      <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{t('Sign in to view your wishlist')}</p>
+      <Link to="/login" className="noir-btn-primary" style={{ padding: '12px 24px' }}>{t('Sign in')}</Link>
     </div>
   )
 
   return (
     <div style={{ padding: '48px 0 80px' }}>
       <div className="container-noir">
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>Wishlist</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>{t('Wishlist')}</h1>
         <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 40 }}>{items.length} saved item{items.length !== 1 ? 's' : ''}</p>
 
         {loading ? (
@@ -75,8 +77,8 @@ export default function Wishlist() {
         ) : items.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
             <Heart size={48} style={{ color: 'var(--border)', margin: '0 auto 16px' }} />
-            <p style={{ fontSize: 16, color: 'var(--text-muted)', marginBottom: 20 }}>Your wishlist is empty.</p>
-            <Link to="/products" className="noir-btn-primary" style={{ display: 'inline-flex', padding: '12px 24px' }}>Explore products</Link>
+            <p style={{ fontSize: 16, color: 'var(--text-muted)', marginBottom: 20 }}>{t('Your wishlist is empty.')}</p>
+            <Link to="/products" className="noir-btn-primary" style={{ display: 'inline-flex', padding: '12px 24px' }}>{t('Explore products')}</Link>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -124,7 +126,7 @@ export default function Wishlist() {
                   {/* Actions */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <Link to={`/products/${pid}`} className="noir-btn-outline" style={{ fontSize: 13, padding: '10px 16px', borderRadius: 8, textDecoration: 'none' }}>
-                      View Product
+                      {t('View product')}
                     </Link>
                     <button
                       onClick={() => handleAddToCart(item)}

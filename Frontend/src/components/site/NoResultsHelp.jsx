@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useT } from '../../lib/i18n'
 import { Link } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
 import apiService from '../../api/service'
@@ -9,6 +10,7 @@ const slugify = (name = '') => name.toLowerCase().replace(/\s+/g, '-')
 
 // Shown under an empty search/listing: hand the query to Blue, or jump to a category.
 export default function NoResultsHelp({ query }) {
+  const { t } = useT()
   const [categories, setCategories] = useState([])
   useEffect(() => {
     apiService.categories.getAll()
@@ -17,14 +19,14 @@ export default function NoResultsHelp({ query }) {
   }, [])
 
   const ask = query
-    ? `I searched for "${query}" and found nothing. What do you have that's close?`
-    : 'Help me find the right product.'
+    ? t('I searched for "{query}" and found nothing. What do you have that\'s close?', { query })
+    : t('Help me find the right product.')
 
   return (
     <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
       <button onClick={() => openLiveChat(ask, { send: true })} className="noir-btn-primary"
         style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '11px 22px' }}>
-        <Sparkles size={15} /> Ask Blue to find it
+        <Sparkles size={15} /> {t('Ask Blue to find it')}
       </button>
       {categories.length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 560 }}>

@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { useT } from '../../lib/i18n'
 import { useState } from 'react'
 import { X, SlidersHorizontal, ChevronDown, Check } from 'lucide-react'
 import { FILTER_FACETS } from '../../lib/specTemplates'
@@ -34,18 +35,19 @@ function Option({ label, count, checked, onChange }) {
 }
 
 function FacetGroup({ group, values, selected, onToggle }) {
+  const { t } = useT()
   const [expanded, setExpanded] = useState(false)
   // Keep ticked values visible even when the list is folded.
   const shown = expanded ? values : values.filter((v, i) => i < VISIBLE_OPTIONS || selected.includes(v.value))
   const hidden = values.length - shown.length
   return (
-    <Group id={group.key} title={group.label} selectedCount={selected.length}>
+    <Group id={group.key} title={t(group.label)} selectedCount={selected.length}>
       {shown.map(({ value, count }) => (
         <Option key={value} label={value} count={count} checked={selected.includes(value)} onChange={() => onToggle(group.key, value)} />
       ))}
       {(hidden > 0 || expanded) && values.length > VISIBLE_OPTIONS && (
         <button type="button" className="filter-more" onClick={() => setExpanded(e => !e)}>
-          {expanded ? 'Show less' : `Show all ${values.length}`}
+          {expanded ? t('Show less') : t('Show all {n}', { n: values.length })}
         </button>
       )}
     </Group>
@@ -55,17 +57,18 @@ function FacetGroup({ group, values, selected, onToggle }) {
 // Facet values come from the API (/products/facets), so a group only appears when some
 // published product actually has a value for it — no dead "coming soon" options.
 function FilterGroups({ filters, setters, facets }) {
+  const { t } = useT()
   const { selected, minPrice, maxPrice } = filters
   const { toggleFacet, setMinPrice, setMaxPrice } = setters
   const groups = FILTER_FACETS.filter(f => facets?.[f.key]?.length)
 
   return (
     <>
-      <Group id="price" title="Price" hint="RWF" selectedCount={(minPrice ? 1 : 0) + (maxPrice ? 1 : 0)}>
+      <Group id="price" title={t('Price')} hint="RWF" selectedCount={(minPrice ? 1 : 0) + (maxPrice ? 1 : 0)}>
         <div className="filter-price">
-          <input type="number" min="0" placeholder="Min" aria-label="Minimum price" value={minPrice} onChange={e => setMinPrice(e.target.value)} />
+          <input type="number" min="0" placeholder={t('Min')} aria-label={t('Minimum price')} value={minPrice} onChange={e => setMinPrice(e.target.value)} />
           <span style={{ color: 'var(--muted-dark)', fontSize: 13 }}>–</span>
-          <input type="number" min="0" placeholder="Max" aria-label="Maximum price" value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
+          <input type="number" min="0" placeholder={t('Max')} aria-label={t('Maximum price')} value={maxPrice} onChange={e => setMaxPrice(e.target.value)} />
         </div>
       </Group>
 
@@ -77,16 +80,17 @@ function FilterGroups({ filters, setters, facets }) {
 }
 
 export default function FilterRail({ filters, setters, facets, activeCount, onClearAll, mobileOpen, onMobileClose }) {
+  const { t } = useT()
   return (
     <>
       {/* ── Desktop — persistent sidebar ─────────────────────── */}
-      <aside className="filter-rail-desktop" aria-label="Product filters">
+      <aside className="filter-rail-desktop" aria-label={t('Product filters')}>
         <div className="filter-rail-head">
           <b>
-            <SlidersHorizontal size={15} style={{ color: 'var(--accent-light)' }} /> Filters
+            <SlidersHorizontal size={15} style={{ color: 'var(--accent-light)' }} /> {t('Filters')}
             {activeCount > 0 && <span className="filter-count">{activeCount}</span>}
           </b>
-          {activeCount > 0 && <button type="button" className="filter-clear" onClick={onClearAll}>Clear all</button>}
+          {activeCount > 0 && <button type="button" className="filter-clear" onClick={onClearAll}>{t('Clear all')}</button>}
         </div>
         <div className="filter-scroll">
           <FilterGroups filters={filters} setters={setters} facets={facets} />
@@ -121,7 +125,7 @@ export default function FilterRail({ filters, setters, facets, activeCount, onCl
               <div style={{ padding: '22px 22px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <SlidersHorizontal size={16} style={{ color: 'var(--accent)' }} />
-                  <span style={{ fontSize: 15, fontWeight: 700 }}>Filters</span>
+                  <span style={{ fontSize: 15, fontWeight: 700 }}>{t('Filters')}</span>
                 </div>
                 <button
                   onClick={onMobileClose}
@@ -141,14 +145,14 @@ export default function FilterRail({ filters, setters, facets, activeCount, onCl
                   className="noir-btn-outline"
                   style={{ flex: 1, fontSize: 13 }}
                 >
-                  Clear all
+                  {t('Clear all')}
                 </button>
                 <button
                   onClick={onMobileClose}
                   className="noir-btn-cta"
                   style={{ flex: 1, fontSize: 13 }}
                 >
-                  Show results
+                  {t('Show results')}
                 </button>
               </div>
             </motion.div>

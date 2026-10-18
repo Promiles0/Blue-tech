@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useT } from '../../lib/i18n'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Laptop, Monitor, ArrowRight } from 'lucide-react'
@@ -22,6 +23,7 @@ const DESKTOPS = [
 ]
 
 export default function CategoriesMenu() {
+  const { t } = useT()
   const { formatPrice } = useCurrency()
   const {
     open, setOpen, close, containerRef, triggerRef, setItemRef, onTriggerKeyDown, onMenuKeyDown,
@@ -67,7 +69,7 @@ export default function CategoriesMenu() {
         onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)' }}
         onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
       >
-        Categories
+        {t('Categories')}
         <ChevronDown size={14} style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
       </button>
 
@@ -118,7 +120,7 @@ export default function CategoriesMenu() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 3 }}>
-                        New arrival
+                        {t('New arrival')}
                       </p>
                       <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {newArrival.name}
@@ -143,7 +145,7 @@ export default function CategoriesMenu() {
                 onClick={close}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}
               >
-                View all products <ArrowRight size={13} />
+                {t('View all products')} <ArrowRight size={13} />
               </Link>
               <span style={{ fontSize: 12, color: 'var(--muted-dark)' }}>{categories.length} categories</span>
             </div>
@@ -155,10 +157,11 @@ export default function CategoriesMenu() {
 }
 
 function MenuColumn({ title, items, Icon, slotOffset, setItemRef, onSelect }) {
+  const { t } = useT()
   return (
     <div>
       <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-dark)', marginBottom: 10 }}>
-        {title}
+        {t(title)}
       </p>
       {items.map((item, i) => (
         <Link
@@ -176,7 +179,7 @@ function MenuColumn({ title, items, Icon, slotOffset, setItemRef, onSelect }) {
           onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text)' }}
         >
           <Icon size={15} style={{ flexShrink: 0, opacity: 0.7 }} />
-          {item.label}
+          {t(item.label)}
         </Link>
       ))}
     </div>

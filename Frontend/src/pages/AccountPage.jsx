@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useCurrency } from '../context/CurrencyContext'
+import { LANGUAGES, useT } from '../lib/i18n'
 import { openLiveChat } from '../lib/liveChat'
 import { WHATSAPP_NUMBER } from '../lib/helpLinks'
 import RwandaAddressFields from '../components/site/RwandaAddressFields'
@@ -11,22 +13,12 @@ import apiService from '../api/service'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 
-const LANGUAGES = ['English', 'French', 'Spanish', 'Arabic', 'Kinyarwanda', 'Swahili', 'Portuguese', 'German']
-const CURRENCIES = [
-  { code: 'USD', label: 'USD — US Dollar' },
-  { code: 'EUR', label: 'EUR — Euro' },
-  { code: 'GBP', label: 'GBP — British Pound' },
-  { code: 'RWF', label: 'RWF — Rwandan Franc' },
-  { code: 'KES', label: 'KES — Kenyan Shilling' },
-  { code: 'NGN', label: 'NGN — Nigerian Naira' },
-  { code: 'ZAR', label: 'ZAR — South African Rand' },
-  { code: 'JPY', label: 'JPY — Japanese Yen' },
-]
 const THEMES = ['Dark', 'Light']
 
 const formatDate = (v) => v ? new Date(v).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'
 
 export default function Account() {
+  const { t, lang, setLang } = useT()
   const { user, logout, updateUser } = useAuth()
   const navigate = useNavigate()
 
@@ -40,13 +32,13 @@ export default function Account() {
   }, [user])
 
   const saveDetails = async () => {
-    if (!detailsForm.name.trim()) return toast.error('Name is required')
+    if (!detailsForm.name.trim()) return toast.error(t('Name is required'))
     setDetailsSaving(true)
     try {
       const { data } = await apiService.auth.updateProfile({ name: detailsForm.name.trim(), phone: detailsForm.phone.trim() })
       updateUser(data.data)
       setEditingDetails(false)
-      toast.success('Details updated')
+      toast.success(t('Details updated'))
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update')
     } finally {
@@ -60,12 +52,12 @@ export default function Account() {
 
   const savePassword = async (e) => {
     e.preventDefault()
-    if (!passForm.oldPassword || !passForm.newPassword) return toast.error('Fill in both fields')
+    if (!passForm.oldPassword || !passForm.newPassword) return toast.error(t('Fill in both fields'))
     setPassSaving(true)
     try {
       await apiService.auth.changePassword(passForm)
       setPassForm({ oldPassword: '', newPassword: '' })
-      toast.success('Password changed')
+      toast.success(t('Password changed'))
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to change password')
     } finally {
@@ -88,7 +80,7 @@ export default function Account() {
   }, [user])
 
   const saveAddress = async () => {
-    if (!addrForm.city || !addrForm.street.trim()) return toast.error('Choose a district and add your street')
+    if (!addrForm.city || !addrForm.street.trim()) return toast.error(t('Choose a district and add your street'))
     setAddrSaving(true)
     try {
       const { landmark, ...rest } = addrForm // eslint-disable-line no-unused-vars
@@ -96,7 +88,7 @@ export default function Account() {
       setAddresses(prev => [...prev, data.data])
       setShowAddrForm(false)
       setAddrForm(EMPTY_RW_ADDRESS)
-      toast.success('Address added')
+      toast.success(t('Address added'))
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to add address')
     } finally {
@@ -108,21 +100,21 @@ export default function Account() {
     try {
       await apiService.addresses.delete(id)
       setAddresses(prev => prev.filter(a => a.id !== id))
-      toast.success('Address removed')
-    } catch { toast.error('Failed to remove') }
+      toast.success(t('Address removed'))
+    } catch { toast.error(t('Failed to remove')) }
   }
 
   const setDefaultAddress = async (id) => {
     try {
       await apiService.addresses.setDefault(id)
       setAddresses(prev => prev.map(a => ({ ...a, isDefault: a.id === id })))
-      toast.success('Default address updated')
-    } catch { toast.error('Failed to update') }
+      toast.success(t('Default address updated'))
+    } catch { toast.error(t('Failed to update')) }
   }
 
   // ── App Settings ─────────────────────────────────────────────
-  const [language, setLanguage] = useState('English')
-  const [currency, setCurrency] = useState('USD')
+  // Real site settings — the same ones the header switches change.
+  const { currency, setCurrency } = useCurrency()
   const { theme: currentTheme, setTheme: setGlobalTheme } = useTheme()
   const theme = currentTheme === 'light' ? 'Light' : 'Dark'
   const setTheme = (val) => setGlobalTheme(val.toLowerCase())
@@ -139,13 +131,13 @@ export default function Account() {
 
         {/* Page header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 56 }}>
-          <p className="label-muted" style={{ marginBottom: 10 }}>Account</p>
-          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 6 }}>My Profile</h1>
-          <p style={{ color: 'var(--muted)', fontSize: 15 }}>Manage your personal details, addresses and security.</p>
+          <p className="label-muted" style={{ marginBottom: 10 }}>{t('Account')}</p>
+          <h1 style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 6 }}>{t('My profile')}</h1>
+          <p style={{ color: 'var(--muted)', fontSize: 15 }}>{t('Manage your personal details, addresses and security.')}</p>
         </motion.div>
 
         {/* ── Section 1: Account Details ── */}
-        <Section title="Account Details" delay={0.05}>
+        <Section title={t('Account details')} delay={0.05}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, var(--accent), var(--accent-light))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 800, color: 'var(--text)', flexShrink: 0 }}>
@@ -158,12 +150,12 @@ export default function Account() {
             </div>
             {!editingDetails ? (
               <button onClick={() => setEditingDetails(true)} className="noir-btn-outline" style={{ borderRadius: 10, padding: '8px 18px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 7 }}>
-                <Edit3 size={14} /> Edit
+                <Edit3 size={14} /> {t('Edit')}
               </button>
             ) : (
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => setEditingDetails(false)} className="noir-btn-outline" style={{ borderRadius: 10, padding: '8px 16px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <X size={14} /> Cancel
+                  <X size={14} /> {t('Cancel')}
                 </button>
                 <button onClick={saveDetails} disabled={detailsSaving} className="noir-btn-primary shine" style={{ borderRadius: 10, padding: '8px 18px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 7 }}>
                   <Save size={14} /> {detailsSaving ? 'Saving…' : 'Save'}
@@ -175,10 +167,10 @@ export default function Account() {
           {editingDetails ? (
             <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                <Field label="Full Name">
+                <Field label={t('Full name')}>
                   <input className="noir-input" value={detailsForm.name} onChange={e => setDetailsForm(f => ({ ...f, name: e.target.value }))} style={{ borderRadius: 10 }} />
                 </Field>
-                <Field label="Phone Number">
+                <Field label={t('Phone number')}>
                   <input className="noir-input" value={detailsForm.phone} onChange={e => setDetailsForm(f => ({ ...f, phone: e.target.value }))} placeholder="+250 XXX XXX XXX" style={{ borderRadius: 10 }} />
                 </Field>
               </div>
@@ -190,10 +182,10 @@ export default function Account() {
                   <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Change Password</p>
                 </div>
                 <form onSubmit={savePassword} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                  <Field label="Current Password">
+                  <Field label={t('Current password')}>
                     <input type="password" className="noir-input" value={passForm.oldPassword} onChange={e => setPassForm(f => ({ ...f, oldPassword: e.target.value }))} placeholder="••••••••" style={{ borderRadius: 10 }} />
                   </Field>
-                  <Field label="New Password">
+                  <Field label={t('New password')}>
                     <input type="password" className="noir-input" value={passForm.newPassword} onChange={e => setPassForm(f => ({ ...f, newPassword: e.target.value }))} placeholder="••••••••" style={{ borderRadius: 10 }} />
                   </Field>
                   <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}>
@@ -206,28 +198,28 @@ export default function Account() {
             </motion.div>
           ) : (
             <div style={{ display: 'grid', gap: 0 }}>
-              <InfoRow label="Full Name" value={user.name  ?? '—'} />
-              <InfoRow label="Email"     value={user.email ?? '—'} />
-              <InfoRow label="Phone"     value={user.phone ?? '—'} last />
+              <InfoRow label={t('Full name')} value={user.name  ?? '—'} />
+              <InfoRow label={t('Email')} value={user.email ?? '—'} />
+              <InfoRow label={t('Phone')} value={user.phone ?? '—'} last />
             </div>
           )}
         </Section>
 
         {/* ── Section 2: Payment Methods ── */}
-        <Section title="Payment Methods" delay={0.1}>
+        <Section title={t('Payment methods')} delay={0.1}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '20px 0' }}>
             <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CreditCard size={20} style={{ color: 'var(--muted)' }} />
             </div>
             <div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>MTN MoMo, Airtel Money or card</p>
-              <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 3 }}>You choose at checkout. For your safety we never store card numbers.</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{t('MTN MoMo, Airtel Money or card')}</p>
+              <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 3 }}>{t('You choose at checkout. For your safety we never store card numbers.')}</p>
             </div>
           </div>
         </Section>
 
         {/* ── Section 3: Shopping Addresses ── */}
-        <Section title="Shopping Addresses" delay={0.15}>
+        <Section title={t('Delivery addresses')} delay={0.15}>
           <div style={{ display: 'grid', gap: 12, marginBottom: addresses.length > 0 ? 20 : 0 }}>
             {addresses.map(addr => (
               <motion.div key={addr.id} layout style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 20px', borderRadius: 14, background: 'var(--glass-bg)', border: `1px solid ${addr.isDefault ? 'var(--accent-glow)' : 'var(--glass-border)'}` }}>
@@ -246,7 +238,7 @@ export default function Account() {
                     <button onClick={() => setDefaultAddress(addr.id)} style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, transition: 'background 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dim)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                    >Set default</button>
+                    >{t('Set default')}</button>
                   )}
                   <button onClick={() => deleteAddress(addr.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', transition: 'all 0.15s' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--error-dim)'; e.currentTarget.style.color = 'var(--error)' }}
@@ -261,7 +253,7 @@ export default function Account() {
 
           {showAddrForm ? (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '24px', borderRadius: 16, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 20 }}>New Address</p>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 20 }}>{t('New address')}</p>
               <RwandaAddressFields value={addrForm} onChange={setAddrForm} />
               <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
                 <button onClick={saveAddress} disabled={addrSaving} className="noir-btn-primary shine" style={{ borderRadius: 10, padding: '10px 22px', fontSize: 13 }}>
@@ -274,42 +266,42 @@ export default function Account() {
             </motion.div>
           ) : (
             <button onClick={() => setShowAddrForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.8 }}>
-              <Plus size={15} /> Add new address
+              <Plus size={15} /> {t('Add new address')}
             </button>
           )}
         </Section>
 
         {/* ── Section 4: App Settings ── */}
-        <Section title="App Settings" delay={0.2}>
+        <Section title={t('App settings')} delay={0.2}>
           <SelectRow
             icon={<Languages size={16} />}
-            label="Language"
-            value={language}
-            options={LANGUAGES.map(l => ({ value: l, label: l }))}
-            onChange={setLanguage}
+            label={t('Language')}
+            value={lang}
+            options={LANGUAGES.map(l => ({ value: l.code, label: l.label }))}
+            onChange={setLang}
           />
           <SelectRow
             icon={<DollarSign size={16} />}
-            label="Currency"
+            label={t('Currency')}
             value={currency}
-            options={CURRENCIES.map(c => ({ value: c.code, label: c.label }))}
+            options={[{ value: 'RWF', label: t('RWF — Rwandan franc') }, { value: 'USD', label: t('USD — US dollar') }]}
             onChange={setCurrency}
           />
           <SelectRow
             icon={<Palette size={16} />}
-            label="Theme"
+            label={t('Theme')}
             value={theme}
-            options={THEMES.map(t => ({ value: t, label: t }))}
+            options={THEMES.map(th => ({ value: th, label: t(th) }))}
             onChange={setTheme}
             last
           />
         </Section>
 
         {/* ── Section 5: Support & Help ── */}
-        <Section title="Support & Help" delay={0.25}>
-          <SettingRow icon={<HelpCircle size={16} />} label="FAQ" value="Browse common questions" onClick={() => navigate('/help?v=faq')} />
-          <SettingRow icon={<Mail size={16} />} label="WhatsApp Support" value="Message the Blue-Tech team" onClick={() => window.open(`https://wa.me/${WHATSAPP_NUMBER}`, '_blank', 'noopener')} />
-          <SettingRow icon={<Phone size={16} />} label="Ask Blue" value="Instant answers from our AI assistant" onClick={() => openLiveChat()} last />
+        <Section title={t('Support & help')} delay={0.25}>
+          <SettingRow icon={<HelpCircle size={16} />} label={t('FAQ')} value={t('Browse common questions')} onClick={() => navigate('/help?v=faq')} />
+          <SettingRow icon={<Mail size={16} />} label={t('WhatsApp support')} value={t('Message the Blue-Tech team')} onClick={() => window.open(`https://wa.me/${WHATSAPP_NUMBER}`, '_blank', 'noopener')} />
+          <SettingRow icon={<Phone size={16} />} label={t('Ask Blue')} value={t('Instant answers from our AI assistant')} onClick={() => openLiveChat()} last />
         </Section>
 
         {/* Sign out */}
@@ -320,7 +312,7 @@ export default function Account() {
             onMouseEnter={e => e.currentTarget.style.opacity = '1'}
             onMouseLeave={e => e.currentTarget.style.opacity = '0.8'}
           >
-            Sign out
+            {t('Sign out')}
           </button>
         </motion.div>
 

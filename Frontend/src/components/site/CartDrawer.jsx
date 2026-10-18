@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { useT } from '../../lib/i18n'
 import { Link } from 'react-router-dom'
 import { X, ShoppingBag, Plus, Minus, Trash2 } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
@@ -7,6 +8,7 @@ import { getProductImage, handleProductImageError } from '../../lib/productImage
 import { useCurrency } from '../../context/CurrencyContext'
 
 export default function CartDrawer() {
+  const { t } = useT()
   const { formatPrice } = useCurrency()
   const { cartOpen, setCartOpen } = useUI()
   const { items, total, removeFromCart, updateQuantity } = useCart()
@@ -51,7 +53,7 @@ export default function CartDrawer() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <ShoppingBag size={18} style={{ color: 'var(--accent)' }} />
-                <span style={{ fontSize: 16, fontWeight: 700 }}>Your cart</span>
+                <span style={{ fontSize: 16, fontWeight: 700 }}>{t('Your cart')}</span>
                 {items.length > 0 && (
                   <span style={{ fontSize: 12, color: 'var(--muted-dark)' }}>({items.length})</span>
                 )}
@@ -75,13 +77,13 @@ export default function CartDrawer() {
                   height: '100%', gap: 16, color: 'var(--muted)',
                 }}>
                   <ShoppingBag size={44} />
-                  <p style={{ fontSize: 15, color: 'var(--muted-dark)' }}>Your cart is empty</p>
+                  <p style={{ fontSize: 15, color: 'var(--muted-dark)' }}>{t('Your cart is empty')}</p>
                   <button
                     onClick={() => setCartOpen(false)}
                     className="noir-btn-outline"
                     style={{ fontSize: 13 }}
                   >
-                    Continue shopping
+                    {t('Continue shopping')}
                   </button>
                 </div>
               ) : (
@@ -168,7 +170,7 @@ export default function CartDrawer() {
             {items.length > 0 && (
               <div style={{ padding: '20px 24px', borderTop: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-                  <span style={{ fontSize: 14, color: 'var(--muted)' }}>Subtotal</span>
+                  <span style={{ fontSize: 14, color: 'var(--muted)' }}>{t('Subtotal')}</span>
                   <span style={{ fontSize: 20, fontWeight: 800 }}>{formatPrice(total)}</span>
                 </div>
                 <Link
@@ -177,7 +179,7 @@ export default function CartDrawer() {
                   className="noir-btn-cta shine"
                   style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '14px', fontSize: 15 }}
                 >
-                  Checkout →
+                  {t('Checkout')} →
                 </Link>
                 <Link
                   to="/cart"
@@ -186,7 +188,7 @@ export default function CartDrawer() {
                   onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
                   onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border)' }}
                 >
-                  View full cart
+                  {t('View full cart')}
                 </Link>
               </div>
             )}

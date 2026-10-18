@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useT } from '../lib/i18n'
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Tag, Shield, Truck, Headphones, FileText } from 'lucide-react'
 import ProformaModal from '../components/site/ProformaModal'
 import { useCart } from '../context/CartContext'
@@ -8,6 +9,7 @@ import { getProductImage, handleProductImageError } from '../lib/productImage'
 import { useCurrency } from '../context/CurrencyContext'
 
 export default function Cart() {
+  const { t } = useT()
   const { formatPrice } = useCurrency()
   const { items, count, total, updateQuantity, removeFromCart, clearCart } = useCart()
   const navigate = useNavigate()
@@ -16,25 +18,25 @@ export default function Cart() {
   if (items.length === 0) return (
     <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20, padding: 24 }}>
       <ShoppingBag size={48} style={{ color: 'var(--border)' }} />
-      <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>Your cart is empty</p>
-      <p style={{ fontSize: 14, color: 'var(--muted)' }}>Add something beautiful to get started.</p>
-      <Link to="/products" className="noir-btn-primary" style={{ padding: '12px 24px' }}>Shop now</Link>
+      <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{t('Your cart is empty')}</p>
+      <p style={{ fontSize: 14, color: 'var(--muted)' }}>{t('Find a laptop, printer or accessory to get started.')}</p>
+      <Link to="/products" className="noir-btn-primary" style={{ padding: '12px 24px' }}>{t('Shop now')}</Link>
     </div>
   )
 
   return (
     <div style={{ padding: '48px 0 80px' }}>
       <div className="container-noir">
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>Your cart</h1>
-        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 40 }}>{count} item{count !== 1 ? 's' : ''}</p>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>{t('Your cart')}</h1>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 40 }}>{count === 1 ? t('1 item') : t('{n} items', { n: count })}</p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 40, alignItems: 'start' }}>
+        <div className="cart-grid">
 
           {/* Items */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {items.map(item => {
               const img   = getProductImage(item.product ?? item)
-              const name  = item.productName ?? 'Product'
+              const name  = item.productName ?? t('Product')
               const opts  = item.sizeOrColor
               const price = parseFloat(item.unitPrice ?? 0)
               const id    = item.cartItemId
@@ -91,24 +93,24 @@ export default function Cart() {
               onMouseEnter={e => e.currentTarget.style.color = 'var(--error)'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
             >
-              Clear cart
+              {t('Clear cart')}
             </button>
           </div>
 
           {/* Summary */}
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--card-border)', borderRadius: 16, padding: 28, position: 'sticky', top: 80 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 24 }}>Order summary</h2>
-            <SummaryRow label="Subtotal"  value={formatPrice(total)} />
-            <SummaryRow label="Shipping"  value="Free" />
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 24 }}>{t('Order summary')}</h2>
+            <SummaryRow label={t('Subtotal')}  value={formatPrice(total)} />
+            <SummaryRow label={t('Delivery')}  value={t('Free')} />
             <div style={{ borderTop: '1px solid var(--border)', margin: '16px 0' }} />
-            <SummaryRow label="Total" value={formatPrice(total)} bold />
+            <SummaryRow label={t('Total')} value={formatPrice(total)} bold />
 
             <button
               onClick={() => navigate('/checkout')}
               className="noir-btn-cta"
               style={{ width: '100%', padding: '14px', fontSize: 15, marginTop: 20 }}
             >
-              Checkout <ArrowRight size={16} />
+              {t('Checkout')} <ArrowRight size={16} />
             </button>
 
             <button
@@ -116,9 +118,9 @@ export default function Cart() {
               className="noir-btn-outline"
               style={{ width: '100%', padding: '11px', fontSize: 13.5, marginTop: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
             >
-              <FileText size={15} /> Get a proforma invoice
+              <FileText size={15} /> {t('Get a proforma invoice')}
             </button>
-            <p style={{ fontSize: 11.5, color: 'var(--text-muted)', textAlign: 'center', marginTop: 6 }}>For schools, companies and tenders — free PDF, no payment.</p>
+            <p style={{ fontSize: 11.5, color: 'var(--text-muted)', textAlign: 'center', marginTop: 6 }}>{t('For schools, companies and tenders — free PDF, no payment.')}</p>
 
             <Link
               to="/products"
@@ -126,7 +128,7 @@ export default function Cart() {
               onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
             >
-              Continue shopping
+              {t('Continue shopping')}
             </Link>
           </div>
         </div>

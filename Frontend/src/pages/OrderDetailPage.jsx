@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useT } from '../lib/i18n'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Package, Truck, CheckCircle2, Clock, XCircle, Wallet, Star } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -8,6 +9,9 @@ import { toast } from 'sonner'
 import { useCurrency } from '../context/CurrencyContext'
 import { StarInput } from '../components/site/StarRating'
 import InvoiceButton from '../components/site/InvoiceButton'
+import { useStoreSettings, deliveryWindow, formatWindow } from '../lib/delivery'
+
+const DELIVERY_LABELS = { STANDARD: 'Standard delivery', EXPRESS: 'Express', PICKUP: 'Pick up at our shop' }
 
 const STATUS_STEPS = ['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED']
 
@@ -69,6 +73,8 @@ function TimelineStep({ label, sublabel, done, active, last, icon: Icon }) {
 }
 
 export default function OrderDetailPage() {
+  const { t, intlLocale } = useT()
+  const { deliveryConfig } = useStoreSettings()
   const { formatPrice } = useCurrency()
   const { id } = useParams()
   const [order, setOrder] = useState(null)
@@ -103,20 +109,24 @@ export default function OrderDetailPage() {
     </div>
   )
 
+  const deliveryEstimate = order && deliveryConfig && !['DELIVERED', 'CANCELLED'].includes(order.status)
+    ? formatWindow(deliveryWindow(deliveryConfig, order.shippingCity, order.shippingMethod ?? 'STANDARD', new Date(order.createdAt)), intlLocale)
+    : null
+
   if (error || !order) return (
     <div style={{ padding: '80px 24px', maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
-      <p style={{ color: 'var(--text-secondary)' }}>{error || 'Order not found.'}</p>
-      <Link to="/orders" style={{ color: 'var(--accent)', fontSize: 14, marginTop: 16, display: 'inline-block', textDecoration: 'none' }}>← Back to orders</Link>
+      <p style={{ color: 'var(--text-secondary)' }}>{error || t('Order not found.')}</p>
+      <Link to="/orders" style={{ color: 'var(--accent)', fontSize: 14, marginTop: 16, display: 'inline-block', textDecoration: 'none' }}>← {t('Back to orders')}</Link>
     </div>
   )
 
   const stepIdx = order.status === 'CANCELLED' ? -1 : STATUS_STEPS.indexOf(order.status)
 
   const timeline = [
-    { key: 'PENDING',    label: 'Order Placed',  sub: fmtDate(order.createdAt),   icon: Clock        },
-    { key: 'PROCESSING', label: 'Processing',    sub: 'Preparing your items',      icon: Package      },
-    { key: 'SHIPPED',    label: 'Shipped',        sub: order.shipmentInfo?.carrier ?? 'On the way', icon: Truck },
-    { key: 'DELIVERED',  label: 'Delivered',      sub: 'Enjoy your order',          icon: CheckCircle2 },
+    { key: 'PENDING',    label: t('Order placed'),  sub: fmtDate(order.createdAt),   icon: Clock        },
+    { key: 'PROCESSING', label: t('Processing'),    sub: t('Preparing your items'),      icon: Package      },
+    { key: 'SHIPPED',    label: t('Shipped'),        sub: order.shipmentInfo?.carrier ?? t('On the way'), icon: Truck },
+    { key: 'DELIVERED',  label: t('Delivered'),      sub: t('Enjoy your order'),          icon: CheckCircle2 },
   ]
 
   return (
@@ -126,14 +136,14 @@ export default function OrderDetailPage() {
         <Link to="/orders" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)', marginBottom: 32, transition: 'color 0.2s', textDecoration: 'none' }}
           onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
           onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
-          <ArrowLeft size={13} /> Back to orders
+          <ArrowLeft size={13} /> {t('Back to orders')}
         </Link>
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18, gap: 16, flexWrap: 'wrap' }}>
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>Order</p>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>{t('Order')}</p>
               <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>#{order.orderId}</h1>
               <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6 }}>{fmt(order.createdAt)}</p>
             </div>
@@ -152,7 +162,7 @@ export default function OrderDetailPage() {
                     cursor: 'pointer'
                   }}
                 >
-                  Confirm Delivery
+                  {t('Confirm delivery')}
                 </button>
               )}
               <span style={{ fontSize: 24, fontWeight: 900, color: 'var(--price-color, #f59e0b)' }}>{formatPrice(order.totalAmount)}</span>
@@ -171,7 +181,7 @@ export default function OrderDetailPage() {
                 }}>
                   <Clock size={16} style={{ color: '#3b82f6' }} />
                 </div>
-                <span className="label-muted">Order date</span>
+                <span className="label-muted">{t('Order date')}</span>
               </div>
               <p style={{ marginTop: 10, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{fmt(order.createdAt)}</p>
             </div>
@@ -192,7 +202,7 @@ export default function OrderDetailPage() {
                            order.paymentStatus === 'PENDING' ? '#f59e0b' : '#ef4444'
                   }} />
                 </div>
-                <span className="label-muted">Payment</span>
+                <span className="label-muted">{t('Payment')}</span>
               </div>
               <p style={{ marginTop: 10, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{order.paymentMethod ?? 'Credit card'}</p>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{order.paymentStatus ?? 'Completed'}</p>
@@ -206,10 +216,10 @@ export default function OrderDetailPage() {
                 }}>
                   <Truck size={16} style={{ color: 'var(--accent)' }} />
                 </div>
-                <span className="label-muted">Shipping</span>
+                <span className="label-muted">{t('Delivery')}</span>
               </div>
-              <p style={{ marginTop: 10, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{order.shippingMethod ?? 'Standard delivery'}</p>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>Estimated delivery: 3-5 days</p>
+              <p style={{ marginTop: 10, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{t(DELIVERY_LABELS[order.shippingMethod] ?? 'Standard delivery')}</p>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>{deliveryEstimate ? t('Estimated: {dates}', { dates: deliveryEstimate }) : null}</p>
             </div>
           </div>
 
@@ -225,7 +235,7 @@ export default function OrderDetailPage() {
                   <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(248,113,113,0.12)', border: '2px solid rgba(248,113,113,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <XCircle size={14} color="#f87171" />
                   </div>
-                  <p style={{ fontSize: 14, color: '#f87171', fontWeight: 600 }}>Order cancelled</p>
+                  <p style={{ fontSize: 14, color: '#f87171', fontWeight: 600 }}>{t('Order cancelled')}</p>
                 </div>
               ) : (
                 timeline.map((step, i) => (
@@ -246,7 +256,7 @@ export default function OrderDetailPage() {
             <div className="order-details-grid">
               {(order.shippingRecipient || order.shippingStreet) && (
                 <div className="dashboard-panel" style={{ background: 'var(--bg-surface)', border: '1px solid var(--card-border)', borderRadius: 20, padding: 24 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>Ship to</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>{t('Deliver to')}</p>
                   {order.shippingRecipient && <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{order.shippingRecipient}</p>}
                   {order.shippingStreet  && <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{order.shippingStreet}</p>}
                   {order.shippingCity    && <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{order.shippingCity}</p>}
@@ -260,12 +270,12 @@ export default function OrderDetailPage() {
                   <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>Shipment</p>
                   {order.shipmentInfo.carrier && (
                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Carrier: </span>{order.shipmentInfo.carrier}
+                      <span style={{ color: 'var(--text-muted)' }}>{t('Carrier:')} </span>{order.shipmentInfo.carrier}
                     </p>
                   )}
                   {order.shipmentInfo.trackingNumber && (
                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                      <span style={{ color: 'var(--text-muted)' }}>Tracking: </span>
+                      <span style={{ color: 'var(--text-muted)' }}>{t('Tracking:')} </span>
                       <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{order.shipmentInfo.trackingNumber}</span>
                     </p>
                   )}
@@ -281,7 +291,7 @@ export default function OrderDetailPage() {
           {order.items?.length > 0 && (
             <div className="dashboard-panel" style={{ background: 'var(--bg-surface)', border: '1px solid var(--card-border)', borderRadius: 20, padding: 0, overflow: 'hidden', marginBottom: 32 }}>
               <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--card-border)' }}>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Items</p>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{t('Items')}</p>
               </div>
               {order.items.map((item, i) => (
                 <div key={i} style={{
@@ -309,7 +319,7 @@ export default function OrderDetailPage() {
                           gap: 4
                         }}
                       >
-                        <Star size={12} fill="currentColor" /> Write a review
+                        <Star size={12} fill="currentColor" /> {t('Write a review')}
                       </button>
                     )}
                   </div>
@@ -320,7 +330,7 @@ export default function OrderDetailPage() {
                 </div>
               ))}
               <div style={{ padding: '18px 24px', borderTop: '1px solid var(--card-border)', display: 'flex', justifyContent: 'space-between', background: 'var(--glass-bg2)' }}>
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Total</span>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t('Total')}</span>
                 <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--price-color, #f59e0b)' }}>{formatPrice(order.totalAmount)}</span>
               </div>
             </div>
@@ -348,23 +358,23 @@ export default function OrderDetailPage() {
               }}
             >
               <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>
-                Review Product
+                {t('Review product')}
               </h3>
               <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
                 {activeReviewProduct.name}
               </p>
 
               <div style={{ marginBottom: 18 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>Rating</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>{t('Rating')}</label>
                 <StarInput value={rating} onChange={setRating} />
               </div>
 
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>Your Thoughts</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>{t('Your review')}</label>
                 <textarea
                   value={comment}
                   onChange={e => setComment(e.target.value)}
-                  placeholder="Share your experience with this product..."
+                  placeholder={t('Share your experience with this product…')}
                   rows={4}
                   style={{
                     width: '100%', padding: '10px 14px', borderRadius: 10, fontSize: 14,
@@ -386,18 +396,18 @@ export default function OrderDetailPage() {
                   style={{ padding: '8px 16px', fontSize: 13 }}
                   disabled={submittingReview}
                 >
-                  Cancel
+                  {t('Cancel')}
                 </button>
                 <button
                   onClick={async () => {
                     if (!rating) {
-                      toast.error('Please select a star rating.')
+                      toast.error(t('Please select a star rating.'))
                       return
                     }
                     setSubmittingReview(true)
                     try {
                       await api.post(`/products/${activeReviewProduct.id}/reviews`, { rating, comment })
-                      toast.success('Review posted successfully!')
+                      toast.success(t('Review posted successfully!'))
                       setActiveReviewProduct(null)
                       setRating(0)
                       setComment('')

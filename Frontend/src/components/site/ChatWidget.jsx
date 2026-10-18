@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useT } from '../../lib/i18n'
 import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Sparkles, X, ArrowUp, RotateCcw, MessageCircle, Mail, FileText } from 'lucide-react'
@@ -29,6 +30,7 @@ const SUGGESTIONS = [
 ]
 const GREETING = {
   role: 'assistant',
+  greeting: true, // shown through t() so it follows the site language
   text: "Hi, I'm Blue 👋 Tell me what you'll use it for and your budget, and I'll find the right machine. I can also answer questions about delivery, warranty and returns.",
 }
 
@@ -71,23 +73,25 @@ function ProductChip({ product, onNavigate }) {
 }
 
 function Handoff({ kind, lastQuestion, onNavigate }) {
+  const { t } = useT()
   if (kind === 'quote') {
     return (
       <div className="bluechat-actions">
-        <Link to="/interactive-screens?quote=1" onClick={onNavigate} className="bluechat-action primary"><FileText size={13} /> Request a quote</Link>
+        <Link to="/interactive-screens?quote=1" onClick={onNavigate} className="bluechat-action primary"><FileText size={13} /> {t('Request a quote')}</Link>
       </div>
     )
   }
-  const waText = encodeURIComponent(`Hi Blue-Tech! I was chatting with your assistant and need help with: ${lastQuestion ?? ''}`)
+  const waText = encodeURIComponent(t('Hi Blue-Tech! I was chatting with your assistant and need help with: {q}', { q: lastQuestion ?? '' }))
   return (
     <div className="bluechat-actions">
-      <a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`} target="_blank" rel="noreferrer" className="bluechat-action primary"><MessageCircle size={13} /> WhatsApp the team</a>
-      <a href={`mailto:${SUPPORT_EMAIL}`} className="bluechat-action"><Mail size={13} /> Email us</a>
+      <a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${waText}`} target="_blank" rel="noreferrer" className="bluechat-action primary"><MessageCircle size={13} /> {t('WhatsApp the team')}</a>
+      <a href={`mailto:${SUPPORT_EMAIL}`} className="bluechat-action"><Mail size={13} /> {t('Email us')}</a>
     </div>
   )
 }
 
 export default function ChatWidget() {
+  const { t, lang } = useT()
   const location = useLocation()
   const reduce = useReducedMotion()
   const [open, setOpen] = useState(false)
@@ -120,8 +124,6 @@ export default function ChatWidget() {
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  if (HIDDEN_ON.some((p) => location.pathname.startsWith(p))) return null
-
   const send = async (raw) => {
     const text = (raw ?? input).trim()
     if (!text || sending) return
@@ -131,22 +133,26 @@ export default function ChatWidget() {
     setSending(true)
     try {
       const { data } = await apiService.chat.send(
-        next.filter((m) => m !== GREETING && !m.error).map(({ role, text }) => ({ role, text })),
+        next.filter((m) => m !== GREETING && !m.greeting && m.text !== GREETING.text && !m.error).map(({ role, text }) => ({ role, text })),
         chatSessionId(),
+        lang,
       )
       setMessages((m) => [...m, { role: 'assistant', text: data.reply, products: data.products, handoff: data.handoff }])
     } catch (error) {
       const limited = error?.response?.status === 429
       setMessages((m) => [...m, {
         role: 'assistant', error: true, handoff: 'human',
-        text: limited ? "You're sending messages quickly — give me a minute, or reach the team directly:" : "I'm having trouble connecting right now. You can reach the team directly:",
+        text: limited ? t("You're sending messages quickly — give me a minute, or reach the team directly:") : t("I'm having trouble connecting right now. You can reach the team directly:"),
       }])
     } finally {
       setSending(false)
     }
   }
 
-  sendRef.current = send
+  // Keep the latest send() for the open-and-ask event (updated after render, not during it).
+  useEffect(() => { sendRef.current = send })
+
+  if (HIDDEN_ON.some((p) => location.pathname.startsWith(p))) return null
 
   const reset = () => { setMessages([GREETING]); setInput('') }
   const close = () => setOpen(false)
@@ -162,7 +168,7 @@ export default function ChatWidget() {
           <motion.div
             className="bluechat-panel"
             role="dialog"
-            aria-label="Blue-Tech AI assistant"
+            aria-label={t('Blue-Tech AI assistant')}
             initial={reduce ? false : { opacity: 0, y: 16, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.97 }}
@@ -171,19 +177,19 @@ export default function ChatWidget() {
             <header className="bluechat-header">
               <div className="bluechat-avatar"><Sparkles size={16} /></div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, fontFamily: '"Space Grotesk",sans-serif' }}>Blue · AI assistant</div>
+                <div style={{ fontWeight: 700, fontSize: 14, fontFamily: '"Space Grotesk",sans-serif' }}>Blue · {t('AI assistant')}</div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span className="bluechat-dot" /> Online · usually answers instantly
+                  <span className="bluechat-dot" /> {t('Online · usually answers instantly')}
                 </div>
               </div>
-              <button className="bluechat-icon" onClick={reset} aria-label="Start a new conversation" title="New conversation"><RotateCcw size={15} /></button>
-              <button className="bluechat-icon" onClick={close} aria-label="Close chat"><X size={17} /></button>
+              <button className="bluechat-icon" onClick={reset} aria-label={t('Start a new conversation')} title={t('New conversation')}><RotateCcw size={15} /></button>
+              <button className="bluechat-icon" onClick={close} aria-label={t('Close chat')}><X size={17} /></button>
             </header>
 
             <div className="bluechat-body" ref={scrollRef} aria-live="polite">
               {messages.map((m, i) => (
                 <div key={i} className={`bluechat-row ${m.role}`}>
-                  <div className={`bluechat-bubble ${m.role}`}><RichText text={m.text} /></div>
+                  <div className={`bluechat-bubble ${m.role}`}><RichText text={m.greeting || m.text === GREETING.text ? t(GREETING.text) : m.text} /></div>
                   {m.products?.length > 0 && (
                     <div className="bluechat-products">
                       {m.products.map((p) => <ProductChip key={p.productId} product={p} onNavigate={() => window.innerWidth < 520 && close()} />)}
@@ -203,7 +209,7 @@ export default function ChatWidget() {
 
               {showSuggestions && (
                 <div className="bluechat-suggestions">
-                  {SUGGESTIONS.map((s) => <button key={s} onClick={() => send(s)}>{s}</button>)}
+                  {SUGGESTIONS.map((s) => <button key={s} onClick={() => send(t(s))}>{t(s)}</button>)}
                 </div>
               )}
             </div>
@@ -214,13 +220,13 @@ export default function ChatWidget() {
                 rows={1}
                 value={input}
                 maxLength={1000}
-                placeholder="Ask about a product, budget, delivery…"
+                placeholder={t('Ask about a product, budget, delivery…')}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
               />
-              <button type="submit" className="bluechat-send" disabled={!input.trim() || sending} aria-label="Send message"><ArrowUp size={17} /></button>
+              <button type="submit" className="bluechat-send" disabled={!input.trim() || sending} aria-label={t('Send message')}><ArrowUp size={17} /></button>
             </form>
-            <div className="bluechat-foot">AI can make mistakes — check details on the product page. Chats are saved anonymously to improve answers.</div>
+            <div className="bluechat-foot">{t('AI can make mistakes — check details on the product page. Chats are saved anonymously to improve answers.')}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -228,7 +234,7 @@ export default function ChatWidget() {
       <motion.button
         className={`bluechat-launcher ${open ? 'is-open' : ''}`}
         onClick={() => setOpen((o) => !o)}
-        aria-label={open ? 'Close chat' : 'Chat with our AI assistant'}
+        aria-label={open ? t('Close chat') : t('Chat with our AI assistant')}
         whileHover={reduce ? undefined : { scale: 1.05 }}
         whileTap={reduce ? undefined : { scale: 0.95 }}
       >

@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
+import { useT } from '../lib/i18n'
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, Heart, ShoppingBag, User, Package, LogOut, Menu, Bell, X, Moon, Sun } from 'lucide-react'
 import NotificationBell from './site/NotificationBell'
+import LanguageSwitcher from './site/LanguageSwitcher'
 import CategoriesMenu from './site/CategoriesMenu'
 import CurrencySwitcher from './site/CurrencySwitcher'
 import HelpMenu from './site/HelpMenu'
@@ -13,6 +15,7 @@ import { useUI } from '../context/UIContext'
 import { useTheme } from '../context/ThemeContext'
 
 export default function Header() {
+  const { t } = useT()
   const { user, logout, isAdmin }                           = useAuth()
   const { count }                                           = useCart()
   const { setCartOpen, setMobileNavOpen }                   = useUI()
@@ -120,7 +123,7 @@ export default function Header() {
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
           >
-            Store
+            {t('Store')}
           </Link>
 
           <CategoriesMenu />
@@ -132,7 +135,7 @@ export default function Header() {
             onMouseEnter={e => { e.currentTarget.style.color = 'var(--muted)' }}
             onMouseLeave={e => { e.currentTarget.style.color = 'var(--text)' }}
           >
-            Interactive Screens
+            {t('Interactive Screens')}
           </Link>
         </nav>
 
@@ -165,7 +168,7 @@ export default function Header() {
                       ref={searchInputRef}
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
-                      placeholder="Search…"
+                      placeholder={t('Search…')}
                       style={{
                         flex: 1, background: 'none', border: 'none',
                         outline: 'none', color: 'var(--text)', fontSize: 13,
@@ -187,12 +190,14 @@ export default function Header() {
             </AnimatePresence>
             <IconBtn
               onClick={() => { setSearchOpen(o => !o); if (searchOpen) setSearchQuery('') }}
-              title="Search"
+              title={t('Search')}
               active={searchOpen}
             >
               {searchOpen ? <X size={18} /> : <Search size={18} />}
             </IconBtn>
           </div>
+
+          <span className="hdr-hide-sm"><LanguageSwitcher /></span>
 
           <CurrencySwitcher />
 
@@ -200,7 +205,7 @@ export default function Header() {
           <span className="hdr-hide-sm"><HelpMenu /></span>
 
           <span className="hdr-hide-sm">
-            <IconBtn onClick={toggleTheme} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+            <IconBtn onClick={toggleTheme} title={theme === 'dark' ? t('Switch to light mode') : t('Switch to dark mode')}>
               {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
             </IconBtn>
           </span>
@@ -285,17 +290,17 @@ export default function Header() {
                       </div>
                     </div>
                   </div>
-                  {!isAdmin && <DropdownItem to="/account"       icon={<User size={14} />}     onClick={() => setUserMenuOpen(false)}>My profile</DropdownItem>}
-                  {!isAdmin && <DropdownItem to="/orders"        icon={<Package size={14} />}  onClick={() => setUserMenuOpen(false)}>My orders</DropdownItem>}
-                  {!isAdmin && <DropdownItem to="/notifications" icon={<Bell size={14} />}     onClick={() => setUserMenuOpen(false)}>Notifications</DropdownItem>}
+                  {!isAdmin && <DropdownItem to="/account"       icon={<User size={14} />}     onClick={() => setUserMenuOpen(false)}>{t('My profile')}</DropdownItem>}
+                  {!isAdmin && <DropdownItem to="/orders"        icon={<Package size={14} />}  onClick={() => setUserMenuOpen(false)}>{t('My orders')}</DropdownItem>}
+                  {!isAdmin && <DropdownItem to="/notifications" icon={<Bell size={14} />}     onClick={() => setUserMenuOpen(false)}>{t('Notifications')}</DropdownItem>}
                   {isAdmin && (
                     <DropdownItem to="/admin" icon={<span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.06em', color: 'var(--accent)' }}>ADM</span>} onClick={() => setUserMenuOpen(false)}>
-                      Admin panel
+                      {t('Admin panel')}
                     </DropdownItem>
                   )}
                   <div style={{ height: 1, background: 'var(--border)', margin: '4px 6px' }} />
                   <DropdownItem danger icon={<LogOut size={14} />} onClick={() => { logout(); setUserMenuOpen(false); navigate('/') }}>
-                    Sign out
+                    {t('Sign out')}
                   </DropdownItem>
                 </div>
               )}

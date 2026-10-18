@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../lib/i18n'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -7,6 +8,7 @@ import PasswordStrength, { isFair } from '../components/site/PasswordStrength'
 import Logo from '../components/site/Logo'
 
 export default function Register() {
+  const { t } = useT()
   const [name, setName]         = useState('')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -19,16 +21,16 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (password !== confirm)   { setError('Passwords do not match.');           return }
-    if (password.length < 8)    { setError('Password must be at least 8 characters.'); return }
-    if (!isFair(password))      { setError('Password is too weak. Add uppercase letters, numbers or symbols.'); return }
+    if (password !== confirm)   { setError(t('Passwords do not match.'));           return }
+    if (password.length < 8)    { setError(t('Password must be at least 8 characters.')); return }
+    if (!isFair(password))      { setError(t('Password is too weak. Add uppercase letters, numbers or symbols.')); return }
     setError('')
     setLoading(true)
     try {
       await register(name, email, password)
       navigate('/')
     } catch (err) {
-      setError(err.response?.data?.message ?? 'Registration failed. Please try again.')
+      setError(err.response?.data?.message ?? t('Registration failed. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -75,8 +77,8 @@ export default function Register() {
           <Logo height={17} />
         </Link>
 
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>Get started</p>
-        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>Create account</h1>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>{t('Get started')}</p>
+        <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>{t('Create account')}</h1>
 
         {error && (
           <div style={{ background: 'var(--error-dim)', border: '1px solid var(--danger-border)', borderRadius: 8, padding: '11px 14px', fontSize: 13, color: 'var(--error)', marginBottom: 20 }}>
@@ -85,19 +87,19 @@ export default function Register() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <Field label="Full name">
+          <Field label={t('Full name')}>
             <input type="text" value={name} required onChange={e => setName(e.target.value)}
               placeholder="Jane Doe" className="noir-input auth-input" />
           </Field>
-          <Field label="Email">
+          <Field label={t('Email')}>
             <input type="email" value={email} required onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com" className="noir-input auth-input" />
           </Field>
-          <Field label="Password">
+          <Field label={t('Password')}>
             <div style={{ position: 'relative' }}>
               <input type={showPass ? 'text' : 'password'} value={password} required
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Min. 8 characters" className="noir-input auth-input" style={{ paddingRight: 44 }} />
+                placeholder={t('Min. 8 characters')} className="noir-input auth-input" style={{ paddingRight: 44 }} />
               <button type="button" onClick={() => setShowPass(p => !p)}
                 style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', padding: 4 }}>
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -105,14 +107,14 @@ export default function Register() {
             </div>
             <PasswordStrength password={password} />
           </Field>
-          <Field label="Confirm password" style={{ marginBottom: 28 }}>
+          <Field label={t('Confirm password')} style={{ marginBottom: 28 }}>
             <input type={showPass ? 'text' : 'password'} value={confirm} required
               onChange={e => setConfirm(e.target.value)}
-              placeholder="Repeat password" className="noir-input auth-input" />
+              placeholder={t('Repeat password')} className="noir-input auth-input" />
           </Field>
 
           <button type="submit" disabled={loading} className="noir-btn-primary auth-submit-btn" style={{ width: '100%', padding: '13px', fontSize: 15 }}>
-            {loading ? 'Creating account…' : 'Create account'}
+            {loading ? t('Creating account…') : t('Create account')}
           </button>
         </form>
 
@@ -121,8 +123,8 @@ export default function Register() {
         </div>
 
         <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: 'var(--muted)' }}>
-          Already have an account?{' '}
-          <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 500 }}>Sign in</Link>
+          {t('Already have an account?')}{' '}
+          <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 500 }}>{t('Sign in')}</Link>
         </p>
       </div>
 

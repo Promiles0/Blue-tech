@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useT } from '../../lib/i18n'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, GitCompare } from 'lucide-react'
 import { useCompare, removeCompare, clearCompare, COMPARE_MAX } from '../../lib/compare'
@@ -7,6 +8,7 @@ const HIDDEN_ON = ['/compare', '/checkout', '/login', '/register']
 
 // Floating tray (bottom-left, clear of the chat button) listing what's picked for compare.
 export default function CompareTray() {
+  const { t } = useT()
   const items = useCompare()
   const { pathname } = useLocation()
   const show = items.length > 0 && !HIDDEN_ON.some((p) => pathname.startsWith(p))
@@ -27,15 +29,15 @@ export default function CompareTray() {
               return p ? (
                 <div key={p.id} className="ct-slot" title={p.name}>
                   {p.image ? <img src={p.image} alt="" /> : <span>{p.name.slice(0, 2)}</span>}
-                  <button onClick={() => removeCompare(p.id)} aria-label={`Remove ${p.name}`}><X size={10} /></button>
+                  <button onClick={() => removeCompare(p.id)} aria-label={t('Remove {name}', { name: p.name })}><X size={10} /></button>
                 </div>
               ) : <div key={i} className="ct-slot empty" />
             })}
           </div>
           <Link to="/compare" className={`ct-go ${items.length < 2 ? 'dim' : ''}`}>
-            <GitCompare size={14} /> Compare {items.length}
+            <GitCompare size={14} /> {t('Compare')} {items.length}
           </Link>
-          <button className="ct-clear" onClick={clearCompare} aria-label="Clear compare list"><X size={14} /></button>
+          <button className="ct-clear" onClick={clearCompare} aria-label={t('Clear compare list')}><X size={14} /></button>
           <style>{`
             .compare-tray{position:fixed;left:20px;bottom:20px;z-index:58;display:flex;align-items:center;gap:10px;padding:8px;
               border-radius:16px;border:1px solid var(--border);background:var(--surface);box-shadow:0 18px 50px -12px rgba(0,0,0,.55)}

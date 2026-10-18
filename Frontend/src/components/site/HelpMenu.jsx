@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
+import { useT } from '../../lib/i18n'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LifeBuoy, Mail } from 'lucide-react'
 import { HELP_LINKS, SUPPORT_EMAIL } from '../../lib/helpLinks'
 import { useDropdownMenu, DROPDOWN_MOTION_PROPS } from '../../lib/useDropdownMenu'
 
 export default function HelpMenu() {
+  const { t } = useT()
   const {
     open, setOpen, close, containerRef, triggerRef, setItemRef, onTriggerKeyDown, onMenuKeyDown,
   } = useDropdownMenu()
@@ -62,12 +64,12 @@ export default function HelpMenu() {
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-dim)'; e.currentTarget.style.color = 'var(--accent-light)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text)' }}
               >
-                {label}
+                {t(label)}
               </Link>
             ))}
 
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-dark)', margin: '14px 4px 8px', paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-              Contact us
+              {t('Contact us')}
             </p>
             <a
               ref={setItemRef(CONTACT_SLOT)}

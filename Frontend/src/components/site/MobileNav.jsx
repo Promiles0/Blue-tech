@@ -1,9 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { useT } from '../../lib/i18n'
 import { Link, useNavigate } from 'react-router-dom'
 import { X, Search, User, LogOut, Heart, GitCompare, HelpCircle, Sparkles, Moon, Sun } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { openLiveChat } from '../../lib/liveChat'
 import CurrencySwitcher from './CurrencySwitcher'
+import LanguageSwitcher from './LanguageSwitcher'
 import { useUI } from '../../context/UIContext'
 import { useAuth } from '../../context/AuthContext'
 import Logo from './Logo'
@@ -19,6 +21,7 @@ const NAV_ITEMS = [
 ]
 
 export default function MobileNav() {
+  const { t } = useT()
   const { mobileNavOpen, setMobileNavOpen, setPaletteOpen } = useUI()
   const { user, logout, isAdmin } = useAuth()
   const navigate         = useNavigate()
@@ -91,7 +94,7 @@ export default function MobileNav() {
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text)'}
                   >
-                    {item.label}
+                    {t(item.label)}
                   </Link>
                 </motion.div>
               ))}
@@ -99,14 +102,15 @@ export default function MobileNav() {
 
             {/* Things the phone header hides to fit: wishlist, compare, help, Blue, theme, currency. */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '16px 0', borderTop: '1px solid var(--border)' }}>
-              {!isAdmin && <Link to="/wishlist" onClick={close} className="mnav-chip"><Heart size={15} /> Wishlist</Link>}
-              <Link to="/compare" onClick={close} className="mnav-chip"><GitCompare size={15} /> Compare</Link>
-              <Link to="/help?v=faq" onClick={close} className="mnav-chip"><HelpCircle size={15} /> Help</Link>
-              <button onClick={() => { close(); openLiveChat() }} className="mnav-chip"><Sparkles size={15} /> Ask Blue</button>
+              {!isAdmin && <Link to="/wishlist" onClick={close} className="mnav-chip"><Heart size={15} /> {t('Wishlist')}</Link>}
+              <Link to="/compare" onClick={close} className="mnav-chip"><GitCompare size={15} /> {t('Compare')}</Link>
+              <Link to="/help?v=faq" onClick={close} className="mnav-chip"><HelpCircle size={15} /> {t('Help')}</Link>
+              <button onClick={() => { close(); openLiveChat() }} className="mnav-chip"><Sparkles size={15} /> {t('Ask Blue')}</button>
               <button onClick={toggleTheme} className="mnav-chip">
-                {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />} {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />} {theme === 'dark' ? t('Light mode') : t('Dark mode')}
               </button>
-              <div className="mnav-chip" style={{ justifyContent: 'space-between' }}>Currency <CurrencySwitcher /></div>
+              <div className="mnav-chip" style={{ justifyContent: 'space-between' }}>{t('Currency')} <CurrencySwitcher /></div>
+              <div className="mnav-chip" style={{ justifyContent: 'space-between', gridColumn: '1 / -1' }}>{t('Language')} <LanguageSwitcher full /></div>
             </div>
 
             {/* Bottom actions */}
@@ -120,22 +124,22 @@ export default function MobileNav() {
                   color: 'var(--muted)', fontSize: 14, cursor: 'pointer',
                 }}
               >
-                <Search size={15} /> Search products
+                <Search size={15} /> {t('Search products')}
               </button>
 
               {user ? (
                 <>
                   {isAdmin && (
                     <Link to="/admin" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent)', fontSize: 14, fontWeight: 700 }}>
-                      <User size={15} /> Admin panel
+                      <User size={15} /> {t('Admin panel')}
                     </Link>
                   )}
                   <Link to="/account" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 14 }}>
-                    <User size={15} /> Profile
+                    <User size={15} /> {t('Profile')}
                   </Link>
                   {!isAdmin && (
                     <Link to="/orders" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 14 }}>
-                      <User size={15} /> My orders
+                      <User size={15} /> {t('My orders')}
                     </Link>
                   )}
                   <button
@@ -146,7 +150,7 @@ export default function MobileNav() {
                       color: 'var(--error)', fontSize: 14, cursor: 'pointer', padding: 0,
                     }}
                   >
-                    <LogOut size={15} /> Sign out
+                    <LogOut size={15} /> {t('Sign out')}
                   </button>
                 </>
               ) : (

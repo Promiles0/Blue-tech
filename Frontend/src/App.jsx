@@ -3,6 +3,7 @@ import { useEffect, useState, lazy, Suspense } from 'react'
 import { LayoutDashboard } from 'lucide-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider }         from './context/ThemeContext'
+import LanguageProvider          from './components/site/LanguageProvider'
 import { CurrencyProvider }      from './context/CurrencyContext'
 import { AuthProvider }    from './context/AuthContext'
 import { CartProvider }    from './context/CartContext'
@@ -109,6 +110,7 @@ function SplashGate({ children }) {
 export default function App() {
   return (
     <ThemeProvider>
+      <LanguageProvider>
       <CurrencyProvider>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
@@ -135,6 +137,7 @@ export default function App() {
           </BrowserRouter>
         </QueryClientProvider>
       </CurrencyProvider>
+    </LanguageProvider>
     </ThemeProvider>
   )
 }

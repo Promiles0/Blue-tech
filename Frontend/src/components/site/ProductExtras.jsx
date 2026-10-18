@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useT } from '../../lib/i18n'
 import { toast } from 'sonner'
 import { ChevronRight, Sparkles, Share2, GitCompare, ShieldCheck, CreditCard, RotateCcw } from 'lucide-react'
 import { openLiveChat } from '../../lib/liveChat'
@@ -8,20 +9,21 @@ import { toggleCompare, useCompare, COMPARE_MAX } from '../../lib/compare'
 const slugify = (name = '') => name.toLowerCase().replace(/\s+/g, '-')
 
 export function Breadcrumb({ product }) {
+  const { t } = useT()
   const category = product.category?.name ?? product.categoryName
   const crumb = { fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }
   return (
-    <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 32 }}>
-      <Link to="/" style={crumb}>Home</Link>
+    <nav aria-label={t('Breadcrumb')} style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 32 }}>
+      <Link to="/" style={crumb}>{t('Home')}</Link>
       <ChevronRight size={13} style={{ color: 'var(--muted-dark)' }} />
       {category ? (
         <>
-          <Link to={`/category/${encodeURIComponent(product.category?.slug ?? slugify(category))}`} style={crumb}>{category}</Link>
+          <Link to={`/category/${encodeURIComponent(product.category?.slug ?? slugify(category))}`} style={crumb}>{t(category)}</Link>
           <ChevronRight size={13} style={{ color: 'var(--muted-dark)' }} />
         </>
       ) : (
         <>
-          <Link to="/products" style={crumb}>Store</Link>
+          <Link to="/products" style={crumb}>{t('Store')}</Link>
           <ChevronRight size={13} style={{ color: 'var(--muted-dark)' }} />
         </>
       )}
@@ -40,6 +42,7 @@ const pill = {
 
 // Ask Blue · Share · Compare — the secondary actions under Add to cart.
 export function ProductActions({ product }) {
+  const { t } = useT()
   const compare = useCompare()
   const id = product.productId ?? product.id
   const comparing = compare.some((p) => p.id === id)
@@ -51,7 +54,7 @@ export function ProductActions({ product }) {
     }
     try {
       await navigator.clipboard.writeText(url)
-      toast.success('Link copied — paste it anywhere to share')
+      toast.success(t('Link copied — paste it anywhere to share'))
     } catch {
       window.open(`https://wa.me/?text=${encodeURIComponent(`${product.name} — ${url}`)}`, '_blank', 'noopener')
     }
@@ -59,22 +62,22 @@ export function ProductActions({ product }) {
 
   const onCompare = () => {
     const result = toggleCompare(product)
-    if (result === 'full') toast.info(`You can compare up to ${COMPARE_MAX} products — remove one first.`)
-    else if (result === 'added') toast.success('Added to compare')
+    if (result === 'full') toast.info(t('You can compare up to {n} products — remove one first.', { n: COMPARE_MAX }))
+    else if (result === 'added') toast.success(t('Added to compare'))
   }
 
   return (
     <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-      <button style={pill} onClick={() => openLiveChat(`About the ${product.name}: `)}>
-        <Sparkles size={14} style={{ color: 'var(--accent-light, var(--accent))' }} /> Ask Blue
+      <button style={pill} onClick={() => openLiveChat(t('About the {name}: ', { name: product.name }))}>
+        <Sparkles size={14} style={{ color: 'var(--accent-light, var(--accent))' }} /> {t('Ask Blue')}
       </button>
-      <button style={pill} onClick={share}><Share2 size={14} /> Share</button>
+      <button style={pill} onClick={share}><Share2 size={14} /> {t('Share')}</button>
       <button
         style={{ ...pill, ...(comparing ? { borderColor: 'var(--accent)', background: 'var(--accent-dim)' } : {}) }}
         onClick={onCompare}
         aria-pressed={comparing}
       >
-        <GitCompare size={14} /> {comparing ? 'Comparing' : 'Compare'}
+        <GitCompare size={14} /> {comparing ? t('Comparing') : t('Compare')}
       </button>
     </div>
   )
@@ -82,10 +85,11 @@ export function ProductActions({ product }) {
 
 // Delivery, warranty, returns and payment in one glance, right under the buy buttons.
 export function BuyInfo({ product }) {
+  const { t } = useT()
   const rows = [
-    { Icon: ShieldCheck, text: product.warranty ? `${product.warranty} warranty` : 'Warranty included' },
-    { Icon: RotateCcw, text: '30-day returns' },
-    { Icon: CreditCard, text: 'Pay with MTN MoMo, Airtel Money or card' },
+    { Icon: ShieldCheck, text: product.warranty ? t('{w} warranty', { w: product.warranty }) : t('Warranty included') },
+    { Icon: RotateCcw, text: t('30-day returns') },
+    { Icon: CreditCard, text: t('Pay with MTN MoMo, Airtel Money or card') },
   ]
   return (
     <div style={{ marginTop: 20, border: '1px solid var(--border)', borderRadius: 12, padding: '4px 14px' }}>

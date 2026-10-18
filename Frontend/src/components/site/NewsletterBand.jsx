@@ -1,11 +1,13 @@
 // v2
 import { useState } from 'react'
+import { useT } from '../../lib/i18n'
 import { toast } from 'sonner'
 import { ArrowRight } from 'lucide-react'
 import apiService from '../../api/service'
 import { Magnetic } from '../../lib/motion'
 
 export default function NewsletterBand() {
+  const { t } = useT()
   const [email,      setEmail]      = useState('')
   const [subscribed, setSubscribed] = useState(false)
   const [loading,    setLoading]    = useState(false)
@@ -18,7 +20,7 @@ export default function NewsletterBand() {
       await apiService.newsletter.subscribe(email)
       setSubscribed(true)
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Something went wrong. Please try again.')
+      toast.error(err.response?.data?.message || t('Something went wrong. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -36,10 +38,10 @@ export default function NewsletterBand() {
           fontWeight: 800, letterSpacing: '-0.02em',
           marginBottom: 12, lineHeight: 1.15,
         }}>
-          Deals and new arrivals, first
+          {t('Deals and new arrivals, first')}
         </h2>
         <p style={{ color: 'var(--muted)', fontSize: 16, lineHeight: 1.7, marginBottom: 36 }}>
-          New laptops, restocks and offers from Blue-Tech. A few emails a month, no spam — unsubscribe any time.
+          {t('New laptops, restocks and offers from Blue-Tech. A few emails a month, no spam — unsubscribe any time.')}
         </p>
 
         {subscribed ? (
@@ -66,10 +68,10 @@ export default function NewsletterBand() {
               fontSize: 17, fontWeight: 700,
               color: 'var(--text)', marginBottom: 8,
             }}>
-              Subscription confirmed
+              {t('Subscription confirmed')}
             </p>
             <p style={{ fontSize: 13, color: 'var(--muted-dark)', lineHeight: 1.6 }}>
-              Thank you for subscribing. You'll hear from us when it matters.
+              {t("Thank you for subscribing. You'll hear from us when it matters.")}
             </p>
           </div>
         ) : (
@@ -78,7 +80,7 @@ export default function NewsletterBand() {
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              placeholder={t('your@email.com')}
               required
               className="noir-input"
               style={{ flex: 1, height: 48 }}
@@ -90,7 +92,7 @@ export default function NewsletterBand() {
                 className="noir-btn-primary shine"
                 style={{ height: 48, padding: '0 22px', whiteSpace: 'nowrap', flexShrink: 0 }}
               >
-                {loading ? '…' : <><span>Subscribe</span> <ArrowRight size={14} /></>}
+                {loading ? '…' : <><span>{t('Subscribe')}</span> <ArrowRight size={14} /></>}
               </button>
             </Magnetic>
           </form>

@@ -1,4 +1,5 @@
 import { useReducedMotion } from 'framer-motion'
+import { useT } from '../../lib/i18n'
 
 const ITEMS = [
   'Free delivery across Rwanda',
@@ -9,6 +10,7 @@ const ITEMS = [
 ]
 
 export default function MarqueeStrip() {
+  const { t } = useT()
   const reduce  = useReducedMotion()
   const tripled = [...ITEMS, ...ITEMS, ...ITEMS]
 
@@ -57,7 +59,7 @@ export default function MarqueeStrip() {
                 background: 'rgba(255,255,255,0.5)',
               }}
             />
-            {msg}
+            {t(msg)}
           </span>
         ))}
       </div>

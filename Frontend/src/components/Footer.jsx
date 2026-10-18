@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../lib/i18n'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
@@ -12,6 +13,7 @@ const ACCOUNT_LINKS = [['Profile', '/account'], ['Orders', '/orders'], ['Wishlis
 const CAT_LIMIT = 3
 
 export default function Footer() {
+  const { t } = useT()
   const [showAllCats, setShowAllCats] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
   const reduce = useReducedMotion()
@@ -37,7 +39,7 @@ export default function Footer() {
               <Logo height={17} />
             </div>
             <p style={{ color: 'var(--muted-dark)', fontSize: 14, lineHeight: 1.7, maxWidth: 220, marginBottom: 20 }}>
-              Laptops, computers, printers and interactive screens — delivered across Rwanda.
+              {t('Laptops, computers, printers and interactive screens — delivered across Rwanda.')}
             </p>
             {/* Contact — collapsed */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, color: 'var(--muted-dark)', fontSize: 13 }}>
@@ -52,7 +54,7 @@ export default function Footer() {
                 <a
                   key={label}
                   href={href}
-                  title={label}
+                  title={t(label)}
                   style={{
                     width: 32, height: 32, borderRadius: 8,
                     border: '1px solid var(--border)',
@@ -77,7 +79,7 @@ export default function Footer() {
               onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}
             >
-              {showDetails ? '↑ Hide details' : 'See full details ↓'}
+              {showDetails ? `↑ ${t('Hide details')}` : `${t('See full details')} ↓`}
             </button>
 
             {/* Contact — expanded */}
@@ -123,12 +125,12 @@ export default function Footer() {
 
           {/* SHOP column — inline category expand */}
           <div>
-            <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: 'var(--muted)', marginBottom: 16 }}>SHOP</h4>
+            <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: 'var(--muted)', marginBottom: 16 }}>{t('SHOP')}</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <Link to="/products" className="story-link" style={{ fontSize: 14, color: 'var(--muted-dark)', transition: 'color 0.2s' }}
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}>
-                All products
+                {t('All products')}
               </Link>
               {visibleCats.map(cat => (
                 <Link
@@ -168,7 +170,7 @@ export default function Footer() {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           flexWrap: 'wrap', gap: 12,
         }}>
-          <p style={{ color: 'var(--muted-dark)', fontSize: 13 }}>© 2026 Blue-Tech. All rights reserved.</p>
+          <p style={{ color: 'var(--muted-dark)', fontSize: 13 }}>© 2026 Blue-Tech. {t('All rights reserved.')}</p>
           <div style={{ display: 'flex', gap: 20 }}>
             {[['Privacy', '/help?v=privacy'], ['Terms', '/help?v=terms'], ['Cookies', '/help?v=cookies']].map(([label, href]) => (
               <a
@@ -178,7 +180,7 @@ export default function Footer() {
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--muted)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
               >
-                {label}
+                {t(label)}
               </a>
             ))}
           </div>
@@ -189,9 +191,10 @@ export default function Footer() {
 }
 
 function FooterCol({ title, links }) {
+  const { t } = useT()
   return (
     <div>
-      <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: 'var(--muted)', marginBottom: 16 }}>{title}</h4>
+      <h4 style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.12em', color: 'var(--muted)', marginBottom: 16 }}>{t(title)}</h4>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {links.map(([label, to]) => (
           <Link
@@ -202,7 +205,7 @@ function FooterCol({ title, links }) {
             onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
             onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
           >
-            {label}
+            {t(label)}
           </Link>
         ))}
       </div>

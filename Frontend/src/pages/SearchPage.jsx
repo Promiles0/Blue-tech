@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useT } from '../lib/i18n'
 import { useSearchParams, Link } from 'react-router-dom'
 import { Search, Clock, X, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -22,6 +23,7 @@ function removeRecent(query) {
 }
 
 export default function SearchPage() {
+  const { t } = useT()
   const [searchParams, setSearchParams] = useSearchParams()
   const [products, setProducts]         = useState([])
   const [loading, setLoading]           = useState(false)
@@ -79,7 +81,7 @@ export default function SearchPage() {
               autoFocus
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Search products…"
+              placeholder={t('Search products…')}
               style={{
                 width: '100%',
                 height: 56,
@@ -143,7 +145,7 @@ export default function SearchPage() {
               style={{ maxWidth: 780, margin: '0 auto 52px' }}
             >
               <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--muted-dark)', textTransform: 'uppercase', marginBottom: 14 }}>
-                Recent searches
+                {t('Recent searches')}
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {recent.map(q => (
@@ -195,11 +197,11 @@ export default function SearchPage() {
           <>
             <div style={{ marginBottom: 28, display: 'flex', alignItems: 'baseline', gap: 12 }}>
               <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' }}>
-                {loading ? 'Searching…' : `"${query}"`}
+                {loading ? t('Searching…') : `"${query}"`}
               </h1>
               {!loading && (
                 <span style={{ fontSize: 13, color: 'var(--muted-dark)' }}>
-                  {total} result{total !== 1 ? 's' : ''}
+                  {total === 1 ? t('1 result') : t('{n} results', { n: total })}
                 </span>
               )}
             </div>
@@ -214,10 +216,10 @@ export default function SearchPage() {
               <div style={{ textAlign: 'center', padding: '80px 0' }}>
                 <Search size={36} style={{ margin: '0 auto 16px', color: 'var(--border)' }} />
                 <p style={{ fontSize: 16, color: 'var(--muted-dark)', marginBottom: 6 }}>
-                  No results for <span style={{ color: 'var(--text)' }}>"{query}"</span>
+                  {t('No results for')} <span style={{ color: 'var(--text)' }}>"{query}"</span>
                 </p>
                 <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
-                  Try a different keyword or browse the full catalogue
+                  {t('Try a different keyword or browse the full catalogue')}
                 </p>
                 <Link
                   to="/products"
@@ -231,7 +233,7 @@ export default function SearchPage() {
                   onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dim)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  Browse all products <ArrowRight size={14} />
+                  {t('Browse all products')} <ArrowRight size={14} />
                 </Link>
                 <NoResultsHelp query={query} />
               </div>
@@ -259,8 +261,8 @@ export default function SearchPage() {
             }}>
               <Search size={24} style={{ color: 'var(--accent)' }} />
             </div>
-            <p style={{ fontSize: 16, color: 'var(--muted-dark)', marginBottom: 6 }}>What are you looking for?</p>
-            <p style={{ fontSize: 13, color: '#333' }}>Start typing to search across all products</p>
+            <p style={{ fontSize: 16, color: 'var(--muted-dark)', marginBottom: 6 }}>{t('What are you looking for?')}</p>
+            <p style={{ fontSize: 13, color: 'var(--muted)' }}>{t('Start typing to search across all products')}</p>
           </div>
         )}
       </div>

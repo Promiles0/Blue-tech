@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useT } from '../lib/i18n'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Truck, Shield, RotateCcw, SlidersHorizontal, Loader2, MessageCircle } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
@@ -29,6 +30,7 @@ const BLUE_EXAMPLES = [
 const PAGE_SIZE = 12
 
 export default function Home() {
+  const { t } = useT()
   const [pool,    setPool]    = useState([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState(emptyFilters)
@@ -175,17 +177,17 @@ export default function Home() {
                   letterSpacing: '-0.02em', lineHeight: 1.1,
                   color: 'var(--text)', marginBottom: 6,
                 }}>
-                  All products
+                  {t('All products')}
                 </h1>
-                <p style={{ fontSize: 14, color: 'var(--muted)' }}>Newest first. Filter by brand, price and specs.</p>
-                <div className="budget-chips" role="group" aria-label="Shop by budget">
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted-dark)', marginRight: 2 }}>Budget:</span>
+                <p style={{ fontSize: 14, color: 'var(--muted)' }}>{t('Newest first. Filter by brand, price and specs.')}</p>
+                <div className="budget-chips" role="group" aria-label={t('Shop by budget')}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted-dark)', marginRight: 2 }}>{t('Budget:')}</span>
                   {BUDGETS.map(b => {
                     const on = filters.minPrice === b.min && filters.maxPrice === b.max
                     return (
                       <button key={b.label} aria-pressed={on} className={`budget-chip ${on ? 'on' : ''}`}
                         onClick={() => setFilters(f => on ? { ...f, minPrice: '', maxPrice: '' } : { ...f, minPrice: b.min, maxPrice: b.max })}>
-                        {b.label}
+                        {t(b.label)}
                       </button>
                     )
                   })}
@@ -196,7 +198,7 @@ export default function Home() {
                 onClick={() => setMobileFiltersOpen(true)}
                 style={{ fontSize: 13 }}
               >
-                <SlidersHorizontal size={14} /> Filters{activeCount > 0 ? ` (${activeCount})` : ''}
+                <SlidersHorizontal size={14} /> {t('Filters')}{activeCount > 0 ? ` (${activeCount})` : ''}
               </button>
             </div>
           </Reveal>
@@ -209,8 +211,8 @@ export default function Home() {
             </div>
           ) : displayProducts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 0', border: '1px solid var(--border)', borderRadius: 12 }}>
-              <p style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 16 }}>No products match your filters.</p>
-              <button onClick={clearAll} className="noir-btn-outline" style={{ fontSize: 13 }}>Clear filters</button>
+              <p style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 16 }}>{t('No products match your filters.')}</p>
+              <button onClick={clearAll} className="noir-btn-outline" style={{ fontSize: 13 }}>{t('Clear filters')}</button>
             </div>
           ) : (
             <div className="grid-4">
@@ -231,10 +233,10 @@ export default function Home() {
                   className="noir-btn-outline"
                   style={{ fontSize: 13, minWidth: 168, justifyContent: 'center', opacity: loadingMore ? 0.7 : 1, cursor: loadingMore ? 'default' : 'pointer' }}
                 >
-                  {loadingMore ? <><Loader2 size={14} className="animate-spin" /> Loading…</> : 'Load more products'}
+                  {loadingMore ? <><Loader2 size={14} className="animate-spin" /> {t('Loading…')}</> : t('Load more products')}
                 </button>
               ) : (
-                <p style={{ fontSize: 13, color: 'var(--muted-dark)' }}>You've seen it all.</p>
+                <p style={{ fontSize: 13, color: 'var(--muted-dark)' }}>{t("You've seen it all.")}</p>
               )}
 
               <Link
@@ -257,16 +259,16 @@ export default function Home() {
             <Link to="/interactive-screens" className="screens-banner">
               <div>
                 <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#f59e0b', marginBottom: 8 }}>
-                  For schools &amp; offices
+                  {t('For schools & offices')}
                 </p>
                 <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(22px, 2.6vw, 30px)', fontWeight: 900, letterSpacing: '-0.02em', color: '#fff', marginBottom: 8 }}>
-                  Interactive screens, 65" to 110".
+                  {t('Interactive screens, 65" to 110".')}
                 </h2>
                 <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, maxWidth: 520 }}>
-                  Touch, stylus, camera and screen mirroring in one display. Find your size and get a quote for one room or the whole building.
+                  {t('Touch, stylus, camera and screen mirroring in one display. Find your size and get a quote for one room or the whole building.')}
                 </p>
               </div>
-              <span className="screens-banner-cta">Explore screens <ArrowRight size={15} /></span>
+              <span className="screens-banner-cta">{t('Explore screens')} <ArrowRight size={15} /></span>
             </Link>
           </div>
         </section>
@@ -289,16 +291,16 @@ export default function Home() {
               }} />
               <div style={{ position: 'relative' }}>
                 <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>
-                  Not sure where to start?
+                  {t('Not sure where to start?')}
                 </p>
                 <h2 style={{
                   fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(24px, 3vw, 32px)',
                   fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)', marginBottom: 12,
                 }}>
-                  Ask Blue before you buy.
+                  {t('Ask Blue before you buy.')}
                 </h2>
                 <p style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.65, maxWidth: 460, margin: '0 auto 28px' }}>
-                  Blue knows the whole catalogue. Say what you'll use it for and your budget, and get real products with prices in seconds.
+                  {t("Blue knows the whole catalogue. Say what you'll use it for and your budget, and get real products with prices in seconds.")}
                 </p>
                 <button
                   onClick={() => openLiveChat()}
@@ -307,15 +309,15 @@ export default function Home() {
                     display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '12px 24px',
                   }}
                 >
-                  <MessageCircle size={16} /> Ask Blue
+                  <MessageCircle size={16} /> {t('Ask Blue')}
                 </button>
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginTop: 18 }}>
                   {BLUE_EXAMPLES.map(q => (
-                    <button key={q} className="blue-example" onClick={() => openLiveChat(q, { send: true })}>“{q}”</button>
+                    <button key={q} className="blue-example" onClick={() => openLiveChat(t(q), { send: true })}>“{t(q)}”</button>
                   ))}
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--muted-dark)', marginTop: 14 }}>
-                  Instant answers 24/7. A real person is one tap away.
+                  {t('Instant answers 24/7. A real person is one tap away.')}
                 </p>
               </div>
             </div>
@@ -335,8 +337,8 @@ export default function Home() {
               <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
                 <div style={{ color: 'var(--muted-dark)', flexShrink: 0, marginTop: 1 }}>{icon}</div>
                 <div>
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text)', marginBottom: 4 }}>{title}</p>
-                  <p style={{ fontSize: 13, color: 'var(--muted-dark)', lineHeight: 1.5 }}>{desc}</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text)', marginBottom: 4 }}>{t(title)}</p>
+                  <p style={{ fontSize: 13, color: 'var(--muted-dark)', lineHeight: 1.5 }}>{t(desc)}</p>
                 </div>
               </div>
             ))}

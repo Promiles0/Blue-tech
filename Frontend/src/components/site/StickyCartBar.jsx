@@ -1,8 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
+import { useT } from '../../lib/i18n'
 import { ShoppingBag, Check } from 'lucide-react'
 import { useCurrency } from '../../context/CurrencyContext'
 
 export default function StickyCartBar({ product, selectedVariant, onAdd, adding, added, visible }) {
+  const { t } = useT()
   const { formatPrice } = useCurrency()
   const price = (parseFloat(product?.price) || 0) + (parseFloat(selectedVariant?.priceAdjustment) || 0)
   const outOfStock = selectedVariant && selectedVariant.stockQuantity === 0
@@ -42,10 +44,10 @@ export default function StickyCartBar({ product, selectedVariant, onAdd, adding,
                 className="noir-btn-cta"
                 style={{ padding: '11px 24px', fontSize: 14, display: 'flex', alignItems: 'center', gap: 7 }}
               >
-                {added       ? <><Check size={15} /> Added!</> :
-                 outOfStock  ? 'Out of stock' :
-                 adding      ? 'Adding…' :
-                               <><ShoppingBag size={15} /> Add to cart</>}
+                {added       ? <><Check size={15} /> {t('Added!')}</> :
+                 outOfStock  ? t('Out of stock') :
+                 adding      ? t('Adding…') :
+                               <><ShoppingBag size={15} /> {t('Add to cart')}</>}
               </button>
             </div>
           </div>

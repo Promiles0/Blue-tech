@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../lib/i18n'
 import { Heart, GitCompare } from 'lucide-react'
 import { toast } from 'sonner'
 import { toggleCompare, useCompare, COMPARE_MAX } from '../lib/compare'
@@ -22,6 +23,7 @@ const STATUS = {
 }
 
 export default function ProductCard({ product }) {
+  const { t } = useT()
   const { formatPrice } = useCurrency()
   const [hover, setHover] = useState(false)
   const { setQuickViewProduct } = useUI()
@@ -109,7 +111,7 @@ export default function ProductCard({ product }) {
               padding: '3px 10px', fontSize: 10, fontWeight: 700,
               letterSpacing: '0.08em',
             }}>
-              {sc.label}
+              {t(sc.label)}
             </div>
           )}
 
@@ -134,7 +136,7 @@ export default function ProductCard({ product }) {
               transition: 'opacity 0.25s, background 0.2s, color 0.2s',
               zIndex: 100,
             }}
-            title={user ? (wishlisted ? 'Remove from wishlist' : 'Add to wishlist') : 'Sign in to save'}
+            title={user ? (wishlisted ? t('Remove from wishlist') : t('Add to wishlist')) : t('Sign in to save')}
             onMouseEnter={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--overlay-hover)' }}
             onMouseLeave={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--glass-bg2)' }}
           >
@@ -171,10 +173,10 @@ export default function ProductCard({ product }) {
               onClick={e => {
                 e.stopPropagation()
                 const result = toggleCompare(product)
-                if (result === 'full') toast.info(`You can compare up to ${COMPARE_MAX} products — remove one first.`)
+                if (result === 'full') toast.info(t('You can compare up to {n} products — remove one first.', { n: COMPARE_MAX }))
               }}
               aria-pressed={comparing}
-              title={comparing ? 'Remove from compare' : 'Add to compare'}
+              title={comparing ? t('Remove from compare') : t('Add to compare')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600,
                 padding: '5px 9px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
@@ -183,7 +185,7 @@ export default function ProductCard({ product }) {
                 color: comparing ? 'var(--accent-light)' : 'var(--muted)',
               }}
             >
-              <GitCompare size={12} /> {comparing ? 'Added' : 'Compare'}
+              <GitCompare size={12} /> {comparing ? t('Added') : t('Compare')}
             </button>
           </div>
         </div>
