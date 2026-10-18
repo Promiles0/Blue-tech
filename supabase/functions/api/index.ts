@@ -1571,6 +1571,71 @@ async function verifyStripeSignature(payload: string, header: string, secret: st
   return computed === signature;
 }
 
+// ── Blue on WhatsApp ──
+// Meta calls /whatsapp/webhook: GET once to verify (WHATSAPP_VERIFY_TOKEN), then POST for each
+// incoming message, signed with WHATSAPP_APP_SECRET. Blue answers within the 24-hour customer
+// window, so a free-form text reply is allowed (no template needed). Off until those secrets
+// and WHATSAPP_TOKEN / WHATSAPP_PHONE_ID are set.
+function whatsappBotEnabled() {
+  return Boolean(Deno.env.get("WHATSAPP_TOKEN") && Deno.env.get("WHATSAPP_PHONE_ID") && Deno.env.get("WHATSAPP_APP_SECRET") && Deno.env.get("WHATSAPP_VERIFY_TOKEN"));
+}
+
+async function verifyMetaSignature(payload: string, header: string, secret: string) {
+  const expected = header.replace(/^sha256=/, "");
+  if (!expected) return false;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  const computed = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  if (computed.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < computed.length; i++) diff |= computed.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
+// Conversations are grouped by a hash of the phone number, so the insights page never shows it.
+async function whatsappSessionId(phone: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`wa:${phone}`));
+  return "wa-" + Array.from(new Uint8Array(digest)).slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function sendWhatsAppText(to: string, text: string) {
+  const res = await fetch(`https://graph.facebook.com/v20.0/${Deno.env.get("WHATSAPP_PHONE_ID")}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${Deno.env.get("WHATSAPP_TOKEN")}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: text.slice(0, 4000), preview_url: true } }),
+  });
+  if (!res.ok) throw new Error(`WhatsApp ${res.status}: ${(await res.text()).slice(0, 200)}`);
+}
+
+async function answerWhatsAppMessage(from: string, text: string) {
+  const sessionId = await whatsappSessionId(from);
+  // The last few turns give Blue the conversation so far.
+  const { data: history } = await adminClient.from("chat_logs").select("question,reply").eq("session_id", sessionId).order("created_at", { ascending: false }).limit(5);
+  const messages = [...(history ?? [])].reverse().flatMap((h) => [
+    { role: "user", text: String(h.question) }, { role: "assistant", text: String(h.reply) },
+  ]);
+  messages.push({ role: "user", text: text.slice(0, 1000) });
+  let reply: string;
+  try {
+    const { topic, noMatch, ...result } = await chatReply(messages);
+    const links = (result.products as { productId: number; name: string; price: number }[])
+      .map((p) => `• ${p.name} — ${Math.round(p.price).toLocaleString("en-US")} RWF\n  https://blue-tech.onrender.com/products/${p.productId}`).join("\n");
+    const handoff = result.handoff === "quote"
+      ? "\n\nRequest a quote: https://blue-tech.onrender.com/interactive-screens?quote=1"
+      : result.handoff === "human" ? "\n\nA member of our team will reply here shortly." : "";
+    reply = `${result.reply}${links ? `\n\n${links}` : ""}${handoff}`;
+    await adminClient.from("chat_logs").insert({
+      session_id: sessionId, question: text, reply: result.reply,
+      product_ids: (result.products as { productId: number }[]).map((p) => p.productId),
+      handoff: result.handoff, no_match: noMatch, topic: topic ? `${topic}` : "whatsapp",
+    });
+  } catch (e) {
+    console.error("WhatsApp Blue failed:", e);
+    reply = "Sorry, I can't answer right now. A member of the Blue-Tech team will reply here shortly.";
+  }
+  await sendWhatsAppText(from, reply);
+}
+
 // Paypack error bodies are not consistently shaped ({message}, {error}, plain text…),
 // so keep the raw payload in the logs — otherwise a failed cashin is undebuggable.
 function paypackError(stage: string, status: number, raw: string) {
@@ -2297,6 +2362,30 @@ async function handle(request: Request) {
     }).select().single();
     if (error) return failure(error.message, 400, request);
     return success("Proforma created", { ...proformaResult(row), business }, request);
+  }
+
+  if (path === "/whatsapp/webhook") {
+    if (!whatsappBotEnabled()) return failure("WhatsApp assistant is not configured", 503, request);
+    if (method === "GET") {
+      // Meta's one-time verification handshake.
+      const ok = url.searchParams.get("hub.mode") === "subscribe" && url.searchParams.get("hub.verify_token") === Deno.env.get("WHATSAPP_VERIFY_TOKEN");
+      return ok ? new Response(url.searchParams.get("hub.challenge") ?? "", { status: 200 }) : new Response("Forbidden", { status: 403 });
+    }
+    if (method === "POST") {
+      const raw = await request.text();
+      if (!(await verifyMetaSignature(raw, request.headers.get("X-Hub-Signature-256") ?? "", Deno.env.get("WHATSAPP_APP_SECRET")!))) {
+        return new Response("Invalid signature", { status: 401 });
+      }
+      const payload = JSON.parse(raw);
+      const incoming = (payload.entry ?? []).flatMap((e: Record<string, unknown>) => (e.changes as Record<string, unknown>[] ?? []))
+        .flatMap((c: Record<string, unknown>) => ((c.value as Record<string, unknown>)?.messages as Record<string, unknown>[] ?? []))
+        .filter((m: Record<string, unknown>) => m.type === "text");
+      for (const m of incoming.slice(0, 5)) {
+        await answerWhatsAppMessage(String(m.from), String((m.text as Record<string, unknown>)?.body ?? ""));
+      }
+      // Always 200 so Meta doesn't retry a message we've already handled.
+      return new Response("ok", { status: 200 });
+    }
   }
 
   // Public AI shopping assistant. Stateless: the widget sends the recent conversation each turn.
