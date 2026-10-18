@@ -1478,6 +1478,8 @@ function heroSlideResult(row: Record<string, unknown>) {
     slideId: row.id,
     imageUrl: row.image_url,
     label: row.label,
+    subtitle: row.subtitle ?? null,
+    link: row.link ?? null,
     altText: row.alt_text,
     sortOrder: toNumber(row.sort_order),
     isActive: Boolean(row.is_active),
@@ -3509,6 +3511,8 @@ async function handle(request: Request) {
         image_url: imageUrl,
         label,
         alt_text: body.altText || null,
+        subtitle: body.subtitle ? String(body.subtitle).slice(0, 160) : null,
+        link: typeof body.link === "string" && body.link.startsWith("/") ? body.link.slice(0, 300) : null,
         sort_order: Number(body.sortOrder) || 0,
         is_active: body.isActive !== undefined ? Boolean(body.isActive) : true,
       }).select().single();
@@ -3526,6 +3530,8 @@ async function handle(request: Request) {
         image_url: imageUrl,
         label,
         alt_text: body.altText || null,
+        subtitle: body.subtitle ? String(body.subtitle).slice(0, 160) : null,
+        link: typeof body.link === "string" && body.link.startsWith("/") ? body.link.slice(0, 300) : null,
         sort_order: Number(body.sortOrder) || 0,
         is_active: body.isActive !== undefined ? Boolean(body.isActive) : true,
       }).eq("id", id).select().maybeSingle();

@@ -1,7 +1,25 @@
 import { useLayoutEffect, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
 import { PROMO_SLIDES } from '../../lib/promoSlides'
+import apiService from '../../api/service'
+
+const DEFAULT_GRADIENT = 'linear-gradient(135deg, #12142a 0%, #22284a 55%, #354380 100%)'
+
+// Slides come from Admin → Home banners; until any are added there, the built-in set shows.
+function useHomeSlides() {
+  const { data } = useQuery({
+    queryKey: ['hero-slides'],
+    queryFn: () => apiService.heroSlides.getActive().then(r => (Array.isArray(r.data) ? r.data : [])),
+    staleTime: 5 * 60 * 1000,
+  })
+  if (!data?.length) return PROMO_SLIDES
+  return data.map(s => ({
+    slug: `slide-${s.slideId}`, to: s.link || '/products', title: s.label, subtitle: s.subtitle,
+    image: s.imageUrl, alt: s.altText, gradient: DEFAULT_GRADIENT,
+  }))
+}
 
 const PEEK = 32   // px of the next slide visible at the right edge
 const GAP  = 10   // px gap between slides
@@ -10,6 +28,7 @@ const slideHeightFor = (w) => Math.round(Math.min(Math.max(w * 0.24, 168), 236))
 const AUTO_ADVANCE_MS = 3000
 
 export default function PromoCarousel() {
+  const slides = useHomeSlides()
   const reduce = useReducedMotion()
   const wrapperRef = useRef(null)
   const draggedRef  = useRef(false)
@@ -34,12 +53,12 @@ export default function PromoCarousel() {
   const slideWidth = Math.max(width - PEEK - GAP, 0)
   const step = slideWidth + GAP
   const SLIDE_HEIGHT = slideHeightFor(slideWidth || 900)
-  const maxIndex = PROMO_SLIDES.length - 1
+  const maxIndex = slides.length - 1
 
   // Auto-advance — paused on hover, mid-drag, or reduced motion
   useEffect(() => {
     if (reduce || hovered || dragging || slideWidth === 0) return
-    const id = setInterval(() => setIndex(i => (i + 1) % PROMO_SLIDES.length), AUTO_ADVANCE_MS)
+    const id = setInterval(() => setIndex(i => (i + 1) % slides.length), AUTO_ADVANCE_MS)
     return () => clearInterval(id)
   }, [reduce, hovered, dragging, slideWidth])
 
@@ -81,7 +100,7 @@ export default function PromoCarousel() {
               transition={reduce ? { duration: 0 } : { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
               style={{ display: 'flex', cursor: 'grab' }}
             >
-              {PROMO_SLIDES.map((slide, i) => (
+              {slides.map((slide, i) => (
                 <Link
                   key={slide.slug}
                   to={slide.to ?? `/promotions/${slide.slug}`}
@@ -90,7 +109,7 @@ export default function PromoCarousel() {
                   style={{
                     position: 'relative', flexShrink: 0,
                     width: slideWidth, height: SLIDE_HEIGHT,
-                    marginRight: i === PROMO_SLIDES.length - 1 ? 0 : GAP,
+                    marginRight: i === slides.length - 1 ? 0 : GAP,
                     borderRadius: 14, overflow: 'hidden',
                     background: slide.gradient,
                     display: 'block', textDecoration: 'none',
@@ -133,11 +152,11 @@ export default function PromoCarousel() {
 
         {/* Dot indicators */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 6 }}>
-          {PROMO_SLIDES.map((slide, i) => (
+          {slides.map((slide, i) => (
             <button
               key={slide.slug}
               onClick={() => goTo(i)}
-              aria-label={`Go to promotion ${i + 1} of ${PROMO_SLIDES.length}`}
+              aria-label={`Go to promotion ${i + 1} of ${slides.length}`}
               aria-current={i === index}
               style={{
                 width: i === index ? 20 : 6, height: 6, borderRadius: 3,
