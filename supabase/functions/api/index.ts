@@ -707,6 +707,106 @@ async function getAdminAnalytics() {
   };
 }
 
+// ── Sales insights (Admin → Sales insights) ──
+// Only orders that were actually paid count as sales.
+const SOLD_STATUSES = ["paid", "processing", "shipped", "delivered", "PAID", "PROCESSING", "SHIPPED", "DELIVERED"];
+
+async function getSalesInsights(days: number) {
+  const since = new Date(Date.now() - days * 86400000);
+  const yearAgo = new Date(Date.now() - 365 * 86400000);
+  const [{ data: orders }, { data: chats }] = await Promise.all([
+    adminClient.from("orders")
+      .select("id,user_id,total_amount,created_at,payment_method,status,points_discount,student_discount,shipments(shipped_at)")
+      .in("status", SOLD_STATUSES).gte("created_at", (since < yearAgo ? since : yearAgo).toISOString()).limit(5000),
+    adminClient.from("chat_logs").select("question,topic").eq("no_match", true).gte("created_at", since.toISOString()).order("created_at", { ascending: false }).limit(200),
+  ]);
+  const all = (orders ?? []) as Record<string, unknown>[];
+  const inRange = all.filter((o) => new Date(String(o.created_at)) >= since);
+  const ids = inRange.map((o) => o.id);
+
+  // Line items for the period, with product, brand and category.
+  const items: Record<string, unknown>[] = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data } = await adminClient.from("order_items")
+      .select("order_id,quantity,unit_price,product_variants(product_id,products(id,name,brand,categories(name)))")
+      .in("order_id", ids.slice(i, i + 200));
+    items.push(...((data ?? []) as Record<string, unknown>[]));
+  }
+
+  const add = (m: Map<string, { units: number; revenue: number; id?: unknown }>, key: string, units: number, revenue: number, id?: unknown) => {
+    const cur = m.get(key) ?? { units: 0, revenue: 0, id };
+    cur.units += units; cur.revenue += revenue; m.set(key, cur);
+  };
+  const byProduct = new Map<string, { units: number; revenue: number; id?: unknown }>();
+  const byCategory = new Map<string, { units: number; revenue: number }>();
+  const byBrand = new Map<string, { units: number; revenue: number }>();
+  let unitsSold = 0;
+  for (const it of items) {
+    const product = ((it.product_variants as Record<string, unknown> | null)?.products ?? {}) as Record<string, unknown>;
+    const units = toNumber(it.quantity);
+    const revenue = units * toNumber(it.unit_price);
+    unitsSold += units;
+    add(byProduct, String(product.name ?? "Unknown"), units, revenue, product.id);
+    add(byCategory, String((product.categories as Record<string, unknown> | null)?.name ?? "Uncategorised"), units, revenue);
+    add(byBrand, String(product.brand ?? "Other"), units, revenue);
+  }
+  const rank = (m: Map<string, { units: number; revenue: number; id?: unknown }>, n: number) =>
+    [...m.entries()].sort((a, b) => b[1].revenue - a[1].revenue).slice(0, n).map(([name, v]) => ({ name, ...v }));
+
+  // Revenue per month for the last 12 months (independent of the selected period).
+  const months: { month: string; revenue: number; orders: number }[] = [];
+  for (let k = 11; k >= 0; k--) {
+    const d = new Date(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() - k);
+    months.push({ month: d.toISOString().slice(0, 7), revenue: 0, orders: 0 });
+  }
+  for (const o of all) {
+    const m = months.find((x) => x.month === String(o.created_at).slice(0, 7));
+    if (m) { m.revenue += toNumber(o.total_amount); m.orders += 1; }
+  }
+
+  const payments = new Map<string, { orders: number; revenue: number }>();
+  for (const o of inRange) {
+    const key = String(o.payment_method ?? "UNKNOWN");
+    const cur = payments.get(key) ?? { orders: 0, revenue: 0 };
+    cur.orders += 1; cur.revenue += toNumber(o.total_amount); payments.set(key, cur);
+  }
+
+  // Hours from order to hand-over to the courier.
+  const shipHours = inRange.map((o) => {
+    const sh = (Array.isArray(o.shipments) ? o.shipments[0] : o.shipments) as Record<string, unknown> | null;
+    return sh?.shipped_at ? (new Date(String(sh.shipped_at)).getTime() - new Date(String(o.created_at)).getTime()) / 3600000 : null;
+  }).filter((h): h is number => h != null && h >= 0);
+
+  const perCustomer = new Map<string, number>();
+  for (const o of all) if (o.user_id) perCustomer.set(String(o.user_id), (perCustomer.get(String(o.user_id)) ?? 0) + 1);
+  const buyers = [...new Set(inRange.map((o) => String(o.user_id)).filter(Boolean))];
+  const repeat = buyers.filter((u) => (perCustomer.get(u) ?? 0) > 1).length;
+
+  const revenue = inRange.reduce((sum, o) => sum + toNumber(o.total_amount), 0);
+  const missed = new Map<string, number>();
+  for (const c of (chats ?? []) as Record<string, unknown>[]) {
+    const q = String(c.question ?? "").trim();
+    if (q) missed.set(q, (missed.get(q) ?? 0) + 1);
+  }
+
+  return {
+    days,
+    totals: {
+      revenue, orders: inRange.length, unitsSold,
+      avgOrder: inRange.length ? Math.round(revenue / inRange.length) : 0,
+      buyers: buyers.length, repeatBuyers: repeat,
+      discounts: inRange.reduce((sum, o) => sum + toNumber(o.points_discount) + toNumber(o.student_discount), 0),
+      avgHoursToShip: shipHours.length ? Math.round(shipHours.reduce((a, b) => a + b, 0) / shipHours.length) : null,
+    },
+    bestSellers: rank(byProduct, 10),
+    byCategory: rank(byCategory, 12),
+    byBrand: rank(byBrand, 10),
+    revenueByMonth: months,
+    payments: [...payments.entries()].map(([method, v]) => ({ method, ...v })).sort((a, b) => b.revenue - a.revenue),
+    missedDemand: [...missed.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([question, count]) => ({ question, count })),
+  };
+}
+
 // Facets the storefront filter rail can narrow by. `brand` is a real column; the rest
 // are spec keys shared across categories (laptops, desktops, tablets, monitors).
 const SPEC_FILTER_KEYS = ["ram", "storage", "screen_size", "cpu_family"];
@@ -3643,6 +3743,16 @@ async function handle(request: Request) {
       return success("Dashboard stats fetched", await getAdminDashboardStats(), request);
     } catch (error) {
       return failure(errorMessage(error, "Failed to load dashboard stats"), 500, request);
+    }
+  }
+
+  if (method === "GET" && path === "/admin/insights") {
+    await requireAdmin(request, user);
+    const days = Math.min(Math.max(Number(url.searchParams.get("days") ?? 30) || 30, 1), 365);
+    try {
+      return success("Sales insights", await getSalesInsights(days), request);
+    } catch (error) {
+      return failure(errorMessage(error, "Failed to load insights"), 500, request);
     }
   }
 

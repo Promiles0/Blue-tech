@@ -121,6 +121,7 @@ const apiService = {
   admin: {
     getDashboardStats: () => api.get('/admin/dashboard/stats'),
     getAnalytics: () => api.get('/admin/analytics'),
+    insights: (days = 30) => api.get(`/admin/insights?days=${days}`),
     users: {
       getAll: (search) => api.get(`/admin/users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
       setAdmin: (userId, make) => api.patch(`/admin/users/${userId}/admin`, { make }),

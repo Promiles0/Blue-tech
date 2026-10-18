@@ -1,190 +1,129 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts'
-import { DollarSign, ShoppingBag, Package, TrendingUp } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { TrendingUp, ShoppingBag, Package, Users, Truck, Percent, SearchX } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import apiService from '../../api/service'
 import { money } from '../../lib/format'
 
-const CHART_COLORS = ['#354380', '#10b981', '#6366f1', '#0d9488', '#f59e0b']
+const RANGES = [{ d: 30, label: '30 days' }, { d: 90, label: '90 days' }, { d: 365, label: '12 months' }]
+const PAYMENT_LABEL = { MOMO: 'MTN MoMo', AIRTEL_MONEY: 'Airtel Money', CARD: 'Card', CASH: 'Cash', CHEQUE: 'Cheque', MANUAL: 'Marked paid', UNKNOWN: 'Unknown' }
+const card = { borderRadius: 14, padding: '20px 22px' }
+const h2 = { fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 600, margin: '0 0 14px' }
+const short = (v) => v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${Math.round(v / 1e3)}k` : String(v)
 
-const tooltipStyle = {
-  contentStyle: {
-    background: 'var(--admin-card)', border: '1px solid var(--admin-border)',
-    borderRadius: 8, fontSize: 12,
-  },
-  labelStyle: { color: 'var(--admin-muted)', marginBottom: 4 },
-}
-
-function fetchAnalytics() {
-  return apiService.admin.getAnalytics().then(r => {
-    const d = r.data?.data ?? r.data
-    if (!d) throw new Error('No analytics data')
-    return d
-  })
-}
-
+// What sold, through which channels, and what customers wanted — the Overview covers today.
 export default function AdminAnalytics() {
+  const [days, setDays] = useState(30)
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin-analytics'],
-    queryFn: fetchAnalytics,
+    queryKey: ['admin-insights', days],
+    queryFn: () => apiService.admin.insights(days).then(r => r.data),
   })
-
-  const { data: stats } = useQuery({
-    queryKey: ['admin-overview'],
-    queryFn: () => apiService.admin.getDashboardStats().then(r => r.data?.data ?? r.data),
-  })
+  const t = data?.totals
 
   return (
     <div style={{ padding: 40 }}>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em' }}>Analytics</h1>
-        <p style={{ color: 'var(--admin-muted)', fontSize: 13, marginTop: 4 }}>Revenue insights and growth metrics</p>
-      </div>
-
-      {isError && <ErrorBanner msg="Failed to load analytics. Make sure the backend is running." />}
-
-      {/* Stats strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
-        {[
-          { icon: DollarSign, label: 'Revenue 24h',   value: money(stats?.revenue24h) },
-          { icon: TrendingUp, label: 'Revenue 7d',    value: money(stats?.revenue7d) },
-          { icon: ShoppingBag,label: 'Total Orders',  value: (stats?.totalOrders ?? 0).toLocaleString() },
-          { icon: Package,    label: 'Total Variants',value: (stats?.totalVariants ?? 0).toLocaleString() },
-        ].map(s => (
-          <div key={s.label} className="surface" style={{ borderRadius: 12, padding: '16px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700,
-              letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--admin-muted)', marginBottom: 10 }}>
-              <s.icon size={12} style={{ color: 'var(--admin-primary)' }} />{s.label}
-            </div>
-            <div style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 700 }}>{s.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <div style={{ color: 'var(--admin-muted)', fontSize: 13 }}>Loading…</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Row 1: Top products + Revenue by category */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-            {/* Top products by revenue */}
-            <div className="surface" style={{ borderRadius: 14, padding: '24px 28px' }}>
-              <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 600, marginBottom: 20 }}>
-                Top Products by Revenue
-              </h2>
-              {!data?.topProducts?.length ? (
-                <Empty />
-              ) : (
-                <ResponsiveContainer width="100%" height={288}>
-                  <BarChart
-                    layout="vertical"
-                    data={data.topProducts}
-                    margin={{ top: 0, right: 16, bottom: 0, left: 0 }}
-                  >
-                    <XAxis
-                      type="number"
-                      tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
-                      tickFormatter={v => `$${v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v}`}
-                      axisLine={false} tickLine={false}
-                    />
-                    <YAxis
-                      type="category" dataKey="name"
-                      width={100}
-                      tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
-                      axisLine={false} tickLine={false}
-                    />
-                    <Tooltip
-                      {...tooltipStyle}
-                      formatter={v => [money(v), 'Revenue']}
-                    />
-                    <Bar dataKey="revenue" fill="var(--admin-primary)" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-
-            {/* Revenue by category — Pie */}
-            <div className="surface" style={{ borderRadius: 14, padding: '24px 28px' }}>
-              <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 600, marginBottom: 20 }}>
-                Revenue by Category
-              </h2>
-              {!data?.byCategory?.length ? (
-                <Empty />
-              ) : (
-                <ResponsiveContainer width="100%" height={288}>
-                  <PieChart>
-                    <Pie
-                      data={data.byCategory}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%" cy="45%"
-                      outerRadius={90}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      labelLine={false}
-                    >
-                      {data.byCategory.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      {...tooltipStyle}
-                      formatter={v => [money(v), 'Revenue']}
-                    />
-                    <Legend
-                      iconType="circle" iconSize={8}
-                      formatter={v => <span style={{ fontSize: 11, color: 'var(--admin-muted)' }}>{v}</span>}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </div>
-
-          {/* Row 2: User growth — full width */}
-          <div className="surface" style={{ borderRadius: 14, padding: '24px 28px' }}>
-            <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 15, fontWeight: 600, marginBottom: 20 }}>
-              User Growth by Month
-            </h2>
-            {!data?.growth?.length ? (
-              <Empty />
-            ) : (
-              <ResponsiveContainer width="100%" height={256}>
-                <BarChart data={data.growth} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
-                    axisLine={false} tickLine={false}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fill: 'var(--admin-muted)', fontSize: 11 }}
-                    axisLine={false} tickLine={false} width={36}
-                  />
-                  <Tooltip
-                    {...tooltipStyle}
-                    formatter={v => [v, 'New users']}
-                  />
-                  <Bar dataKey="count" fill="var(--admin-amber)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 700, letterSpacing: '-0.02em' }}>Sales insights</h1>
+          <p style={{ color: 'var(--admin-muted)', fontSize: 13, marginTop: 4 }}>Paid orders only. What sells, how people pay, and what they asked for that you don't stock.</p>
         </div>
-      )}
+        <div style={{ display: 'flex', gap: 4, padding: 3, borderRadius: 9, border: '1px solid var(--admin-border)' }}>
+          {RANGES.map(r => (
+            <button key={r.d} onClick={() => setDays(r.d)} style={{ padding: '6px 12px', borderRadius: 7, border: 0, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', background: days === r.d ? 'var(--admin-primary)' : 'transparent', color: days === r.d ? '#fff' : 'var(--text)' }}>{r.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {isError && <p style={{ color: 'var(--admin-danger)', fontSize: 13 }}>Could not load insights.</p>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <Stat icon={TrendingUp} label="Revenue" value={t ? money(t.revenue) : '—'} />
+        <Stat icon={ShoppingBag} label="Paid orders" value={t?.orders ?? '—'} sub={t ? `avg ${money(t.avgOrder)}` : null} />
+        <Stat icon={Package} label="Units sold" value={t?.unitsSold ?? '—'} />
+        <Stat icon={Users} label="Repeat buyers" value={t ? `${t.repeatBuyers}/${t.buyers}` : '—'} sub={t?.buyers ? `${Math.round(t.repeatBuyers / t.buyers * 100)}% came back` : null} />
+        <Stat icon={Truck} label="Order → shipped" value={t?.avgHoursToShip != null ? (t.avgHoursToShip >= 48 ? `${Math.round(t.avgHoursToShip / 24)} days` : `${t.avgHoursToShip} h`) : '—'} sub="average" />
+        <Stat icon={Percent} label="Points & student discounts" value={t ? money(t.discounts) : '—'} />
+      </div>
+
+      <div className="surface" style={{ ...card, marginBottom: 16 }}>
+        <h2 style={h2}>Revenue by month (last 12 months)</h2>
+        {isLoading ? <Muted>Loading…</Muted> : (
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={data?.revenueByMonth ?? []} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" vertical={false} />
+              <XAxis dataKey="month" tickFormatter={m => m.slice(5)} tick={{ fill: 'var(--admin-muted)', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={short} tick={{ fill: 'var(--admin-muted)', fontSize: 11 }} axisLine={false} tickLine={false} width={44} />
+              <Tooltip formatter={(v, k) => [k === 'revenue' ? money(v) : v, k === 'revenue' ? 'Revenue' : 'Orders']}
+                contentStyle={{ background: 'var(--admin-card)', border: '1px solid var(--admin-border)', borderRadius: 8, fontSize: 12 }} />
+              <Bar dataKey="revenue" fill="var(--admin-primary)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <Ranked title="Best sellers" rows={data?.bestSellers} loading={isLoading} link={r => r.id ? `/products/${r.id}` : null} />
+        <Ranked title="Sales by category" rows={data?.byCategory} loading={isLoading} />
+        <Ranked title="Sales by brand" rows={data?.byBrand} loading={isLoading} />
+        <div className="surface" style={card}>
+          <h2 style={h2}>How customers pay</h2>
+          {isLoading ? <Muted>Loading…</Muted> : !data?.payments?.length ? <Muted>No paid orders in this period.</Muted> : data.payments.map(p => (
+            <div key={p.method} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderTop: '1px solid var(--admin-border)', fontSize: 13 }}>
+              <span>{PAYMENT_LABEL[p.method] ?? p.method}</span>
+              <span style={{ color: 'var(--admin-muted)' }}>{p.orders} order{p.orders === 1 ? '' : 's'} · <strong style={{ color: 'var(--text)' }}>{money(p.revenue)}</strong></span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="surface" style={card}>
+        <h2 style={{ ...h2, display: 'flex', alignItems: 'center', gap: 8 }}><SearchX size={16} /> Asked for but not stocked</h2>
+        {isLoading ? <Muted>Loading…</Muted> : !data?.missedDemand?.length ? <Muted>Blue didn't hear any requests you couldn't meet in this period.</Muted> : (
+          <>
+            {data.missedDemand.map(m => (
+              <div key={m.question} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderTop: '1px solid var(--admin-border)', fontSize: 13 }}>
+                <span>“{m.question}”</span>{m.count > 1 && <span style={{ color: 'var(--admin-muted)', whiteSpace: 'nowrap' }}>× {m.count}</span>}
+              </div>
+            ))}
+            <Link to="/admin/blue" style={{ fontSize: 12.5, color: 'var(--admin-primary)', display: 'inline-block', marginTop: 10 }}>All Blue conversations →</Link>
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
-function Empty() {
-  return <p style={{ fontSize: 13, color: 'var(--admin-muted)', padding: '40px 0', textAlign: 'center' }}>No data yet.</p>
+const Muted = ({ children }) => <p style={{ fontSize: 13, color: 'var(--admin-muted)', margin: 0 }}>{children}</p>
+
+function Stat({ icon: Icon, label, value, sub }) {
+  return (
+    <div className="surface" style={{ borderRadius: 12, padding: '14px 16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--admin-muted)', marginBottom: 8 }}>
+        <Icon size={12} style={{ color: 'var(--admin-primary)' }} /> {label}
+      </div>
+      <div style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 700 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11.5, color: 'var(--admin-muted)', marginTop: 2 }}>{sub}</div>}
+    </div>
+  )
 }
 
-function ErrorBanner({ msg }) {
+function Ranked({ title, rows, loading, link }) {
+  const max = Math.max(1, ...(rows ?? []).map(r => r.revenue))
   return (
-    <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: 'var(--admin-danger)' }}>
-      {msg}
+    <div className="surface" style={card}>
+      <h2 style={h2}>{title}</h2>
+      {loading ? <Muted>Loading…</Muted> : !rows?.length ? <Muted>No sales in this period.</Muted> : rows.map(r => (
+        <div key={r.name} style={{ marginBottom: 9 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, marginBottom: 3 }}>
+            {link?.(r) ? <a href={link(r)} target="_blank" rel="noreferrer" style={{ color: 'var(--text)' }}>{r.name}</a> : <span>{r.name}</span>}
+            <span style={{ color: 'var(--admin-muted)', whiteSpace: 'nowrap' }}>{r.units} · {money(r.revenue)}</span>
+          </div>
+          <div style={{ height: 5, borderRadius: 3, background: 'var(--glass-border)' }}>
+            <div style={{ width: `${(r.revenue / max) * 100}%`, height: '100%', borderRadius: 3, background: 'var(--admin-primary)' }} />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
