@@ -200,6 +200,8 @@ const apiService = {
     },
     chat: {
       insights: (days = 30) => api.get(`/admin/chat/insights?days=${days}`),
+      providers: () => api.get('/admin/chat/providers'),
+      resumeProvider: (id) => api.post(`/admin/chat/providers/${id}/resume`),
     },
   }
 };

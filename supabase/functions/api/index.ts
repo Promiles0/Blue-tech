@@ -1753,7 +1753,7 @@ async function answerWhatsAppMessage(from: string, text: string) {
   messages.push({ role: "user", text: text.slice(0, 1000) });
   let reply: string;
   try {
-    const { topic, noMatch, ...result } = await chatReply(messages);
+    const { topic, noMatch, provider, ...result } = await chatReply(messages);
     const links = (result.products as { productId: number; name: string; price: number }[])
       .map((p) => `• ${p.name} — ${Math.round(p.price).toLocaleString("en-US")} RWF\n  https://blue-tech.onrender.com/products/${p.productId}`).join("\n");
     const handoff = result.handoff === "quote"
@@ -1763,7 +1763,7 @@ async function answerWhatsAppMessage(from: string, text: string) {
     await adminClient.from("chat_logs").insert({
       session_id: sessionId, question: text, reply: result.reply,
       product_ids: (result.products as { productId: number }[]).map((p) => p.productId),
-      handoff: result.handoff, no_match: noMatch, topic: topic ? `${topic}` : "whatsapp",
+      handoff: result.handoff, no_match: noMatch, topic: topic ? `${topic}` : "whatsapp", provider,
     });
   } catch (e) {
     console.error("WhatsApp Blue failed:", e);
@@ -1950,7 +1950,8 @@ const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.8-flash";
 
 // The published catalogue is small and changes rarely, so a compact copy is cached per
 // instance for a few minutes instead of re-querying on every chat turn.
-let chatCatalogCache: { at: number; text: string; ids: Set<string> } | null = null;
+type CatalogRow = { id: string; name: string; brand: string; category: string; price: number; haystack: string };
+let chatCatalogCache: { at: number; text: string; ids: Set<string>; rows: CatalogRow[] } | null = null;
 async function chatCatalog() {
   if (chatCatalogCache && Date.now() - chatCatalogCache.at < 5 * 60_000) return chatCatalogCache;
   const { data, error } = await adminClient.from("products").select("*, categories(name)").eq("is_active", true).limit(500);
@@ -1963,7 +1964,12 @@ async function chatCatalog() {
     const blurb = String(p.short_description ?? "").slice(0, 160);
     return `[${p.id}] ${p.name} | brand=${p.brand ?? ""} | category=${category} | price_rwf=${p.price} | condition=${p.condition ?? ""} | ${specText} | ${blurb}`;
   });
-  chatCatalogCache = { at: Date.now(), text: lines.join("\n"), ids: new Set(rows.map((p) => String(p.id))) };
+  const compact: CatalogRow[] = rows.map((p, i) => ({
+    id: String(p.id), name: String(p.name ?? ""), brand: String(p.brand ?? ""),
+    category: String((p.categories as Record<string, unknown> | null)?.name ?? ""), price: toNumber(p.price),
+    haystack: lines[i].toLowerCase(),
+  }));
+  chatCatalogCache = { at: Date.now(), text: lines.join("\n"), ids: new Set(rows.map((p) => String(p.id))), rows: compact };
   return chatCatalogCache;
 }
 
@@ -1994,79 +2000,290 @@ async function blueInstructions() {
 
 const CHAT_LANGUAGES: Record<string, string> = { en: "English", rw: "Kinyarwanda", fr: "French" };
 
-async function chatReply(messages: { role: string; text: string }[], lang = "en") {
-  if (!geminiApiKey) throw new Error("GEMINI_API_KEY is not configured");
-  const [catalog, extra] = await Promise.all([chatCatalog(), blueInstructions()]);
-  const ownerNotes = extra ? `\n\nSTORE NOTES FROM THE OWNER (facts to rely on; still follow the rules above):\n${extra}` : "";
-  // The site language the shopper picked; the language they actually write in still wins.
-  const langNote = `\n\nThe customer is browsing the site in ${CHAT_LANGUAGES[lang] ?? "English"}. Reply in that language unless they write to you in a different one.`;
-  // The free tier rate-limits and occasionally reports overload, so one quick retry
-  // turns most transient 429/5xx responses into an answer instead of the fallback.
-  const callGemini = () => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey },
+// ── Blue's AI providers ─────────────────────────────────────────────────────────
+// Tried in order; a provider that fails is skipped for a while (state shared in
+// ai_provider_status), so a rate-limited one doesn't slow every message down. Each one
+// switches on when its secret is set. If all fail, Blue answers from the catalogue (no AI).
+type ChatMessage = { role: string; text: string };
+type Provider = { id: string; label: string; timeoutMs?: number; enabled: () => boolean; call: (system: string, messages: ChatMessage[], signal: AbortSignal) => Promise<string> };
+
+const BLUE_JSON_SHAPE = `Respond ONLY with one JSON object, no other text: {"reply": string, "productIds": string[], "handoff": "none"|"quote"|"human", "topic": string, "noMatch": boolean}`;
+const PROVIDER_TIMEOUT_MS = 9000;
+
+async function geminiCall(model: string, system: string, messages: ChatMessage[], signal: AbortSignal) {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: "POST", signal,
+    headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey! },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: `${CHAT_SYSTEM_PROMPT}${ownerNotes}${langNote}\n\nCATALOGUE:\n${catalog.text}` }] },
+      systemInstruction: { parts: [{ text: system }] },
       contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.text }] })),
       generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 2048,
-        responseMimeType: "application/json",
+        temperature: 0.4, maxOutputTokens: 2048, responseMimeType: "application/json",
         responseSchema: {
           type: "OBJECT",
           properties: {
-            reply: { type: "STRING" },
-            productIds: { type: "ARRAY", items: { type: "STRING" } },
-            handoff: { type: "STRING", enum: ["none", "quote", "human"] },
-            topic: { type: "STRING" },
-            noMatch: { type: "BOOLEAN" },
+            reply: { type: "STRING" }, productIds: { type: "ARRAY", items: { type: "STRING" } },
+            handoff: { type: "STRING", enum: ["none", "quote", "human"] }, topic: { type: "STRING" }, noMatch: { type: "BOOLEAN" },
           },
           required: ["reply", "productIds", "handoff", "topic", "noMatch"],
         },
       },
     }),
   });
-  let res = await callGemini();
-  if (res.status === 429 || res.status >= 500) {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    res = await callGemini();
-  }
-  if (!res.ok) throw new Error(`Gemini error ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok) throw new ProviderError(res.status, (await res.text()).slice(0, 300));
   const body = await res.json();
-  const raw = body?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
-  let parsed: { reply?: string; productIds?: unknown[]; handoff?: string; topic?: string; noMatch?: boolean } = {};
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    // Truncated or malformed JSON: salvage the reply text rather than showing raw JSON.
-    const match = raw.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)/);
-    let salvaged = "";
-    if (match) { try { salvaged = JSON.parse(`"${match[1]}"`); } catch { salvaged = match[1]; } }
-    parsed = { reply: salvaged || (raw.trim().startsWith("{") ? "" : raw) };
+  return body?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+}
+
+// Groq, OpenRouter and Mistral all speak the OpenAI chat-completions format.
+async function openAiStyleCall(url: string, key: string, model: string, system: string, messages: ChatMessage[], signal: AbortSignal, jsonMode = true, extraHeaders: Record<string, string> = {}) {
+  const res = await fetch(url, {
+    method: "POST", signal,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, ...extraHeaders },
+    body: JSON.stringify({
+      model, temperature: 0.4, max_tokens: 1500,
+      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+      messages: [
+        { role: "system", content: `${system}\n\n${BLUE_JSON_SHAPE}` },
+        ...messages.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.text })),
+      ],
+    }),
+  });
+  if (!res.ok) throw new ProviderError(res.status, (await res.text()).slice(0, 300));
+  const body = await res.json();
+  return String(body?.choices?.[0]?.message?.content ?? "");
+}
+
+class ProviderError extends Error {
+  constructor(public status: number, detail: string) { super(`HTTP ${status}: ${detail}`); }
+}
+
+const env = (k: string) => Deno.env.get(k) ?? "";
+
+// Google renames Flash-Lite with each generation, so unless GEMINI_LITE_MODEL is set, ask the
+// API which one this key can use (newest first) and remember it.
+let geminiLiteModel: string | null = null;
+async function resolveGeminiLite(signal: AbortSignal) {
+  if (env("GEMINI_LITE_MODEL")) return env("GEMINI_LITE_MODEL");
+  if (geminiLiteModel) return geminiLiteModel;
+  const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", { signal, headers: { "x-goog-api-key": geminiApiKey! } });
+  if (!res.ok) throw new ProviderError(res.status, (await res.text()).slice(0, 300));
+  const names = ((await res.json())?.models ?? [])
+    .filter((m: { name: string; supportedGenerationMethods?: string[] }) => /flash-lite/.test(m.name) && !/preview|exp|tts|image|audio/.test(m.name) && m.supportedGenerationMethods?.includes("generateContent"))
+    .map((m: { name: string }) => m.name.replace(/^models\//, ""))
+    .sort((a: string, b: string) => b.localeCompare(a, undefined, { numeric: true }));
+  if (!names.length) throw new ProviderError(404, "no Flash-Lite model available for this key");
+  return (geminiLiteModel = names[0] as string);
+}
+
+const BLUE_PROVIDERS: Provider[] = [
+  // The main model can think for a while before answering, so it gets a longer timeout.
+  { id: "gemini", label: "Google Gemini", timeoutMs: 15000, enabled: () => Boolean(geminiApiKey),
+    call: (sys, msgs, sig) => geminiCall(GEMINI_MODEL, sys, msgs, sig) },
+  // Same key, a lighter model with its own separate free quota.
+  { id: "gemini-lite", label: "Google Gemini Flash-Lite", enabled: () => Boolean(geminiApiKey),
+    call: async (sys, msgs, sig) => geminiCall(await resolveGeminiLite(sig), sys, msgs, sig) },
+  { id: "groq", label: "Groq", enabled: () => Boolean(env("GROQ_API_KEY")),
+    call: (sys, msgs, sig) => openAiStyleCall("https://api.groq.com/openai/v1/chat/completions", env("GROQ_API_KEY"), env("GROQ_MODEL") || "llama-3.3-70b-versatile", sys, msgs, sig) },
+  { id: "openrouter", label: "OpenRouter", enabled: () => Boolean(env("OPENROUTER_API_KEY")),
+    call: (sys, msgs, sig) => openAiStyleCall("https://openrouter.ai/api/v1/chat/completions", env("OPENROUTER_API_KEY"), env("OPENROUTER_MODEL") || "openrouter/free", sys, msgs, sig, false,
+      { "HTTP-Referer": "https://blue-tech.onrender.com", "X-Title": "Blue-Tech" }) },
+  { id: "mistral", label: "Mistral", enabled: () => Boolean(env("MISTRAL_API_KEY")),
+    call: (sys, msgs, sig) => openAiStyleCall("https://api.mistral.ai/v1/chat/completions", env("MISTRAL_API_KEY"), env("MISTRAL_MODEL") || "mistral-small-latest", sys, msgs, sig) },
+];
+
+// How long to skip a provider after a failure.
+function pauseFor(err: unknown) {
+  const status = err instanceof ProviderError ? err.status : 0;
+  const text = String((err as Error)?.message ?? err).toLowerCase();
+  if (status === 401 || status === 403 || status === 404) return 6 * 3600_000;   // bad key / model: needs fixing
+  if (status === 429 && /quota|per day|daily|exceeded/.test(text)) return 60 * 60_000; // quota used up
+  if (status === 429) return 5 * 60_000;                                            // short rate limit
+  return 2 * 60_000;                                                                // timeout, overload, 5xx
+}
+
+async function providerStatuses() {
+  const { data } = await adminClient.from("ai_provider_status").select("*");
+  return new Map(((data ?? []) as Record<string, unknown>[]).map((r) => [String(r.provider), r]));
+}
+
+async function markProvider(id: string, ok: boolean, err?: unknown) {
+  const { data: cur } = await adminClient.from("ai_provider_status").select("ok_count,fail_count").eq("provider", id).maybeSingle();
+  const now = new Date().toISOString();
+  await adminClient.from("ai_provider_status").upsert(ok
+    ? { provider: id, last_ok_at: now, paused_until: null, ok_count: toNumber(cur?.ok_count) + 1, fail_count: toNumber(cur?.fail_count) }
+    : { provider: id, last_error: String((err as Error)?.message ?? err).slice(0, 300), last_error_at: now,
+        paused_until: new Date(Date.now() + pauseFor(err)).toISOString(), ok_count: toNumber(cur?.ok_count), fail_count: toNumber(cur?.fail_count) + 1 },
+  { onConflict: "provider" });
+}
+
+function parseBlueJson(raw: string) {
+  const text = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```$/, "");
+  try { return JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)); } catch { /* salvage below */ }
+  // Truncated or malformed JSON: rescue the reply text rather than showing raw JSON.
+  const match = text.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)/);
+  if (match) { try { return { reply: JSON.parse(`"${match[1]}"`) }; } catch { return { reply: match[1] }; } }
+  if (text && !text.startsWith("{")) return { reply: text };
+  throw new Error("Unreadable answer");
+}
+
+// ── Offline Blue: no AI, just the catalogue ──
+const OFFLINE_TEXT: Record<string, Record<string, string>> = {
+  en: { found: "Here's what I found in our catalogue{budget}. Our team can help you choose on WhatsApp:", over: "Nothing in that range fits that budget right now; the closest options start at {price} RWF. Our team can help you on WhatsApp:", none: "I couldn't find an exact match right now. Our team can help you on WhatsApp:", policy: "We deliver across Rwanda; the options and fee for your district are shown at checkout. Every product page shows its warranty, and unused items can be returned within 30 days. For anything else, our team is on WhatsApp:", budget: " within your budget" },
+  fr: { found: "Voici ce que j'ai trouvé dans notre catalogue{budget}. Notre équipe peut vous aider à choisir sur WhatsApp :", over: "Rien dans cette gamme ne correspond à ce budget pour le moment ; les options les plus proches commencent à {price} RWF. Notre équipe peut vous aider sur WhatsApp :", none: "Je n'ai pas trouvé de correspondance exacte. Notre équipe peut vous aider sur WhatsApp :", policy: "Nous livrons partout au Rwanda ; les options et le tarif pour votre district s'affichent au paiement. Chaque fiche produit indique sa garantie et un article inutilisé peut être retourné sous 30 jours. Pour le reste, notre équipe est sur WhatsApp :", budget: " dans votre budget" },
+  rw: { found: "Dore ibyo nabonye mu bicuruzwa byacu{budget}. Itsinda ryacu ryagufasha guhitamo kuri WhatsApp:", over: "Nta gicuruzwa cy'ubu bwoko kiri muri ayo mafaranga ubu; ibyegereye bitangirira kuri {price} RWF. Itsinda ryacu ryagufasha kuri WhatsApp:", none: "Ntabwo mbonye igihuye neza ubu. Itsinda ryacu ryagufasha kuri WhatsApp:", policy: "Tugeza ibicuruzwa hose mu Rwanda; uburyo n'igiciro ku karere kawe bigaragara mu kwishyura. Buri gicuruzwa kigaragaza garanti yacyo, kandi igitarakoreshejwe gishobora gusubizwa mu minsi 30. Ku bindi, itsinda ryacu riri kuri WhatsApp:", budget: " bihuye n'amafaranga ufite" },
+};
+// What shoppers type (en/fr/rw) → a word found in the matching category's name.
+const CATEGORY_WORDS: { category: RegExp; words: string[] }[] = [
+  { category: /laptop/i, words: ["laptop", "notebook", "mudasobwa igendanwa", "portable"] },
+  { category: /desktop/i, words: ["desktop", "pc", "ordinateur de bureau"] },
+  { category: /printer|photocop/i, words: ["printer", "imprimante", "photocop", "copier", "copieur"] },
+  { category: /monitor/i, words: ["monitor", "moniteur"] },
+  { category: /interactive|screen/i, words: ["interactive", "smart screen", "smart board", "écran interactif"] },
+  { category: /tablet/i, words: ["tablet", "tablette", "tabuleti"] },
+  { category: /ups|projector/i, words: ["ups", "onduleur", "projector", "projecteur"] },
+  { category: /network/i, words: ["router", "switch", "wifi", "réseau", "network", "routeur"] },
+];
+const OFFLINE_STOPWORDS = new Set(["need", "want", "for", "the", "and", "under", "with", "rwf", "frw", "budget", "looking", "have", "you", "any", "price", "cheap", "best", "good", "please", "school", "work", "office", "that", "this", "what", "which", "pour", "moins", "une", "des", "les", "cherche", "veux", "ndashaka", "nshaka", "munsi", "amafaranga"]);
+
+function parseBudget(q: string) {
+  // The largest amount in the message, so "8GB laptop under 600k" reads 600,000, not 8.
+  let best = 0;
+  for (const m of q.replace(/(\d)[,\s](?=\d{3}\b)/g, "$1").matchAll(/(\d+(?:\.\d+)?)\s*(m|million|k)?\b/gi)) {
+    const unit = (m[2] ?? "").toLowerCase();
+    const n = parseFloat(m[1]) * (unit === "m" || unit === "million" ? 1_000_000 : unit === "k" ? 1_000 : 1);
+    best = Math.max(best, n);
+  }
+  return best >= 20_000 ? best : null; // ignore small numbers like "15.6 inch" or "8GB"
+}
+
+function offlineReply(messages: ChatMessage[], lang: string, catalog: { rows: CatalogRow[] }) {
+  const T = OFFLINE_TEXT[lang] ?? OFFLINE_TEXT.en;
+  const q = (messages.filter((m) => m.role === "user").pop()?.text ?? "").toLowerCase();
+  const tokens = q.split(/[^a-z0-9àâçéèêëîïôûùüÿœ]+/i).filter(Boolean);
+  const has = (w: string) => (w.includes(" ") ? q.includes(w) : tokens.some((t) => t.startsWith(w)));
+  const wanted = CATEGORY_WORDS.filter((c) => c.words.some(has));
+
+  if (!wanted.length && /deliver|shipping|livr|kugeza|return|retour|gusubiza|warrant|garanti/.test(q)) {
+    return { reply: T.policy, ids: [] as string[], handoff: "human", topic: "policies", noMatch: false };
   }
 
-  // Only ids that really exist in the published catalogue become cards.
-  const ids = (parsed.productIds ?? []).map(String).filter((id) => catalog.ids.has(id)).slice(0, 3);
-  let products: unknown[] = [];
-  if (ids.length) {
-    const [{ data: rows }, { data: images }] = await Promise.all([
-      adminClient.from("products").select("id,name,price,brand").in("id", ids),
-      adminClient.from("product_images").select("*").in("product_id", ids),
-    ]);
-    products = ids.map((id) => (rows ?? []).find((r) => String(r.id) === id)).filter(Boolean).map((r) => {
-      const imgs = ((images ?? []) as Record<string, unknown>[]).filter((i) => String(i.product_id) === String(r!.id));
-      const img = imgs.find((i) => i.is_primary) ?? imgs[0];
-      return { productId: r!.id, name: r!.name, brand: r!.brand, price: r!.price, imageUrl: img?.image_url ?? img?.url ?? null };
-    });
-  }
-  const handoff = ["quote", "human"].includes(String(parsed.handoff)) ? parsed.handoff : "none";
-  return {
-    reply: String(parsed.reply ?? "").trim() || "Sorry, I didn't catch that. Could you rephrase?",
-    products,
-    handoff,
-    topic: String(parsed.topic ?? "").toLowerCase().trim().slice(0, 40) || null,
-    noMatch: parsed.noMatch === true,
+  const budget = parseBudget(q);
+  const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
+  const pick = (rows: CatalogRow[], topic: string) => {
+    const inBudget = budget ? rows.filter((r) => r.price <= budget) : rows;
+    if (inBudget.length) {
+      // With a budget, show the best they can afford (dearest first); without one, cheapest first.
+      const ids = [...inBudget].sort((a, b) => (budget ? b.price - a.price : a.price - b.price)).slice(0, 3).map((r) => r.id);
+      return { reply: T.found.replace("{budget}", budget ? T.budget : ""), ids, handoff: "human", topic, noMatch: false };
+    }
+    const closest = [...rows].sort((a, b) => a.price - b.price).slice(0, 3);
+    return { reply: T.over.replace("{price}", fmt(closest[0].price)), ids: closest.map((r) => r.id), handoff: "human", topic, noMatch: true };
   };
+
+  // A category was named: stay inside it rather than showing accessories that mention the word.
+  if (wanted.length) {
+    const inCategory = catalog.rows.filter((r) => wanted.some((c) => c.category.test(r.category)));
+    if (inCategory.length) return pick(inCategory, wanted[0].words[0]);
+  }
+
+  // Otherwise a keyword search: a match in the product name counts double.
+  const words = tokens.filter((w) => w.length > 2 && !OFFLINE_STOPWORDS.has(w) && !/^\d/.test(w));
+  const scored = catalog.rows.map((r) => {
+    const name = `${r.name} ${r.brand}`.toLowerCase();
+    let score = 0;
+    for (const w of words) score += name.includes(w) ? 2 : r.haystack.includes(w) ? 1 : 0;
+    return { r, score };
+  }).filter((x) => x.score > 0);
+  if (!scored.length) return { reply: T.none, ids: [] as string[], handoff: "human", topic: "offline", noMatch: true };
+  const top = Math.max(...scored.map((x) => x.score));
+  return pick(scored.filter((x) => x.score >= top - 1).map((x) => x.r), "offline");
+}
+
+async function productCards(ids: string[]) {
+  if (!ids.length) return [];
+  const [{ data: rows }, { data: images }] = await Promise.all([
+    adminClient.from("products").select("id,name,price,brand").in("id", ids),
+    adminClient.from("product_images").select("*").in("product_id", ids),
+  ]);
+  return ids.map((id) => (rows ?? []).find((r) => String(r.id) === id)).filter(Boolean).map((r) => {
+    const imgs = ((images ?? []) as Record<string, unknown>[]).filter((i) => String(i.product_id) === String(r!.id));
+    const img = imgs.find((i) => i.is_primary) ?? imgs[0];
+    return { productId: r!.id, name: r!.name, brand: r!.brand, price: r!.price, imageUrl: img?.image_url ?? img?.url ?? null };
+  });
+}
+
+// Alert the team once an hour at most if no AI provider could answer.
+async function alertAllProvidersDown(lastError: string) {
+  const { data: recent } = await adminClient.from("admin_notifications").select("id")
+    .eq("title", "Blue is answering without AI").gte("created_at", new Date(Date.now() - 3600_000).toISOString()).limit(1);
+  if (recent?.length) return;
+  await notifyAdmins("Blue is answering without AI", `Every AI provider failed (last: ${lastError.slice(0, 160)}). Blue is using catalogue search until one recovers. Add a backup provider key on Admin → Blue AI.`,
+    { severity: "warning", category: "system", href: "/admin/blue" });
+}
+
+async function chatReply(messages: ChatMessage[], lang = "en") {
+  const [catalog, extra] = await Promise.all([chatCatalog(), blueInstructions()]);
+
+  // One-off questions (no earlier turns) are cached for an hour per language.
+  const userTurns = messages.filter((m) => m.role === "user");
+  const cacheKey = userTurns.length === 1 && messages.length === 1
+    ? `${lang}:${userTurns[0].text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim().slice(0, 300)}` : null;
+  if (cacheKey) {
+    const { data: hit } = await adminClient.from("ai_answer_cache").select("response,provider,created_at").eq("key", cacheKey).maybeSingle();
+    if (hit && Date.now() - new Date(String(hit.created_at)).getTime() < 3600_000) {
+      return { ...(hit.response as Record<string, unknown>), provider: `cache:${hit.provider}` } as Awaited<ReturnType<typeof finish>>;
+    }
+  }
+
+  const ownerNotes = extra ? `\n\nSTORE NOTES FROM THE OWNER (facts to rely on; still follow the rules above):\n${extra}` : "";
+  // The site language the shopper picked; the language they actually write in still wins.
+  const langNote = `\n\nThe customer is browsing the site in ${CHAT_LANGUAGES[lang] ?? "English"}. Reply in that language unless they write to you in a different one.`;
+  const system = `${CHAT_SYSTEM_PROMPT}${ownerNotes}${langNote}\n\nCATALOGUE:\n${catalog.text}`;
+
+  async function finish(parsed: { reply?: string; productIds?: unknown[]; handoff?: string; topic?: string; noMatch?: boolean }, provider: string) {
+    // Only ids that really exist in the published catalogue become cards — whatever the provider said.
+    const ids = (parsed.productIds ?? []).map(String).filter((id) => catalog.ids.has(id)).slice(0, 3);
+    return {
+      reply: String(parsed.reply ?? "").trim() || "Sorry, I didn't catch that. Could you rephrase?",
+      products: await productCards(ids),
+      handoff: ["quote", "human"].includes(String(parsed.handoff)) ? String(parsed.handoff) : "none",
+      topic: String(parsed.topic ?? "").toLowerCase().trim().slice(0, 40) || null,
+      noMatch: parsed.noMatch === true,
+      provider,
+    };
+  }
+
+  const statuses = await providerStatuses();
+  let lastError = "no AI provider configured";
+  for (const provider of BLUE_PROVIDERS) {
+    if (!provider.enabled()) continue;
+    const st = statuses.get(provider.id);
+    if (st?.paused_until && new Date(String(st.paused_until)).getTime() > Date.now()) continue;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), provider.timeoutMs ?? PROVIDER_TIMEOUT_MS);
+    try {
+      const parsed = parseBlueJson(await provider.call(system, messages, controller.signal));
+      const result = await finish(parsed, provider.id);
+      await markProvider(provider.id, true);
+      if (cacheKey) {
+        const { provider: _p, ...cacheable } = result;
+        await adminClient.from("ai_answer_cache").upsert({ key: cacheKey, response: cacheable, provider: provider.id, created_at: new Date().toISOString() }, { onConflict: "key" });
+      }
+      return result;
+    } catch (err) {
+      lastError = `${provider.label}: ${controller.signal.aborted ? "timed out" : String((err as Error)?.message ?? err)}`;
+      console.error("Blue provider failed —", lastError);
+      await markProvider(provider.id, false, controller.signal.aborted ? new ProviderError(0, "timed out") : err);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Every provider failed or is paused: answer from the catalogue so Blue never goes silent.
+  await alertAllProvidersDown(lastError);
+  const off = offlineReply(messages, lang, catalog);
+  return finish({ reply: off.reply, productIds: off.ids, handoff: off.handoff, topic: off.topic, noMatch: off.noMatch }, "offline");
 }
 
 // ── Reviews ──
@@ -2560,7 +2777,7 @@ async function handle(request: Request) {
       .map((m: { role: string; text: string }) => ({ role: m.role, text: m.text.slice(0, 1000) }));
     if (!messages.length || messages[messages.length - 1].role !== "user") return failure("A user message is required", 400, request);
     try {
-      const { topic, noMatch, ...result } = await chatReply(messages, String(body.lang ?? "en").slice(0, 2));
+      const { topic, noMatch, provider, ...result } = await chatReply(messages, String(body.lang ?? "en").slice(0, 2));
       // Best-effort log for Admin → Blue insights; a logging failure never blocks the reply.
       const sessionId = String(body.sessionId ?? "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64) || "anonymous";
       adminClient.from("chat_logs").insert({
@@ -2571,6 +2788,7 @@ async function handle(request: Request) {
         handoff: result.handoff,
         no_match: noMatch,
         topic,
+        provider,
       }).then(({ error }) => { if (error) console.error("chat_logs insert failed:", error.message); });
       return success("Chat reply", result, request);
     } catch (error) {
@@ -3506,6 +3724,41 @@ async function handle(request: Request) {
       missedDemand: rows.filter((r) => r.no_match).slice(0, 40).map(turn),
       conversations,
     }, request);
+  }
+
+  if (method === "GET" && path === "/admin/chat/providers") {
+    await requireAdmin(request, user);
+    const [statuses, { data: recent }] = await Promise.all([
+      providerStatuses(),
+      adminClient.from("chat_logs").select("provider").gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString()).limit(5000),
+    ]);
+    const answered = new Map<string, number>();
+    for (const r of (recent ?? []) as Record<string, unknown>[]) {
+      const k = String(r.provider ?? "unknown").replace(/^cache:.*/, "cache");
+      answered.set(k, (answered.get(k) ?? 0) + 1);
+    }
+    const now = Date.now();
+    return success("Blue providers", {
+      providers: BLUE_PROVIDERS.map((p) => {
+        const st = statuses.get(p.id) as Record<string, unknown> | undefined;
+        const paused = st?.paused_until && new Date(String(st.paused_until)).getTime() > now ? st.paused_until : null;
+        return {
+          id: p.id, label: p.label, configured: p.enabled(),
+          state: !p.enabled() ? "no_key" : paused ? "paused" : "ready",
+          pausedUntil: paused, lastError: st?.last_error ?? null, lastErrorAt: st?.last_error_at ?? null,
+          lastOkAt: st?.last_ok_at ?? null, okCount: toNumber(st?.ok_count), failCount: toNumber(st?.fail_count),
+          answered7d: answered.get(p.id) ?? 0,
+        };
+      }),
+      cacheAnswered7d: answered.get("cache") ?? 0,
+      offlineAnswered7d: answered.get("offline") ?? 0,
+    }, request);
+  }
+
+  if (method === "POST" && /^\/admin\/chat\/providers\/[a-z-]+\/resume$/.test(path)) {
+    await requireAdmin(request, user);
+    await adminClient.from("ai_provider_status").update({ paused_until: null }).eq("provider", path.split("/")[4]);
+    return success("Provider resumed", null, request);
   }
 
   if (path === "/admin/settings/blue") {

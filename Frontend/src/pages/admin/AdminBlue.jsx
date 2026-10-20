@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Sparkles, MessagesSquare, UserRound, FileText, SearchX, Save, ChevronDown } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Sparkles, MessagesSquare, UserRound, FileText, SearchX, Save, ChevronDown, Cpu, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'
 import { dateShort } from '../../lib/format'
@@ -52,6 +52,8 @@ export default function AdminBlue() {
         <Stat icon={FileText} label="Sent to quote form" value={t?.handoffsQuote} loading={isLoading} />
         <Stat icon={SearchX} label="Couldn't find a match" value={t?.noMatch} loading={isLoading} tone="var(--admin-warning)" />
       </div>
+
+      <ProvidersPanel />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 20 }}>
         <div className="surface" style={card}>
@@ -160,6 +162,93 @@ function Conversation({ c }) {
       )}
     </div>
   )
+}
+
+// Secret each backup provider needs, set with `supabase secrets set NAME=value`.
+const PROVIDER_SETUP = {
+  gemini: 'GEMINI_API_KEY',
+  'gemini-lite': 'GEMINI_API_KEY (same key, separate free quota)',
+  groq: 'GROQ_API_KEY — free key at console.groq.com',
+  openrouter: 'OPENROUTER_API_KEY — free key at openrouter.ai',
+  mistral: 'MISTRAL_API_KEY — free key at console.mistral.ai',
+}
+
+const STATE_STYLE = {
+  ready:  { label: 'Working', tone: 'var(--admin-success, #16a34a)' },
+  paused: { label: 'Paused', tone: 'var(--admin-warning)' },
+  no_key: { label: 'Not set up', tone: 'var(--admin-muted)' },
+}
+
+function ProvidersPanel() {
+  const queryClient = useQueryClient()
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['admin-blue-providers'],
+    queryFn: () => apiService.admin.chat.providers().then(r => r.data?.data ?? r.data),
+    refetchInterval: 60_000,
+  })
+  const resume = useMutation({
+    mutationFn: (id) => apiService.admin.chat.resumeProvider(id),
+    onSuccess: () => { toast.success('Blue will try it again on the next message'); queryClient.invalidateQueries({ queryKey: ['admin-blue-providers'] }) },
+    onError: () => toast.error('Could not resume'),
+  })
+  const providers = data?.providers ?? []
+  const working = providers.filter(p => p.state === 'ready').length
+
+  return (
+    <div className="surface" style={{ ...card, marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 6 }}>
+        <h2 style={{ ...h2, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}><Cpu size={15} /> AI providers</h2>
+        {!isLoading && data && (
+          <span style={{ fontSize: 12, color: 'var(--admin-muted)' }}>
+            Last 7 days: {data.cacheAnswered7d} from saved answers · {data.offlineAnswered7d} without AI
+          </span>
+        )}
+      </div>
+      <p style={{ fontSize: 12.5, color: 'var(--admin-muted)', lineHeight: 1.6, margin: '0 0 12px' }}>
+        Blue tries these in order. One that hits its limit or fails is paused and the next one answers.
+        If none can, Blue still replies from the catalogue and points customers to WhatsApp.
+        {!isLoading && working === 0 && <strong style={{ color: 'var(--admin-warning)' }}> Right now no AI provider is working, so Blue is answering without AI.</strong>}
+      </p>
+      {isError ? <Muted>Failed to load provider status.</Muted> : isLoading ? <Muted>Loading…</Muted> : (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {providers.map((p, i) => {
+            const st = STATE_STYLE[p.state] ?? STATE_STYLE.no_key
+            return (
+              <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '22px minmax(0, 1fr) auto', gap: 10, alignItems: 'center', padding: '10px 0', borderTop: i ? '1px solid var(--admin-border)' : 'none' }}>
+                <span style={{ fontSize: 11, color: 'var(--admin-muted)', fontWeight: 700 }}>{i + 1}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{p.label}</span>
+                    <Tag tone={st.tone}>{st.label}{p.state === 'paused' && p.pausedUntil ? ` until ${timeOnly(p.pausedUntil)}` : ''}</Tag>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: 'var(--admin-muted)', marginTop: 3 }}>
+                    {p.configured
+                      ? <>{p.answered7d} answers in 7 days · {p.okCount} ok / {p.failCount} failed overall{p.lastOkAt ? ` · last worked ${timeShort(p.lastOkAt)}` : ''}</>
+                      : <>Add the secret <code>{PROVIDER_SETUP[p.id] ?? p.id}</code> to switch it on.</>}
+                  </div>
+                  {p.configured && p.lastError && p.state === 'paused' && (
+                    <div style={{ fontSize: 11, color: 'var(--admin-muted)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.lastError}>
+                      Last error ({timeShort(p.lastErrorAt)}): {p.lastError}
+                    </div>
+                  )}
+                </div>
+                {p.state === 'paused' && (
+                  <button onClick={() => resume.mutate(p.id)} disabled={resume.isPending} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+                    border: '1px solid var(--admin-border)', background: 'transparent', color: 'var(--text)', cursor: 'pointer',
+                  }}><RotateCcw size={12} /> Try again</button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function timeOnly(iso) {
+  try { return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) } catch { return '' }
 }
 
 const Tag = ({ tone, children }) => (
