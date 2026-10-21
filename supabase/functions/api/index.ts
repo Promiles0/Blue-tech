@@ -338,6 +338,7 @@ const DEFAULT_AUTOMATION = {
   cartReminderHours: 3,
   reviewRequests: true,
   reviewRequestDays: 3,
+  dailySummary: true,            // 7:00 Kigali summary to admins
 };
 const clampInt = (v: unknown, min: number, max: number, fallback: number) => {
   const n = Math.round(Number(v));
@@ -350,6 +351,7 @@ function cleanAutomation(body: Record<string, unknown>) {
     cartReminderHours: clampInt(body.cartReminderHours, 1, 72, 3),
     reviewRequests: body.reviewRequests !== false,
     reviewRequestDays: clampInt(body.reviewRequestDays, 1, 30, 3),
+    dailySummary: body.dailySummary !== false,
   };
 }
 
@@ -1034,6 +1036,186 @@ async function restoreVariantStock(variantId: number, quantity: number) {
   await adminClient.from("product_variants").update({ stock_quantity: current + quantity }).eq("id", variantId);
 }
 
+// ── Restock planner (7b) ──
+// Per product option: stock, units sold in 30/90 days, days of stock left and how many to
+// reorder so it lasts `cover` days after a supplier delay of `lead` days.
+async function restockPlan(cover: number, lead: number) {
+  const since90 = new Date(Date.now() - 90 * 86400_000).toISOString();
+  const since30 = Date.now() - 30 * 86400_000;
+  const [{ data: variants, error: vErr }, { data: sold, error: sErr }] = await Promise.all([
+    adminClient.from("product_variants").select("id,sku_code,size_or_color,stock_quantity,products!inner(id,name,is_active,price,categories(name))").eq("products.is_active", true).limit(5000),
+    adminClient.from("order_items").select("variant_id,quantity,orders!inner(status,created_at)").gte("orders.created_at", since90).in("orders.status", SOLD_ORDER_STATUSES).limit(20000),
+  ]);
+  // A failed query must not look like "nothing to restock".
+  if (vErr || sErr) throw new Error(`Restock plan query failed: ${(vErr ?? sErr)!.message}`);
+  const s30 = new Map<number, number>(), s90 = new Map<number, number>();
+  for (const r of (sold ?? []) as Record<string, unknown>[]) {
+    const v = Number(r.variant_id), q = toNumber(r.quantity);
+    s90.set(v, (s90.get(v) ?? 0) + q);
+    if (new Date(String((r.orders as Record<string, unknown>).created_at)).getTime() >= since30) s30.set(v, (s30.get(v) ?? 0) + q);
+  }
+  return ((variants ?? []) as Record<string, unknown>[]).map((v) => {
+    const p = v.products as Record<string, unknown>;
+    const stock = toNumber(v.stock_quantity), sold30 = s30.get(Number(v.id)) ?? 0, sold90 = s90.get(Number(v.id)) ?? 0;
+    const perDay = Math.max(sold30 / 30, sold90 / 90);
+    const daysLeft = perDay > 0 ? Math.floor(stock / perDay) : null;
+    const suggest = perDay > 0 ? Math.max(0, Math.ceil(perDay * (cover + lead)) - stock) : stock === 0 ? 1 : 0;
+    const status = stock === 0 ? "out" : daysLeft !== null && daysLeft <= lead ? "urgent" : daysLeft !== null && daysLeft <= lead + 14 ? "soon" : "ok";
+    return {
+      variantId: v.id, productId: p.id, name: p.name, option: v.size_or_color && v.size_or_color !== "Default" ? v.size_or_color : null,
+      sku: v.sku_code, category: (p.categories as Record<string, unknown> | null)?.name ?? null, price: toNumber(p.price),
+      stock, sold30, sold90, perDay: Math.round(perDay * 100) / 100, daysLeft, suggest, status,
+    };
+  }).sort((a, b) => ["out", "urgent", "soon", "ok"].indexOf(a.status) - ["out", "urgent", "soon", "ok"].indexOf(b.status) || b.sold30 - a.sold30);
+}
+
+// ── Spreadsheet export / import (7c) ──
+function toCsv(rows: (string | number | null | undefined)[][]) {
+  return rows.map((r) => r.map((v) => {
+    const s = v === null || v === undefined ? "" : String(v);
+    // Semicolons too: the importer accepts them as separators (Excel in some locales).
+    return /[",;\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }).join(",")).join("\r\n") + "\r\n";
+}
+
+// Small RFC 4180 parser: quoted fields, doubled quotes, commas/newlines inside quotes.
+function parseCsv(text: string) {
+  const rows: string[][] = [];
+  let row: string[] = [], field = "", quoted = false;
+  const src = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i];
+    if (quoted) {
+      if (c === '"' && src[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === "," || c === ";") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && src[i + 1] === "\n") i++;
+      row.push(field); field = "";
+      if (row.some((x) => x.trim())) rows.push(row);
+      row = [];
+    } else field += c;
+  }
+  row.push(field);
+  if (row.some((x) => x.trim())) rows.push(row);
+  return rows;
+}
+
+async function exportProductsCsv() {
+  const { data } = await adminClient.from("product_variants")
+    .select("sku_code,size_or_color,stock_quantity,price_adjustment,products(id,name,brand,price,is_active,categories(name))").limit(10000);
+  const rows = ((data ?? []) as Record<string, unknown>[]).map((v) => {
+    const p = v.products as Record<string, unknown>;
+    return [v.sku_code, p.id, p.name, v.size_or_color, p.brand, (p.categories as Record<string, unknown> | null)?.name, toNumber(p.price), toNumber(v.price_adjustment), toNumber(v.stock_quantity), p.is_active === false ? "hidden" : "live"];
+  }).sort((a, b) => String(a[2]).localeCompare(String(b[2])));
+  return toCsv([["sku", "product_id", "name", "option", "brand", "category", "price_rwf", "option_extra_rwf", "stock", "status"], ...rows]);
+}
+
+async function exportOrdersCsv(from: string, to: string) {
+  const { data } = await adminClient.from("orders").select("id,created_at,status,payment_method,shipping_method,total_amount,shipping_fee,order_address_city,order_address_recipient,order_address_phone_number,users(name,email),order_items(quantity,unit_price,product_variants(sku_code,products(name)))")
+    .gte("created_at", from).lt("created_at", to).order("created_at").limit(10000);
+  const rows = ((data ?? []) as Record<string, unknown>[]).map((o) => {
+    const items = ((o.order_items as Record<string, unknown>[]) ?? []).map((i) => `${toNumber(i.quantity)}× ${((i.product_variants as Record<string, unknown> | null)?.products as Record<string, unknown> | null)?.name ?? "item"}`).join("; ");
+    const u = o.users as Record<string, unknown> | null;
+    return [o.id, String(o.created_at).slice(0, 19).replace("T", " "), String(o.status).toLowerCase(), o.payment_method, o.shipping_method, toNumber(o.total_amount), toNumber(o.shipping_fee),
+      u?.name ?? o.order_address_recipient, u?.email, o.order_address_phone_number, o.order_address_city, items];
+  });
+  return toCsv([["order_id", "date", "status", "payment", "delivery", "total_rwf", "delivery_fee_rwf", "customer", "email", "phone", "district", "items"], ...rows]);
+}
+
+// Price and stock updates from a spreadsheet, matched by SKU. Only existing products change.
+async function importChanges(csv: string) {
+  const rows = parseCsv(csv);
+  if (rows.length < 2) return { changes: [], errors: ["The file has no rows below the header"] };
+  const head = rows[0].map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
+  const col = (names: string[]) => head.findIndex((h) => names.includes(h));
+  const iSku = col(["sku", "sku_code"]), iPrice = col(["price_rwf", "price"]), iStock = col(["stock", "stock_quantity", "qty"]);
+  if (iSku < 0) return { changes: [], errors: ['A "sku" column is required (export the product list to get the right format)'] };
+  if (iPrice < 0 && iStock < 0) return { changes: [], errors: ['Add a "price_rwf" and/or "stock" column'] };
+  const { data: variants } = await adminClient.from("product_variants").select("id,sku_code,stock_quantity,product_id,products(id,name,price)").limit(10000);
+  const bySku = new Map(((variants ?? []) as Record<string, unknown>[]).map((v) => [String(v.sku_code ?? "").trim().toLowerCase(), v]));
+  const changes: Record<string, unknown>[] = [], errors: string[] = [];
+  const newPrice = new Map<number, { price: number; line: number }>();
+  rows.slice(1).forEach((r, idx) => {
+    const line = idx + 2;
+    const sku = String(r[iSku] ?? "").trim();
+    if (!sku) return;
+    const v = bySku.get(sku.toLowerCase());
+    if (!v) { errors.push(`Row ${line}: SKU "${sku}" not found — skipped`); return; }
+    const p = v.products as Record<string, unknown>;
+    if (iStock >= 0 && String(r[iStock] ?? "").trim() !== "") {
+      const stock = Number(String(r[iStock]).replace(/[\s,]/g, ""));
+      if (!Number.isInteger(stock) || stock < 0 || stock > 100000) errors.push(`Row ${line}: stock "${r[iStock]}" isn't a whole number`);
+      else if (stock !== toNumber(v.stock_quantity)) changes.push({ kind: "stock", variantId: v.id, productId: v.product_id, sku, name: p.name, from: toNumber(v.stock_quantity), to: stock });
+    }
+    if (iPrice >= 0 && String(r[iPrice] ?? "").trim() !== "") {
+      const price = Number(String(r[iPrice]).replace(/[\s,]/g, "").replace(/rwf/i, ""));
+      if (!Number.isFinite(price) || price <= 0) errors.push(`Row ${line}: price "${r[iPrice]}" isn't a valid amount`);
+      else {
+        const prev = newPrice.get(Number(p.id));
+        if (prev && prev.price !== price) errors.push(`Row ${line}: ${p.name} has two different prices (rows ${prev.line} and ${line}) — price kept unchanged`);
+        else if (!prev) newPrice.set(Number(p.id), { price, line });
+      }
+    }
+  });
+  const conflicting = new Set(errors.filter((e) => e.includes("two different prices")).map((e) => e.match(/rows (\d+)/)?.[1]));
+  for (const [productId, { price, line }] of newPrice) {
+    if (conflicting.has(String(line))) continue;
+    const v = [...bySku.values()].find((x) => Number(x.product_id) === productId)!;
+    const current = toNumber((v.products as Record<string, unknown>).price);
+    if (price !== current) changes.push({ kind: "price", productId, name: (v.products as Record<string, unknown>).name, from: current, to: price });
+  }
+  return { changes, errors };
+}
+
+// ── Daily sales summary (7d) — sent by the hourly job at 7:00 Kigali time ──
+async function dailySummaryText() {
+  const kigaliOffset = 2 * 3600_000;
+  const todayKigali = new Date(Math.floor((Date.now() + kigaliOffset) / 86400_000) * 86400_000 - kigaliOffset);
+  const yStart = new Date(todayKigali.getTime() - 86400_000).toISOString(), yEnd = todayKigali.toISOString();
+  const [{ data: orders }, { count: toShip }, { count: unpaid }, { count: lowStock }, { count: newCustomers }, { count: openRequests }] = await Promise.all([
+    adminClient.from("orders").select("id,total_amount,status,order_items(quantity,product_variants(products(name)))").gte("created_at", yStart).lt("created_at", yEnd),
+    adminClient.from("orders").select("id", { count: "exact", head: true }).in("status", ["paid", "processing", "PAID", "PROCESSING"]),
+    adminClient.from("orders").select("id", { count: "exact", head: true }).in("status", ["pending", "PENDING"]),
+    adminClient.from("product_variants").select("id,products!inner(is_active)", { count: "exact", head: true }).lt("stock_quantity", 5).eq("products.is_active", true),
+    adminClient.from("users").select("id", { count: "exact", head: true }).gte("created_at", yStart).lt("created_at", yEnd),
+    adminClient.from("service_requests").select("id", { count: "exact", head: true }).in("status", ["new", "approved", "received"]),
+  ]);
+  const paid = ((orders ?? []) as Record<string, unknown>[]).filter((o) => SOLD_ORDER_STATUSES.includes(String(o.status)));
+  const revenue = paid.reduce((s, o) => s + toNumber(o.total_amount), 0);
+  const units = new Map<string, number>();
+  for (const o of paid) for (const i of (o.order_items as Record<string, unknown>[]) ?? []) {
+    const name = String(((i.product_variants as Record<string, unknown> | null)?.products as Record<string, unknown> | null)?.name ?? "item");
+    units.set(name, (units.get(name) ?? 0) + toNumber(i.quantity));
+  }
+  const top = [...units.entries()].sort((a, b) => b[1] - a[1])[0];
+  const day = new Date(yStart).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "Africa/Kigali" });
+  const lines = [
+    `Blue-Tech — ${day}`,
+    `Sales: ${Math.round(revenue).toLocaleString("en-US")} RWF from ${paid.length} paid order${paid.length === 1 ? "" : "s"}${(orders ?? []).length > paid.length ? ` (${(orders ?? []).length - paid.length} more placed, not paid)` : ""}`,
+    top ? `Best seller: ${top[0]} (${top[1]})` : "Best seller: —",
+    `To ship now: ${toShip ?? 0} · Unpaid: ${unpaid ?? 0}`,
+    `Low stock: ${lowStock ?? 0} option${lowStock === 1 ? "" : "s"} · New customers: ${newCustomers ?? 0}${openRequests ? ` · Open returns/warranty: ${openRequests}` : ""}`,
+  ];
+  return { title: `Yesterday: ${Math.round(revenue).toLocaleString("en-US")} RWF, ${paid.length} order${paid.length === 1 ? "" : "s"}`, text: lines.join("\n") };
+}
+
+async function sendDailySummary() {
+  const kigaliNow = new Date(Date.now() + 2 * 3600_000);
+  if (kigaliNow.getUTCHours() !== 7) return 0;
+  const today = kigaliNow.toISOString().slice(0, 10);
+  const { data: last } = await adminClient.from("site_settings").select("value").eq("key", "daily_summary_last").maybeSingle();
+  if (last?.value === today) return 0;
+  await adminClient.from("site_settings").upsert({ key: "daily_summary_last", value: today, is_public: false, updated_at: new Date().toISOString() }, { onConflict: "key" });
+  const { title, text } = await dailySummaryText();
+  await notifyAdmins(title, text.split("\n").slice(1).join(" · "), { severity: "info", category: "business", href: "/admin" });
+  const { data: admins } = await adminClient.from("users").select("email,phone").eq("role", "admin");
+  for (const a of (admins ?? []) as Record<string, unknown>[]) await messageCustomer("daily_summary", { email: a.email, phone: a.phone }, title, text);
+  return 1;
+}
+
 // ── Returns and warranty claims (round 3: 5b, 5c) ──
 const RETURN_DAYS = 30;
 const SERVICE_STATUSES = ["new", "approved", "received", "repaired", "replaced", "refunded", "rejected", "closed"];
@@ -1513,6 +1695,7 @@ async function runHourlyJob() {
   await task("cancelledUnpaid", () => cancelUnpaidOrders(settings.autoCancelUnpaidHours));
   if (settings.cartReminders) await task("cartReminders", () => sendCartReminders(settings.cartReminderHours));
   if (settings.reviewRequests) await task("reviewRequests", () => sendReviewRequests(settings.reviewRequestDays));
+  if (settings.dailySummary !== false) await task("dailySummary", () => sendDailySummary());
   console.log("[cron] hourly:", JSON.stringify(result));
   return result;
 }
@@ -4777,6 +4960,46 @@ async function handle(request: Request) {
       missedDemand: rows.filter((r) => r.no_match).slice(0, 40).map(turn),
       conversations,
     }, request);
+  }
+
+  if (method === "GET" && path === "/admin/restock") {
+    await requireStaff(request, user);
+    const cover = clampInt(url.searchParams.get("cover"), 7, 120, 30), lead = clampInt(url.searchParams.get("lead"), 0, 60, 7);
+    return success("Restock plan", { cover, lead, rows: await restockPlan(cover, lead) }, request);
+  }
+
+  // Spreadsheets (7c): CSV downloads, and price/stock updates with a preview before saving.
+  if (method === "GET" && (path === "/admin/export/products.csv" || path === "/admin/export/orders.csv")) {
+    await requireStaff(request, user);
+    const isProducts = path.includes("products");
+    const from = url.searchParams.get("from") || new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10);
+    const to = url.searchParams.get("to") || new Date(Date.now() + 86400_000).toISOString().slice(0, 10);
+    const csv = isProducts ? await exportProductsCsv() : await exportOrdersCsv(`${from}T00:00:00+02:00`, `${to}T00:00:00+02:00`);
+    return new Response("\uFEFF" + csv, { status: 200, headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="blue-tech-${isProducts ? "products" : `orders-${from}-to-${to}`}.csv"` } });
+  }
+
+  if (method === "POST" && (path === "/admin/import/preview" || path === "/admin/import/apply")) {
+    // Prices are admin-only, so spreadsheet imports are too.
+    await requireAdmin(request, user);
+    const body = await readJson(request);
+    const csv = String(body.csv ?? "");
+    if (csv.length > 2_000_000) return failure("That file is too large (max 2 MB)", 400, request);
+    const result = await importChanges(csv);
+    if (path.endsWith("/preview")) return success("Preview", result, request);
+    let applied = 0;
+    const touched = new Set<number>();
+    for (const c of result.changes) {
+      if (c.kind === "stock") {
+        await adminClient.from("product_variants").update({ stock_quantity: c.to }).eq("id", c.variantId);
+        touched.add(Number(c.productId));
+      } else {
+        await adminClient.from("products").update({ price: c.to, updated_at: new Date().toISOString() }).eq("id", c.productId);
+      }
+      applied++;
+    }
+    for (const pid of touched) { await refreshStockState(pid); await sendStockAlerts(pid); }
+    chatCatalogCache = null; // Blue sees the new prices straight away
+    return success(`${applied} change${applied === 1 ? "" : "s"} saved`, { applied, errors: result.errors }, request);
   }
 
   if (method === "GET" && path === "/admin/catalog/health") {

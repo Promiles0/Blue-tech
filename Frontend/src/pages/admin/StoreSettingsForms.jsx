@@ -195,6 +195,10 @@ export function AutomationSettings() {
           <input type="number" min={1} max={30} style={input} value={v.reviewRequestDays} onChange={f.set('reviewRequestDays')} />
         </div>
       )}
+
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13.5, color: 'var(--admin-text)', fontWeight: 600, marginTop: 14 }}>
+        <input type="checkbox" checked={v.dailySummary !== false} onChange={f.set('dailySummary')} /> Send admins a sales summary every morning at 7:00
+      </label>
       <SaveBtn saving={f.saving} dirty={f.dirty} onClick={f.save} />
     </div>
   )

@@ -185,6 +185,13 @@ const apiService = {
     catalog: {
       health: () => api.get('/admin/catalog/health'),
     },
+    restock: (cover = 30, lead = 7) => api.get(`/admin/restock?cover=${cover}&lead=${lead}`),
+    spreadsheets: {
+      exportProducts: () => api.get('/admin/export/products.csv', { responseType: 'blob' }),
+      exportOrders: (from, to) => api.get(`/admin/export/orders.csv?from=${from}&to=${to}`, { responseType: 'blob' }),
+      preview: (csv) => api.post('/admin/import/preview', { csv }),
+      apply: (csv) => api.post('/admin/import/apply', { csv }),
+    },
     serviceRequests: {
       getAll: (status) => api.get(`/admin/service-requests${status ? `?status=${status}` : ''}`),
       update: (id, data) => api.patch(`/admin/service-requests/${id}`, data),
