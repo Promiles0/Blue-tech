@@ -31,6 +31,7 @@ const rateLimiters = redis ? {
   authLogin: new Ratelimit({ redis, prefix: "rl:auth-login", limiter: Ratelimit.slidingWindow(5, "15 m") }),
   authRegister: new Ratelimit({ redis, prefix: "rl:auth-register", limiter: Ratelimit.slidingWindow(3, "1 h") }),
   authGoogle: new Ratelimit({ redis, prefix: "rl:auth-google", limiter: Ratelimit.slidingWindow(5, "15 m") }),
+  authMfa: new Ratelimit({ redis, prefix: "rl:auth-mfa", limiter: Ratelimit.slidingWindow(10, "15 m") }),
   coupon: new Ratelimit({ redis, prefix: "rl:coupon", limiter: Ratelimit.slidingWindow(10, "1 h") }),
   checkout: new Ratelimit({ redis, prefix: "rl:checkout", limiter: Ratelimit.slidingWindow(20, "1 h") }),
   quoteRequest: new Ratelimit({ redis, prefix: "rl:quote-request", limiter: Ratelimit.slidingWindow(5, "1 h") }),
@@ -139,7 +140,9 @@ function decodeBase64UrlJson(value: string) {
   return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(padded), (char) => char.charCodeAt(0))));
 }
 
-async function signAppToken(user: Record<string, unknown>) {
+// `extra` adds claims: { mfa: true } once the two-step code was checked, or a short-lived
+// { purpose: "mfa" } ticket that only POST /auth/mfa/verify accepts.
+async function signAppToken(user: Record<string, unknown>, extra: Record<string, unknown> = {}, ttlSeconds = 60 * 60 * 24 * 7) {
   const now = Math.floor(Date.now() / 1000);
   const header = base64UrlJson({ alg: "HS256", typ: "JWT" });
   const payload = base64UrlJson({
@@ -147,8 +150,9 @@ async function signAppToken(user: Record<string, unknown>) {
     email: user.email,
     role: user.role ?? "user",
     iat: now,
-    exp: now + 60 * 60 * 24 * 7,
+    exp: now + ttlSeconds,
     iss: "blue-tech-edge",
+    ...extra,
   });
   const key = await crypto.subtle.importKey(
     "raw",
@@ -161,23 +165,21 @@ async function signAppToken(user: Record<string, unknown>) {
   return `${header}.${payload}.${base64Url(new Uint8Array(signature))}`;
 }
 
-async function verifyAppToken(token: string) {
+// The verified claims of one of our own tokens, or null. Tickets (purpose) are never sessions.
+async function appTokenClaims(token: string, purpose?: string) {
   try {
     const [header, payload, signature] = token.split(".");
     if (!header || !payload || !signature) return null;
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(jwtSecret),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"],
-    );
-    const expected = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${header}.${payload}`));
-    if (base64Url(new Uint8Array(expected)) !== signature) return null;
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(jwtSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const expected = base64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${header}.${payload}`))));
+    if (expected.length !== signature.length) return null;
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+    if (diff !== 0) return null;
     const claims = decodeBase64UrlJson(payload);
     if (!claims.sub || Number(claims.exp ?? 0) < Math.floor(Date.now() / 1000)) return null;
-    const { data: user } = await adminClient.from("users").select("*").eq("id", claims.sub).maybeSingle();
-    return user ?? null;
+    if ((claims.purpose ?? undefined) !== purpose) return null;
+    return claims as Record<string, unknown>;
   } catch {
     return null;
   }
@@ -2734,17 +2736,93 @@ async function verifyPaypackSignature(rawBody: string, signature: string, secret
 async function getAuthUser(request: Request): Promise<User | null> {
   const token = request.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return null;
-  const appUser = await verifyAppToken(token);
-  if (appUser) return {
-    id: appUser.id as string,
-    email: appUser.email as string,
-    app_metadata: {},
-    user_metadata: {},
-    aud: "authenticated",
-    created_at: appUser.created_at as string ?? new Date().toISOString(),
-  } as User;
+  const claims = await appTokenClaims(token);
+  if (claims) {
+    const { data: appUser } = await adminClient.from("users").select("*").eq("id", claims.sub).maybeSingle();
+    if (!appUser) return null;
+    // Two-step login on: only a session issued after the code check counts.
+    if (appUser.mfa_enabled && claims.mfa !== true) return null;
+    return {
+      id: appUser.id as string,
+      email: appUser.email as string,
+      app_metadata: {},
+      user_metadata: {},
+      aud: "authenticated",
+      created_at: appUser.created_at as string ?? new Date().toISOString(),
+    } as User;
+  }
   const { data: { user } } = await adminClient.auth.getUser(token);
+  if (!user) return null;
+  // A Supabase session can be had with just the password (straight from Supabase's own
+  // sign-in API), so accounts with two-step login never accept it.
+  const { data: row } = await adminClient.from("users").select("mfa_enabled").eq("id", user.id).maybeSingle();
+  if (row?.mfa_enabled) return null;
   return user;
+}
+
+// ── Two-step login (8e): TOTP codes from an authenticator app, RFC 6238 ──
+const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function base32Encode(bytes: Uint8Array) {
+  let bits = 0, value = 0, out = "";
+  for (const b of bytes) { value = (value << 8) | b; bits += 8; while (bits >= 5) { out += B32[(value >>> (bits - 5)) & 31]; bits -= 5; } }
+  if (bits > 0) out += B32[(value << (5 - bits)) & 31];
+  return out;
+}
+function base32Decode(text: string) {
+  const clean = text.toUpperCase().replace(/[^A-Z2-7]/g, "");
+  let bits = 0, value = 0;
+  const out: number[] = [];
+  for (const c of clean) { value = (value << 5) | B32.indexOf(c); bits += 5; if (bits >= 8) { out.push((value >>> (bits - 8)) & 255); bits -= 8; } }
+  return new Uint8Array(out);
+}
+async function totpAt(secret: string, step: number) {
+  const msg = new Uint8Array(8);
+  let n = step;
+  for (let i = 7; i >= 0; i--) { msg[i] = n & 255; n = Math.floor(n / 256); }
+  const key = await crypto.subtle.importKey("raw", base32Decode(secret), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+  const h = new Uint8Array(await crypto.subtle.sign("HMAC", key, msg));
+  const o = h[h.length - 1] & 15;
+  const bin = ((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3];
+  return String(bin % 1_000_000).padStart(6, "0");
+}
+// The matching time step (±30 s for clock drift), or null.
+async function totpMatch(secret: string, code: string) {
+  const c = String(code ?? "").replace(/\s+/g, "");
+  if (!/^\d{6}$/.test(c)) return null;
+  const now = Math.floor(Date.now() / 30000);
+  for (const step of [now, now - 1, now + 1]) if ((await totpAt(secret, step)) === c) return step;
+  return null;
+}
+async function sha256Hex(text: string) {
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function recoveryCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O, 1/I
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  const s = Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
+  return `${s.slice(0, 5)}-${s.slice(5)}`;
+}
+
+// "Require two-step login for admin and staff" (Admin → Two-step login), cached briefly.
+let securityCache: { at: number; requireMfa: boolean } | null = null;
+async function mfaRequiredForStaff() {
+  if (securityCache && Date.now() - securityCache.at < 60_000) return securityCache.requireMfa;
+  const s = await jsonSetting("security", { requireMfaForStaff: false });
+  securityCache = { at: Date.now(), requireMfa: s.requireMfaForStaff === true };
+  return securityCache.requireMfa;
+}
+async function enforceStaffMfa(request: Request, userId: string, mfaEnabled: unknown) {
+  if (mfaEnabled === true || !(await mfaRequiredForStaff())) return;
+  throw new Response(JSON.stringify({ success: false, code: "MFA_SETUP_REQUIRED", message: "Set up two-step login to use the admin panel" }),
+    { status: 403, headers: { ...corsHeaders(request), "Content-Type": "application/json" } });
+}
+
+// After the password (or Google) check: a session, or a ticket to enter the code first.
+async function finishSignIn(profile: Record<string, unknown> | null, fallback: () => Record<string, unknown>, session: () => Promise<string>) {
+  if (profile?.mfa_enabled) {
+    return { mfaRequired: true, ticket: await signAppToken(profile, { purpose: "mfa" }, 300), email: profile.email };
+  }
+  return { token: await session(), user: userResult(profile) ?? fallback() };
 }
 
 async function requireUser(request: Request) {
@@ -2768,7 +2846,7 @@ async function requireStaff(request: Request, user?: User) {
   const authenticated = user ?? await requireUser(request);
   const [{ data: profile }, { data: userProfile }] = await Promise.all([
     adminClient.from("profiles").select("role").eq("id", authenticated.id).maybeSingle(),
-    adminClient.from("users").select("role, is_suspended").eq("id", authenticated.id).maybeSingle(),
+    adminClient.from("users").select("role, is_suspended, mfa_enabled").eq("id", authenticated.id).maybeSingle(),
   ]);
   const roles = [profile?.role, userProfile?.role].map((r) => String(r ?? "").toUpperCase());
   const role = roles.includes("ADMIN") ? "ADMIN" : roles.includes("STAFF") ? "STAFF" : null;
@@ -2776,6 +2854,7 @@ async function requireStaff(request: Request, user?: User) {
     JSON.stringify({ success: false, message: "Staff access required" }),
     { status: 403, headers: { ...corsHeaders(request), "Content-Type": "application/json" } },
   );
+  await enforceStaffMfa(request, authenticated.id, userProfile?.mfa_enabled);
   return role;
 }
 
@@ -2788,7 +2867,7 @@ async function requireAdmin(request: Request, user?: User) {
     .maybeSingle();
   const { data: userProfile, error: userError } = await adminClient
     .from("users")
-    .select("role, is_suspended")
+    .select("role, is_suspended, mfa_enabled")
     .eq("id", authenticated.id)
     .maybeSingle();
   const profileRole = profile?.role?.toUpperCase();
@@ -2798,6 +2877,7 @@ async function requireAdmin(request: Request, user?: User) {
     JSON.stringify({ success: false, message: "Administrator access required" }),
     { status: 403, headers: { ...corsHeaders(request), "Content-Type": "application/json" } },
   );
+  await enforceStaffMfa(request, authenticated.id, userProfile?.mfa_enabled);
   return authenticated;
 }
 
@@ -3352,7 +3432,32 @@ async function handle(request: Request) {
     if (error || !data.user || !data.session) return failure(error?.message ?? "Login failed", 401);
     const { data: profile } = await adminClient.from("users").select("*").eq("id", data.user.id).maybeSingle();
     if (profile?.is_suspended) return failure("Account suspended", 403);
-    return success("Login successful!", { token: data.session.access_token, user: userResult(profile) ?? { id: data.user.id, email: data.user.email } });
+    const result = await finishSignIn(profile, () => ({ id: data.user.id, email: data.user.email }), async () => data.session.access_token);
+    return success(result.mfaRequired ? "Enter the code from your authenticator app" : "Login successful!", result);
+  }
+
+  if (method === "POST" && path === "/auth/mfa/verify") {
+    await enforceRateLimit(rateLimiters?.authMfa, `ip:${clientIp(request)}`, request);
+    const body = await readJson(request);
+    const claims = await appTokenClaims(String(body.ticket ?? ""), "mfa");
+    if (!claims) return failure("This sign-in has expired. Please sign in again.", 401, request);
+    const { data: u } = await adminClient.from("users").select("*").eq("id", claims.sub).maybeSingle();
+    if (!u || u.is_suspended || !u.mfa_enabled || !u.mfa_secret) return failure("Please sign in again", 401, request);
+    const code = String(body.code ?? "").trim();
+    const step = await totpMatch(String(u.mfa_secret), code);
+    if (step !== null) {
+      if (u.mfa_last_step && step <= Number(u.mfa_last_step)) return failure("That code was already used. Wait for the next one.", 401, request);
+      await adminClient.from("users").update({ mfa_last_step: step }).eq("id", u.id);
+    } else {
+      // A one-time backup code (XXXXX-XXXXX) instead.
+      const hash = await sha256Hex(code.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+      const left = ((u.mfa_recovery as string[]) ?? []);
+      if (!left.includes(hash)) return failure("That code isn't right. Check the time on your phone and try again.", 401, request);
+      await adminClient.from("users").update({ mfa_recovery: left.filter((h) => h !== hash) }).eq("id", u.id);
+      await notifyAdmins("Backup code used to sign in", `${u.email} signed in with a backup code (${left.length - 1} left).`, { severity: "warning", category: "system", href: "/admin/security" });
+    }
+    await adminClient.from("users").update({ last_login: new Date().toISOString() }).eq("id", u.id);
+    return success("Login successful!", authResult(u, await signAppToken(u, { mfa: true })), request);
   }
 
   if (method === "POST" && path === "/auth/google") {
@@ -3398,6 +3503,9 @@ async function handle(request: Request) {
       role: user.role?.toUpperCase() === "ADMIN" ? "ADMIN" : "USER",
     }, { onConflict: "id" });
 
+    if (user.mfa_enabled) {
+      return success("Enter the code from your authenticator app", { mfaRequired: true, ticket: await signAppToken(user, { purpose: "mfa" }, 300), email: user.email }, request);
+    }
     return success("Google login successful!", authResult(user, await signAppToken(user)), request);
   }
 
@@ -4430,6 +4538,68 @@ async function handle(request: Request) {
         { severity: rating <= 2 ? "warning" : "info", category: "community", href: "/admin/reviews" });
       return success("Review created successfully", publicReview(data));
     }
+  }
+
+  if (path.startsWith("/auth/mfa/")) {
+    const { data: me } = await adminClient.from("users").select("*").eq("id", user.id).maybeSingle();
+    if (!me) return failure("Account not found", 404, request);
+    const isStaff = ["ADMIN", "STAFF"].includes(String(me.role ?? "").toUpperCase());
+    const required = isStaff && await mfaRequiredForStaff();
+
+    if (method === "GET" && path === "/auth/mfa/status") {
+      return success("Two-step login", { enabled: me.mfa_enabled === true, required, backupCodesLeft: ((me.mfa_recovery as string[]) ?? []).length, requireForStaff: await mfaRequiredForStaff() }, request);
+    }
+    if (method === "POST" && path === "/auth/mfa/setup") {
+      if (me.mfa_enabled) return failure("Two-step login is already on", 409, request);
+      const secret = base32Encode(crypto.getRandomValues(new Uint8Array(20)));
+      await adminClient.from("users").update({ mfa_pending_secret: secret }).eq("id", me.id);
+      const label = encodeURIComponent(`Blue-Tech:${me.email}`);
+      return success("Scan the code", { secret, otpauthUrl: `otpauth://totp/${label}?secret=${secret}&issuer=Blue-Tech&algorithm=SHA1&digits=6&period=30` }, request);
+    }
+    if (method === "POST" && path === "/auth/mfa/enable") {
+      const body = await readJson(request);
+      if (!me.mfa_pending_secret) return failure("Start the setup again", 409, request);
+      const step = await totpMatch(String(me.mfa_pending_secret), String(body.code ?? ""));
+      if (step === null) return failure("That code isn't right. Check the time on your phone and try again.", 400, request);
+      const codes = Array.from({ length: 8 }, recoveryCode);
+      const hashes = await Promise.all(codes.map((c) => sha256Hex(c.replace(/-/g, ""))));
+      const { data: updated, error } = await adminClient.from("users").update({
+        mfa_enabled: true, mfa_secret: me.mfa_pending_secret, mfa_pending_secret: null, mfa_recovery: hashes, mfa_last_step: step,
+      }).eq("id", me.id).select("*").single();
+      if (error) return failure(error.message, 400, request);
+      await notifyAdmins("Two-step login turned on", `${me.email} now signs in with an authenticator app.`, { category: "system", href: "/admin/security" });
+      // The current session predates the code check, so hand over one that passes it.
+      return success("Two-step login is on", { recoveryCodes: codes, ...authResult(updated, await signAppToken(updated, { mfa: true })) }, request);
+    }
+    if (method === "POST" && path === "/auth/mfa/disable") {
+      if (required) return failure("Two-step login is required for admin and staff accounts", 403, request);
+      const body = await readJson(request);
+      if (!me.mfa_enabled || (await totpMatch(String(me.mfa_secret), String(body.code ?? ""))) === null) return failure("Enter a current code from your app to turn it off", 400, request);
+      await adminClient.from("users").update({ mfa_enabled: false, mfa_secret: null, mfa_recovery: [], mfa_last_step: null }).eq("id", me.id);
+      await notifyAdmins("Two-step login turned off", `${me.email} turned off two-step login.`, { severity: "warning", category: "system", href: "/admin/security" });
+      return success("Two-step login is off", authResult(me, await signAppToken(me)), request);
+    }
+    if (method === "POST" && path === "/auth/mfa/backup-codes") {
+      const body = await readJson(request);
+      if (!me.mfa_enabled || (await totpMatch(String(me.mfa_secret), String(body.code ?? ""))) === null) return failure("Enter a current code from your app", 400, request);
+      const codes = Array.from({ length: 8 }, recoveryCode);
+      await adminClient.from("users").update({ mfa_recovery: await Promise.all(codes.map((c) => sha256Hex(c.replace(/-/g, "")))) }).eq("id", me.id);
+      return success("New backup codes", { recoveryCodes: codes }, request);
+    }
+  }
+
+  if (method === "PUT" && path === "/admin/settings/security") {
+    await requireAdmin(request, user);
+    const body = await readJson(request);
+    const on = body.requireMfaForStaff === true;
+    const { data: me } = await adminClient.from("users").select("mfa_enabled").eq("id", user.id).maybeSingle();
+    // Never lock everyone out: only someone already using it can make it required.
+    if (on && !me?.mfa_enabled) return failure("Turn on two-step login for your own account first", 409, request);
+    const { error } = await saveJsonSetting("security", { requireMfaForStaff: on });
+    if (error) return failure(error.message, 400, request);
+    securityCache = null;
+    const { data: missing } = await adminClient.from("users").select("email").in("role", ["admin", "staff", "ADMIN", "STAFF"]).eq("mfa_enabled", false);
+    return success("Saved", { requireMfaForStaff: on, notYetSetUp: ((missing ?? []) as Record<string, unknown>[]).map((m) => m.email) }, request);
   }
 
   if (method === "GET" && path === "/users/profile") {

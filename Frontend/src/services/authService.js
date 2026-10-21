@@ -29,6 +29,15 @@ const authService = {
   },
 
   /**
+   * Two-step login — POST /auth/mfa/verify with the ticket from login/googleLogin
+   * (returned as { mfaRequired: true, ticket } when the account uses an authenticator app).
+   */
+  verifyMfa: async (ticket, code) => {
+    const res = await api.post("/auth/mfa/verify", { ticket, code }, { skipAuthRedirect: true });
+    return res.data;
+  },
+
+  /**
    * Get the logged-in user's profile — GET /auth/me
    */
   getMe: async () => {

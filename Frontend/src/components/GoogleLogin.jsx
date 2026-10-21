@@ -30,7 +30,9 @@ const GoogleLogin = () => {
           }
 
           try {
-            await googleLogin(response.credential)
+            const result = await googleLogin(response.credential)
+            // Accounts with two-step login: the login page shows the code step.
+            if (result?.mfaRequired) { navigate('/login', { replace: true, state: window.history.state?.usr ?? undefined }); return }
             navigate('/', { replace: true })
           } catch (err) {
             console.error('Google login failed:', err)

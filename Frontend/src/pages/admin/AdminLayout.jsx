@@ -3,7 +3,7 @@ import { Toaster } from 'sonner'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Users, MessageSquare, BarChart3, ScrollText,
-  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send, Gift, Bug, HeartPulse, Undo2, PackagePlus, FileSpreadsheet,
+  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send, Gift, Bug, HeartPulse, Undo2, PackagePlus, FileSpreadsheet, ShieldCheck,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
@@ -43,6 +43,7 @@ const NAV_GROUPS = [
   { label: 'System', items: [
     { to: '/admin/settings',      label: 'Settings',      icon: Settings, adminOnly: true },
     { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+    { to: '/admin/security',      label: 'Two-step login', icon: ShieldCheck },
     { to: '/admin/audit',         label: 'Audit Log',     icon: ScrollText, adminOnly: true },
     { to: '/admin/errors',        label: 'Site errors',   icon: Bug, adminOnly: true },
   ] },

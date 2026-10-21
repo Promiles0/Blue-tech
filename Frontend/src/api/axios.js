@@ -21,6 +21,10 @@ api.interceptors.response.use(
   },
   (error) => {
     const status = error.response?.status
+    if (status === 403 && error.response?.data?.code === 'MFA_SETUP_REQUIRED' && !window.location.pathname.startsWith('/admin/security')) {
+      window.location.href = '/admin/security?required=1'
+      return Promise.reject(error)
+    }
     const message = error.response?.data?.message?.toLowerCase() || ''
 
     // Only logout on 401 from our own API, or explicit token-related 400s

@@ -680,4 +680,13 @@ export default {
   // ── Help: self-service returns ──
   'To start a return, open the order in My orders and choose "Return or warranty" on the item. We reply within one working day and tell you how to drop it off at our shop in Kigali or have it collected. You can also contact us by WhatsApp, phone or email (below).': 'Pour un retour, ouvrez la commande dans « Mes commandes » et choisissez « Retour ou garantie » sur l\'article. Nous répondons sous un jour ouvrable et vous indiquons comment le déposer à notre boutique à Kigali ou le faire enlever. Vous pouvez aussi nous contacter par WhatsApp, téléphone ou e-mail (ci-dessous).',
   'To make a claim, open the order in My orders and choose "Return or warranty" on the item, with a short description and photos of the problem. You can follow the claim on the order page. You can also contact us directly (below).': 'Pour une demande de garantie, ouvrez la commande dans « Mes commandes » et choisissez « Retour ou garantie » sur l\'article, avec une courte description et des photos du problème. Vous suivez la demande sur la page de la commande. Vous pouvez aussi nous contacter directement (ci-dessous).',
+  // ── Round 3: two-step login ──
+  'Two-step login': 'Connexion en deux étapes',
+  'Enter one of your backup codes (each works once).': 'Saisissez l\'un de vos codes de secours (chacun ne sert qu\'une fois).',
+  'Enter the 6-digit code from your authenticator app for {email}.': 'Saisissez le code à 6 chiffres de votre application d\'authentification pour {email}.',
+  'That code isn\'t right.': 'Ce code n\'est pas correct.',
+  'Checking…': 'Vérification…',
+  'Verify': 'Valider',
+  'Use the app code': 'Utiliser le code de l\'application',
+  'Use a backup code': 'Utiliser un code de secours',
 }

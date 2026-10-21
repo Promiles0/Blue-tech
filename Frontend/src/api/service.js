@@ -6,6 +6,14 @@ const apiService = {
     login: (credentials) => api.post('/auth/login', credentials),
     register: (userData) => api.post('/auth/register', userData),
     googleLogin: (token) => api.post('/auth/google', { token }),
+    // Two-step login (authenticator app) for admin and staff.
+    mfa: {
+      status: () => api.get('/auth/mfa/status'),
+      setup: () => api.post('/auth/mfa/setup'),
+      enable: (code) => api.post('/auth/mfa/enable', { code }),
+      disable: (code) => api.post('/auth/mfa/disable', { code }),
+      backupCodes: (code) => api.post('/auth/mfa/backup-codes', { code }),
+    },
     getProfile: () => api.get('/users/profile'),
     updateProfile: (data) => api.put('/users/profile', data),
     changePassword: (data) => api.put('/users/password', data),
@@ -218,6 +226,7 @@ const apiService = {
       saveAutomation: (config) => api.put('/admin/settings/automation', config),
       saveAbout: (about) => api.put('/admin/settings/about', about),
       saveAnalytics: (ids) => api.put('/admin/settings/analytics', ids),
+      saveSecurity: (s) => api.put('/admin/settings/security', s),
       getBlue: () => api.get('/admin/settings/blue'),
       saveBlue: (instructions) => api.put('/admin/settings/blue', { instructions }),
     },

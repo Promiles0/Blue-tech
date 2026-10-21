@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import MfaStep from '../components/MfaStep'
 import { useT } from '../lib/i18n'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
@@ -13,7 +14,7 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false)
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
-  const { login }               = useAuth()
+  const { login, pendingMfa }   = useAuth()
   const navigate                = useNavigate()
   const location                = useLocation()
   const from                    = location.state?.from ?? '/'
@@ -23,7 +24,8 @@ export default function Login() {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
+      const result = await login(email, password)
+      if (result?.mfaRequired) return // the code step below takes over
       navigate(from, { replace: true })
     } catch (err) {
       setError(err.response?.data?.message ?? t('Invalid email or password.'))
@@ -31,6 +33,8 @@ export default function Login() {
       setLoading(false)
     }
   }
+
+  if (pendingMfa) return <MfaStep onDone={() => navigate(from, { replace: true })} />
 
   return (
     <div style={{

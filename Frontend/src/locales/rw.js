@@ -681,4 +681,13 @@ export default {
   // ── Help: self-service returns ──
   'To start a return, open the order in My orders and choose "Return or warranty" on the item. We reply within one working day and tell you how to drop it off at our shop in Kigali or have it collected. You can also contact us by WhatsApp, phone or email (below).': 'Kugira ngo usubize igicuruzwa, fungura itegeko muri "Ibyo natumije" maze uhitemo "Gusubiza cyangwa garanti" ku gicuruzwa. Dusubiza mu munsi umwe w\'akazi tukakubwira uko wakizana mu iduka ryacu i Kigali cyangwa uko twagitwara. Ushobora no kutwandikira kuri WhatsApp, guhamagara cyangwa email (hepfo).',
   'To make a claim, open the order in My orders and choose "Return or warranty" on the item, with a short description and photos of the problem. You can follow the claim on the order page. You can also contact us directly (below).': 'Kugira ngo usabe garanti, fungura itegeko muri "Ibyo natumije" maze uhitemo "Gusubiza cyangwa garanti" ku gicuruzwa, wandike ikibazo muri make kandi ushyireho amafoto. Ushobora gukurikirana icyifuzo cyawe kuri paji y\'itegeko. Ushobora no kutwandikira (hepfo).',
+  // ── Round 3: two-step login ──
+  'Two-step login': 'Kwinjira mu ntambwe ebyiri',
+  'Enter one of your backup codes (each works once).': 'Andika imwe muri kode zawe z\'inyongera (buri imwe ikora rimwe).',
+  'Enter the 6-digit code from your authenticator app for {email}.': 'Andika kode y\'imibare 6 iri muri porogaramu yawe ya authenticator ya {email}.',
+  'That code isn\'t right.': 'Iyo kode si yo.',
+  'Checking…': 'Ndimo kugenzura…',
+  'Verify': 'Emeza',
+  'Use the app code': 'Koresha kode ya porogaramu',
+  'Use a backup code': 'Koresha kode y\'inyongera',
 }

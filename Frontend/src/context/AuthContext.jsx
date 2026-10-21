@@ -6,6 +6,8 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
+  // Signed in with a password/Google but the account also needs its authenticator code.
+  const [pendingMfa, setPendingMfa] = useState(null) // { ticket, email }
 
   useEffect(() => {
     try {
@@ -22,6 +24,7 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const data = await authService.login(email, password)
+    if (data?.mfaRequired) { setPendingMfa({ ticket: data.ticket, email: data.email }); return data }
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
     setUser(data.user)
@@ -38,11 +41,23 @@ export function AuthProvider({ children }) {
 
   const googleLogin = useCallback(async (token) => {
     const data = await authService.googleLogin(token)
+    if (data?.mfaRequired) { setPendingMfa({ ticket: data.ticket, email: data.email }); return data }
     localStorage.setItem('token', data.token)
     localStorage.setItem('user', JSON.stringify(data.user))
     setUser(data.user)
     return data
   }, [])
+
+  const verifyMfa = useCallback(async (code) => {
+    const data = await authService.verifyMfa(pendingMfa?.ticket, code)
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
+    setUser(data.user)
+    setPendingMfa(null)
+    return data
+  }, [pendingMfa])
+
+  const cancelMfa = useCallback(() => setPendingMfa(null), [])
 
   const logout = useCallback(async () => {
     localStorage.removeItem('user')
@@ -57,6 +72,9 @@ export function AuthProvider({ children }) {
 
   const value = useMemo(() => ({
     user,
+    pendingMfa,
+    verifyMfa,
+    cancelMfa,
     loading,
     login,
     register,
@@ -68,7 +86,7 @@ export function AuthProvider({ children }) {
     // Staff run day-to-day operations in the admin panel; admins also manage settings and people.
     isStaff: user?.role?.toLowerCase() === 'staff',
     canUseAdmin: ['admin', 'staff'].includes(user?.role?.toLowerCase()),
-  }), [user, loading, login, register, googleLogin, logout, updateUser])
+  }), [pendingMfa, verifyMfa, cancelMfa, user, loading, login, register, googleLogin, logout, updateUser])
 
   return (
     <AuthContext.Provider value={value}>
