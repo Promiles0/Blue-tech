@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { useCurrency } from '../context/CurrencyContext'
 import { StarInput } from '../components/site/StarRating'
 import InvoiceButton from '../components/site/InvoiceButton'
+import PayForOrder from '../components/site/PayForOrder'
 import ReviewPhotoPicker from '../components/site/ReviewPhotoPicker'
 import { useStoreSettings, deliveryWindow, formatWindow } from '../lib/delivery'
 
@@ -140,6 +141,29 @@ export default function OrderDetailPage() {
           onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
           <ArrowLeft size={13} /> {t('Back to orders')}
         </Link>
+
+        {/* Unpaid order: finish paying here (payment rescue) */}
+        {order.status === 'PENDING' && !['CASH', 'PICKUP'].includes(String(order.paymentMethod ?? '').toUpperCase()) && (
+          <div style={{ marginBottom: 24, padding: 22, borderRadius: 16, border: '1px solid rgba(245,158,11,0.35)', background: 'rgba(245,158,11,0.06)' }}>
+            <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Wallet size={18} style={{ color: '#f59e0b' }} /> {t('Complete your payment')}
+            </h2>
+            <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.6 }}>
+              {t('This order is reserved for you but not paid yet. Pay with mobile money or card to confirm it.')}
+            </p>
+            <PayForOrder
+              orderId={order.orderId}
+              total={order.totalAmount}
+              defaultMethod={order.paymentMethod}
+              defaultPhone={order.shippingPhoneNumber ?? ''}
+              onPaid={async () => {
+                toast.success(t('Payment received — thank you!'))
+                const { data } = await apiService.orders.getOrderDetails(id)
+                setOrder(data)
+              }}
+            />
+          </div>
+        )}
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>

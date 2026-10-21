@@ -312,6 +312,29 @@ function cleanDeliveryConfig(body: Record<string, unknown>) {
   };
 }
 
+// ── Automation (round 1): unpaid-order auto-cancel, cart reminders, review requests ──
+// Auto-cancel is a business rule, so it's off until the owner turns it on.
+const DEFAULT_AUTOMATION = {
+  autoCancelUnpaidHours: 0,      // 0 = off; recommended 24
+  cartReminders: true,
+  cartReminderHours: 3,
+  reviewRequests: true,
+  reviewRequestDays: 3,
+};
+const clampInt = (v: unknown, min: number, max: number, fallback: number) => {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : fallback;
+};
+function cleanAutomation(body: Record<string, unknown>) {
+  return {
+    autoCancelUnpaidHours: clampInt(body.autoCancelUnpaidHours, 0, 168, 0),
+    cartReminders: body.cartReminders !== false,
+    cartReminderHours: clampInt(body.cartReminderHours, 1, 72, 3),
+    reviewRequests: body.reviewRequests !== false,
+    reviewRequestDays: clampInt(body.reviewRequestDays, 1, 30, 3),
+  };
+}
+
 function cleanBusinessInfo(body: Record<string, unknown>) {
   const vatMode = ["none", "included", "added"].includes(String(body.vatMode)) ? String(body.vatMode) : "none";
   return {
@@ -1866,6 +1889,62 @@ async function settlePayment(recordId: number, orderId: number, paid: boolean) {
   }
 }
 
+// ── Payment rescue (1b) ──
+// The payment record for a provider reference: the current attempt, or an earlier attempt the
+// customer replaced by retrying (so a late approval of that one still pays the order).
+async function paymentRecordForRef(ref: string) {
+  if (!ref) return null;
+  const { data: current } = await adminClient.from("payment_records").select("id,order_id").eq("transaction_reference", ref).maybeSingle();
+  if (current) return { id: current.id as number, orderId: current.order_id as number, current: true };
+  const { data: earlier } = await adminClient.from("payment_records").select("id,order_id").contains("previous_references", [ref]).maybeSingle();
+  return earlier ? { id: earlier.id as number, orderId: earlier.order_id as number, current: false } : null;
+}
+
+// Before a new payment attempt: the order must still be waiting for payment, and a previous
+// attempt that could still go through must be settled first — never two charges at once.
+// Returns an error message for the customer, or null when it's safe to charge.
+async function checkPayable(order: Record<string, unknown>) {
+  const status = String(order.status ?? "").toLowerCase();
+  if (status === "cancelled") return "This order was cancelled. Please place a new order.";
+  if (status !== "pending") return "This order is already paid.";
+  const { data: rec } = await adminClient.from("payment_records").select("*").eq("order_id", order.id).maybeSingle();
+  if (!rec) return null;
+  if (String(rec.status).toUpperCase() === "SUCCESS") return "This order is already paid.";
+  if (String(rec.status).toUpperCase() !== "PENDING" || !rec.transaction_reference) return null;
+  const ref = String(rec.transaction_reference);
+  let remote = "";
+  try {
+    remote = ref.startsWith("pi_") ? await findStripeIntentStatus(ref) : await findPaypackTransaction(ref);
+  } catch (e) {
+    console.error(`[payments] couldn't check previous attempt ${ref}: ${errorMessage(e, "unknown")}`);
+  }
+  if (remote === "successful" || remote === "succeeded") {
+    await settlePayment(rec.id as number, order.id as number, true);
+    return "This order is already paid.";
+  }
+  const settled = ["failed", "canceled", "cancelled", "requires_payment_method", "requires_confirmation", "requires_action"].includes(remote);
+  const ageMs = Date.now() - new Date(String(rec.updated_at ?? rec.created_at)).getTime();
+  // A MoMo prompt can still be approved for a few minutes; a card intent that was never
+  // confirmed (requires_*) hasn't charged anything and can simply be replaced.
+  if (!settled && !ref.startsWith("pi_") && ageMs < 3 * 60_000) {
+    return "Your last payment request is still waiting. Approve it on your phone, or try again in a few minutes.";
+  }
+  if (remote === "processing") return "Your card payment is still processing. Please wait a minute before trying again.";
+  await adminClient.from("payment_records").update({ status: "FAILED", updated_at: new Date().toISOString() }).eq("id", rec.id);
+  return null;
+}
+
+// Saves a new attempt for an order, remembering the reference it replaces.
+async function savePaymentAttempt(order: Record<string, unknown>, ref: string | null, status: string, method: string) {
+  const { data: rec } = await adminClient.from("payment_records").select("transaction_reference,previous_references").eq("order_id", order.id).maybeSingle();
+  const previous = [...((rec?.previous_references as string[] | null) ?? []), rec?.transaction_reference]
+    .filter((r): r is string => Boolean(r) && r !== ref).slice(-20);
+  return adminClient.from("payment_records").upsert({
+    order_id: order.id, amount: order.total_amount, transaction_reference: ref, status, payment_method: method,
+    previous_references: [...new Set(previous)], updated_at: new Date().toISOString(),
+  }, { onConflict: "order_id" });
+}
+
 async function verifyPaypackSignature(rawBody: string, signature: string, secret: string) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sigBytes = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(rawBody));
@@ -2325,6 +2404,30 @@ const ORDER_OFFLINE_TEXT: Record<string, { mine: string; none: string; signIn: s
   rw: { mine: "Dore ibyo mwatumije vuba. Kanda kuri kimwe ubone ibisobanuro byose:", none: "Nta byo mwatumije mbonye kuri konti yanyu.", signIn: "Mwinjire muri konti nshobore kubarebera aho ibyo mwatumije bigeze. Cyangwa itsinda ryacu ribafashe kuri WhatsApp:" },
 };
 
+// ── Smart search helpers (2a) ──
+// Kinyarwanda and French shopping words → the English words the catalogue uses.
+const SEARCH_SYNONYMS: [RegExp, string][] = [
+  [/\bmudasobwa (igendanwa|ntoya)\b/g, "laptop"], [/\bordinateurs? portables?\b/g, "laptop"], [/\bportables?\b/g, "laptop"],
+  [/\bmudasobwa\b/g, "laptop"], [/\bordinateurs? de bureau\b/g, "desktop"], [/\bordinateurs?\b/g, "computer"],
+  [/\bimprimantes?\b/g, "printer"], [/\bimashini (yo )?gucapa\b/g, "printer"], [/\bprinta\b/g, "printer"], [/\bphotocopieuses?\b/g, "photocopier"],
+  [/(?<!\p{L})[ée]crans? interactifs?\b/gu, "interactive screen"], [/(?<!\p{L})[ée]crans?\b/gu, "monitor"], [/\bmoniteurs?\b/g, "monitor"],
+  [/\btablettes?\b/g, "tablet"], [/\btabuleti\b/g, "tablet"], [/\bsouris\b/g, "mouse"], [/\bimbeba\b/g, "mouse"],
+  [/\bclaviers?\b/g, "keyboard"], [/\bonduleurs?\b/g, "ups"], [/\bprojecteurs?\b/g, "projector"], [/\brouteurs?\b/g, "router"],
+  [/\bcasques?\b/g, "headset"], [/(?<!\p{L})[ée]couteurs?\b/gu, "headset"], [/\bchargeurs?\b/g, "charger"], [/\bsacs?\b/g, "bag"],
+  [/\bsans fil\b/g, "wireless"], [/\bbon march[ée]\b/gu, ""], [/\bcartouches?\b/g, "cartridge"], [/\bencre\b/g, "ink"], [/\bdisques? durs?\b/g, "hard drive"], [/\bc[âa]bles?\b/g, "cable"],
+];
+// Words that describe the wish rather than the product.
+const SEARCH_STOPWORDS = new Set(["a", "an", "the", "for", "with", "and", "or", "of", "in", "on", "to", "i", "me", "my", "need", "want", "looking",
+  "buy", "cheap", "cheapest", "best", "good", "new", "please", "price", "prices", "under", "below", "around", "show", "some", "any",
+  "pour", "avec", "le", "la", "les", "un", "une", "des", "de", "du", "et", "je", "cherche", "veux", "moins", "cher", "chère", "chers", "pas", "prix",
+  "ndashaka", "nshaka", "ndifuza", "ihendutse", "nziza", "nkeneye", "rwf", "frw"]);
+
+function normalizeSearch(raw: string) {
+  let q = raw.toLowerCase().normalize("NFC");
+  for (const [re, en] of SEARCH_SYNONYMS) q = q.replace(re, en);
+  return q.split(/[^\p{L}\p{N}.+]+/u).filter((w) => w && !SEARCH_STOPWORDS.has(w)).join(" ").slice(0, 120);
+}
+
 // Alert the team once an hour at most if no AI provider could answer.
 async function alertAllProvidersDown(lastError: string) {
   const { data: recent } = await adminClient.from("admin_notifications").select("id")
@@ -2519,6 +2622,21 @@ async function handle(request: Request) {
     return success("Google login successful!", authResult(user, await signAppToken(user)), request);
   }
 
+  // Smart search (2a): ranked product ids for what the shopper typed, or null when the
+  // smart search finds nothing (the caller then falls back to plain text matching).
+  async function smartSearchIds(raw: string) {
+    const q = normalizeSearch(raw);
+    if (!q) return null;
+    const { data, error } = await adminClient.rpc("search_products", { q, max_results: 200 });
+    if (error) { console.error("search_products failed:", error.message); return null; }
+    // Drop weak tail matches (a foam cleaner whose description mentions laptops) so that
+    // sorting "laptop" by price still lists laptops.
+    const rows = (data ?? []) as { product_id: number; score: number }[];
+    const top = rows[0]?.score ?? 0;
+    const ids = rows.filter((r) => r.score >= top * 0.7).map((r) => Number(r.product_id));
+    return ids.length ? ids : null;
+  }
+
   if (method === "GET" && (path === "/products" || path === "/products/search")) {
     const page = Number(url.searchParams.get("page") ?? 0);
     const size = Math.min(Number(url.searchParams.get("size") ?? 10), 100);
@@ -2537,7 +2655,11 @@ async function handle(request: Request) {
       }
     }
     const name = (url.searchParams.get("name") ?? "").replace(/[,()%*\\]/g, " ").trim();
-    if (name) query = query.or(`name.ilike.%${name}%,brand.ilike.%${name}%,model_number.ilike.%${name}%`);
+    // Shoppers get the smart (typo-tolerant, ranked) search; the admin product list keeps
+    // plain matching so hidden products can be found too.
+    const ranked = name && !includeHidden ? await smartSearchIds(name) : null;
+    if (ranked) query = query.in("id", ranked);
+    else if (name) query = query.or(`name.ilike.%${name}%,brand.ilike.%${name}%,model_number.ilike.%${name}%`);
     const categoryId = url.searchParams.get("categoryId");
     if (categoryId) query = query.eq("category_id", categoryId);
     const minPrice = url.searchParams.get("minPrice");
@@ -2557,6 +2679,17 @@ async function handle(request: Request) {
     const [sortField, sortDir] = (url.searchParams.get("sort") ?? "updatedAt,desc").split(",");
     const orderColumn = sortColumns[sortField] ?? "updated_at";
     const ascending = sortDir === "asc";
+
+    // A search with no sort chosen lists best matches first.
+    if (ranked && !url.searchParams.get("sort")) {
+      const { data: all, error: allError } = await query;
+      if (allError) return failure(allError.message, 500, request);
+      const rank = new Map(ranked.map((id, i) => [id, i]));
+      const sorted = ((all ?? []) as Record<string, unknown>[]).sort((a, b) => (rank.get(Number(a.id)) ?? 999) - (rank.get(Number(b.id)) ?? 999));
+      const pageRows = sorted.slice(page * size, page * size + size);
+      const content = await Promise.all(pageRows.map((row) => productResult(row)));
+      return success("Products fetched successfully", { content, totalElements: sorted.length, number: page, size, totalPages: Math.ceil(sorted.length / size) });
+    }
 
     const { data, count, error } = await query.range(page * size, page * size + size - 1).order(orderColumn, { ascending }).order("id", { ascending });
     if (error) return failure(error.message, 500, request);
@@ -2650,11 +2783,12 @@ async function handle(request: Request) {
     console.log(`[stripe] webhook received: ${event.type}`);
     if (event.type === "payment_intent.succeeded" || event.type === "payment_intent.payment_failed") {
       const intent = event.data?.object;
-      const { data: record } = await adminClient.from("payment_records").select("id,order_id").eq("transaction_reference", intent?.id).maybeSingle();
-      if (!record) {
+      const found = await paymentRecordForRef(String(intent?.id ?? ""));
+      if (!found) {
         console.error(`[stripe] no payment_record for intent ${intent?.id}`);
-      } else {
-        await settlePayment(record.id as number, record.order_id as number, event.type === "payment_intent.succeeded");
+      } else if (event.type === "payment_intent.succeeded" || found.current) {
+        // A failure of an earlier, replaced attempt must not fail the customer's current one.
+        await settlePayment(found.id, found.orderId, event.type === "payment_intent.succeeded");
       }
     }
     return response({ received: true }, 200, request);
@@ -2672,11 +2806,11 @@ async function handle(request: Request) {
     const status = String(data.status ?? "").toLowerCase();
     console.log(`[paypack] webhook received: kind=${payload.kind} ref=${data.ref} status=${status}`);
     if (payload.kind === "transaction:processed") {
-      const { data: record } = await adminClient.from("payment_records").select("id,order_id").eq("transaction_reference", data.ref).maybeSingle();
-      if (!record) {
+      const found = await paymentRecordForRef(String(data.ref ?? ""));
+      if (!found) {
         console.error(`[paypack] no payment_record for ref ${data.ref}`);
-      } else if (status === "successful" || status === "failed") {
-        await settlePayment(record.id as number, record.order_id as number, status === "successful");
+      } else if (status === "successful" || (status === "failed" && found.current)) {
+        await settlePayment(found.id, found.orderId, status === "successful");
       }
     }
     return response({ received: true }, 200, request);
@@ -3492,12 +3626,14 @@ async function handle(request: Request) {
     const { data: order, error } = await adminClient.from("orders").select("*").eq("id", orderId).eq("user_id", user.id).maybeSingle();
     if (error) return failure(error.message, 500, request);
     if (!order) return failure("Order not found", 404, request);
+    const blocked = await checkPayable(order);
+    if (blocked) return failure(blocked, 409, request);
     try {
       const intent = await createStripePaymentIntent(toNumber(order.total_amount), { orderId: String(order.id), userEmail: String(user.email ?? "") });
-      const { error: paymentError } = await adminClient.from("payment_records").upsert({
-        order_id: order.id, amount: order.total_amount, transaction_reference: intent.id, status: "PENDING", payment_method: "CARD", updated_at: new Date().toISOString(),
-      }, { onConflict: "order_id" });
+      const { error: paymentError } = await savePaymentAttempt(order, intent.id, "PENDING", "CARD");
       if (paymentError) return failure(paymentError.message, 400, request);
+      // Switching to card on an order placed with mobile money (payment rescue).
+      if (String(order.payment_method ?? "").toUpperCase() !== "CARD") await adminClient.from("orders").update({ payment_method: "CARD" }).eq("id", order.id);
       return success("Payment initialized", { status: "success", message: "Payment initialized", paymentLink: intent.client_secret }, request);
     } catch (error) {
       return failure(errorMessage(error, "Stripe initialization failed"), 500, request);
@@ -3520,24 +3656,25 @@ async function handle(request: Request) {
     // the wrong wallet without any error — catch it before the cashin call.
     const provider = momoProviderFor(phone);
     const chosen = String(order.payment_method ?? "").toUpperCase();
-    if ((chosen === "MOMO" || chosen === "AIRTEL_MONEY") && chosen !== provider) {
+    // At first checkout the number must match the network chosen; when retrying a failed
+    // payment (switchMethod), the customer may move to the other network or from card.
+    if ((chosen === "MOMO" || chosen === "AIRTEL_MONEY") && chosen !== provider && body.switchMethod !== true) {
       const expected = chosen === "MOMO" ? "MTN (078/079)" : "Airtel (072/073)";
       return failure(`This looks like an ${provider === "MOMO" ? "MTN" : "Airtel"} number, but the order was placed with ${chosen === "MOMO" ? "MTN MoMo" : "Airtel Money"}. Use an ${expected} number or change the payment method.`, 400, request);
     }
+    const blocked = await checkPayable(order);
+    if (blocked) return failure(blocked, 409, request);
+    if (chosen !== provider) await adminClient.from("orders").update({ payment_method: provider }).eq("id", order.id);
 
     try {
       const ref = await initiateMomoPayment(order, phone);
-      const { error: paymentError } = await adminClient.from("payment_records").upsert({
-        order_id: order.id, amount: order.total_amount, transaction_reference: ref, status: "PENDING", payment_method: provider, updated_at: new Date().toISOString(),
-      }, { onConflict: "order_id" });
+      const { error: paymentError } = await savePaymentAttempt(order, ref, "PENDING", provider);
       if (paymentError) return failure(paymentError.message, 400, request);
       return success("MoMo payment initiated", { status: "success", message: `Payment request sent to ${phone}. Please approve on your phone.`, paymentLink: ref }, request);
     } catch (error) {
       // Leave a trace of the failed attempt — otherwise a rejected cashin vanishes and
       // there is nothing to look at afterwards.
-      await adminClient.from("payment_records").upsert({
-        order_id: order.id, amount: order.total_amount, transaction_reference: null, status: "FAILED", payment_method: provider, updated_at: new Date().toISOString(),
-      }, { onConflict: "order_id" });
+      await savePaymentAttempt(order, null, "FAILED", provider);
       return failure(errorMessage(error, "Paypack initialization failed"), 500, request);
     }
   }
@@ -4026,6 +4163,14 @@ async function handle(request: Request) {
     return success("Updated", data, request);
   }
 
+  if (method === "PUT" && path === "/admin/settings/automation") {
+    await requireAdmin(request, user);
+    const value = cleanAutomation(await readJson(request));
+    const { error } = await saveJsonSetting("automation", value);
+    if (error) return failure(error.message, 400, request);
+    return success("Settings saved", value, request);
+  }
+
   if (method === "PUT" && (path === "/admin/settings/delivery" || path === "/admin/settings/business")) {
     await requireAdmin(request, user);
     const body = await readJson(request);
@@ -4058,10 +4203,11 @@ async function handle(request: Request) {
     await requireAdmin(request, user);
 
     if (method === "GET" && path === "/admin/settings") {
-      const [deliveryConfig, businessInfo] = await Promise.all([
+      const [deliveryConfig, businessInfo, automation] = await Promise.all([
         jsonSetting("delivery_config", DEFAULT_DELIVERY), jsonSetting("business_info", DEFAULT_BUSINESS),
+        jsonSetting("automation", DEFAULT_AUTOMATION),
       ]);
-      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate(), deliveryConfig, businessInfo, programs: await programsSetting() }, request);
+      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate(), deliveryConfig, businessInfo, automation: { ...DEFAULT_AUTOMATION, ...automation }, programs: await programsSetting() }, request);
     }
 
     if (method === "PUT" && path === "/admin/settings/exchange-rate") {

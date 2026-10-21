@@ -109,7 +109,7 @@ const apiService = {
   // --- PAYMENTS ---
   payments: {
     createIntent: (orderId) => api.post(`/payments/initialize/${orderId}`),
-    initiateMomo: (orderId, phone) => api.post(`/payments/momo/${orderId}`, { phone }),
+    initiateMomo: (orderId, phone, opts = {}) => api.post(`/payments/momo/${orderId}`, { phone, ...opts }),
     getStatus: (orderId) => api.get(`/payments/status/${orderId}`),
   },
 
@@ -190,6 +190,7 @@ const apiService = {
       updateExchangeRate: (usdToRwfRate) => api.put('/admin/settings/exchange-rate', { usdToRwfRate }),
       saveDelivery: (config) => api.put('/admin/settings/delivery', config),
       saveBusiness: (info) => api.put('/admin/settings/business', info),
+      saveAutomation: (config) => api.put('/admin/settings/automation', config),
       getBlue: () => api.get('/admin/settings/blue'),
       saveBlue: (instructions) => api.put('/admin/settings/blue', { instructions }),
     },

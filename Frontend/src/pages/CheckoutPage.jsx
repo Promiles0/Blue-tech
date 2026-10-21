@@ -6,7 +6,6 @@ import RwandaAddressFields from "../components/site/RwandaAddressFields";
 import { EMPTY_RW_ADDRESS, addressStreet } from "../lib/rwandaAddress";
 import { useNavigate, Link } from "react-router-dom";
 import { CheckCircle, Clock, ArrowLeft, MapPin, Truck, Wallet } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import apiService from "../api/service";
 import { useAuth } from "../context/AuthContext";
@@ -14,38 +13,12 @@ import { useCart } from "../context/CartContext";
 import { toast } from "sonner";
 import CouponInput from "../components/site/CouponInput";
 import { useCurrency } from "../context/CurrencyContext";
+import PayForOrder from "../components/site/PayForOrder";
+import { CARD_ELEMENT_OPTIONS, MOMO_POLL_INTERVAL_MS, MOMO_POLL_TIMEOUT_MS, getStripe, momoProviderFor, normalizeRwandaPhone } from "../lib/payments";
 
 const EXPRESS_SHIPPING_FEE_RWF = 7500;
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
-
-// Paypack only accepts local-format Rwandan numbers (07XXXXXXXX). Mirror the backend
-// rule here so the customer is corrected before an order is even created.
-const normalizeRwandaPhone = (input) => {
-  const digits = String(input ?? "").replace(/\D/g, "");
-  let local = digits;
-  if (local.startsWith("250")) local = local.slice(3);
-  if (local.length === 9 && local.startsWith("7")) local = `0${local}`;
-  return /^07[2389]\d{7}$/.test(local) ? local : null;
-};
-
-const momoProviderFor = (localPhone) => (/^07[89]/.test(localPhone) ? "MOMO" : "AIRTEL_MONEY");
-
-// How long to keep polling before telling the customer to check their orders page.
-const MOMO_POLL_INTERVAL_MS = 4000;
-const MOMO_POLL_TIMEOUT_MS = 3 * 60 * 1000;
-
-const CARD_ELEMENT_OPTIONS = {
-  style: {
-    base: {
-      fontSize: "14px",
-      color: "var(--text-primary)",
-      fontFamily: "inherit",
-      "::placeholder": { color: "var(--text-muted)" },
-    },
-    invalid: { color: "#e53e3e" },
-  },
-};
+// Card element styling, phone rules and polling timings: lib/payments.js (shared with PayForOrder).
 
 function CheckoutForm() {
   const { t, intlLocale } = useT()
@@ -57,7 +30,7 @@ function CheckoutForm() {
   const elements = useElements();
   const { formatPrice, formatUsd } = useCurrency();
 
-  const [step, setStep] = useState("shipping"); // "shipping" | "success" | "momo-pending"
+  const [step, setStep] = useState("shipping"); // "shipping" | "success" | "momo-pending" | "pay-rescue"
   const [loading, setLoading] = useState(false);
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
@@ -68,6 +41,7 @@ function CheckoutForm() {
   const { deliveryConfig } = useStoreSettings();
   const [paymentMethod, setPaymentMethod] = useState("CARD");
   const [pendingOrderId, setPendingOrderId] = useState(null);
+  const [pendingTotal, setPendingTotal] = useState(0);
   const [momoOutcome, setMomoOutcome] = useState("waiting"); // "waiting" | "timeout"
 
   const [newAddress, setNewAddress] = useState(EMPTY_RW_ADDRESS);
@@ -152,8 +126,8 @@ function CheckoutForm() {
           return;
         }
         if (data?.paymentStatus === "FAILED") {
-          t_err("The mobile money payment was declined or cancelled.");
-          setStep("shipping");
+          // The order (and its reserved stock) is kept: retry on the same order, never a new one.
+          setStep("pay-rescue");
           return;
         }
       } catch {
@@ -199,12 +173,18 @@ function CheckoutForm() {
     if (!payload) return;
 
     setLoading(true);
+    let createdOrderId = null;
     try {
       // 1. Create the order (PENDING) — backend clears cart internally
       const { data: orderData } = await apiService.orders.checkout(payload);
       const orderId = orderData?.orderId;
 
       if (!orderId) throw new Error("Order creation failed — no order ID returned");
+      // The server has moved the cart into this order; keep its id so a failed payment can be
+      // retried on it instead of placing a duplicate order.
+      createdOrderId = orderId;
+      setPendingOrderId(orderId);
+      setPendingTotal(orderData?.totalAmount ?? total);
 
       // 2. CARD: Stripe flow
       if (paymentMethod === "CARD") {
@@ -220,7 +200,12 @@ function CheckoutForm() {
           },
         });
 
-        if (error) { toast.error(error.message || t("Card payment failed")); return; }
+        if (error) {
+          toast.error(error.message || t("Card payment failed"));
+          clearCart();
+          setStep("pay-rescue");
+          return;
+        }
         if (paymentIntent.status === "succeeded") {
           clearCart();
           setStep("success");
@@ -247,6 +232,8 @@ function CheckoutForm() {
 
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || t("Failed to place order"));
+      // The order was created but paying failed (e.g. the MoMo request didn't go out): rescue it.
+      if (createdOrderId) { clearCart(); setStep("pay-rescue"); }
     } finally {
       setLoading(false);
     }
@@ -266,6 +253,30 @@ function CheckoutForm() {
           <Link to="/orders" className="noir-btn-primary" style={{ padding: "14px 32px" }}>
             {t("Track my order")}
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "pay-rescue" && pendingOrderId) {
+    return (
+      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 16px" }}>
+        <div className="fade-in" style={{ width: "100%", maxWidth: 460 }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "var(--warning-soft, #fff8e1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", color: "var(--warning, #f59e0b)" }}>
+              <Wallet size={34} />
+            </div>
+            <h1 style={{ fontSize: 26, fontWeight: 900, color: "var(--text-primary)", marginBottom: 10 }}>{t("Your order is saved")}</h1>
+            <p style={{ color: "var(--text-secondary)", fontSize: 14.5, lineHeight: 1.7, marginBottom: 24 }}>
+              {t("Order #{id} is reserved for you, but the payment didn't go through. Try again, use another number, or pay by card:", { id: pendingOrderId })}
+            </p>
+          </div>
+          <div style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", borderRadius: 16, padding: 22 }}>
+            <PayForOrder orderId={pendingOrderId} total={pendingTotal} defaultMethod={paymentMethod} defaultPhone={momoPhone} onPaid={() => setStep("success")} />
+          </div>
+          <p style={{ textAlign: "center", fontSize: 12.5, color: "var(--text-muted)", marginTop: 16 }}>
+            {t("You can also finish paying later from")} <Link to={`/orders/${pendingOrderId}`}>{t("your order page")}</Link>.
+          </p>
         </div>
       </div>
     );
@@ -296,9 +307,16 @@ function CheckoutForm() {
               {t("We haven't received confirmation yet. If you approved the prompt, the payment may still be settling — your order is reserved and will update automatically. You can check its status on the orders page.")}
             </p>
           )}
-          <Link to="/orders" className="noir-btn-primary" style={{ padding: "14px 32px" }}>
-            {t("View my orders")}
-          </Link>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+            {momoOutcome !== "waiting" && (
+              <button type="button" className="noir-btn-outline" style={{ padding: "14px 24px" }} onClick={() => setStep("pay-rescue")}>
+                {t("Pay another way")}
+              </button>
+            )}
+            <Link to="/orders" className="noir-btn-primary" style={{ padding: "14px 32px" }}>
+              {t("View my orders")}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -505,7 +523,7 @@ function CheckoutForm() {
 
 export default function CheckoutPage() {
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={getStripe()}>
       <CheckoutForm />
     </Elements>
   );

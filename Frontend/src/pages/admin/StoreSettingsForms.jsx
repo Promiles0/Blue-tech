@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Truck, FileText } from 'lucide-react'
+import { Save, Truck, FileText, Timer } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import apiService from '../../api/service'
@@ -80,6 +80,53 @@ export function DeliverySettings() {
       </div>
       {v.pickupEnabled && (
         <div style={{ marginTop: 14 }}><label style={lbl}>Pickup address</label><input style={input} value={v.pickupAddress ?? ''} onChange={f.set('pickupAddress')} /></div>
+      )}
+      <SaveBtn saving={f.saving} dirty={f.dirty} onClick={f.save} />
+    </div>
+  )
+}
+
+// Automatic actions: unpaid-order auto-cancel, cart reminders, review requests.
+export function AutomationSettings() {
+  const f = useSettingForm('automation', apiService.admin.settings.saveAutomation)
+  if (!f.value) return <div style={card}>Loading automation settings…</div>
+  const v = f.value
+  const cancelOn = Number(v.autoCancelUnpaidHours) > 0
+  return (
+    <div style={card}>
+      <h2 style={h2}><Timer size={17} /> Orders and reminders</h2>
+      <p style={hint}>Things the shop does on its own, checked every hour. Reminders go out as in-app notifications, plus email/SMS/WhatsApp when those are set up.</p>
+
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13.5, color: 'var(--admin-text)', fontWeight: 600 }}>
+        <input type="checkbox" checked={cancelOn} onChange={(e) => f.setValue(cur => ({ ...cur, autoCancelUnpaidHours: e.target.checked ? 24 : 0 }))} />
+        Cancel unpaid orders automatically
+      </label>
+      <p style={{ ...hint, margin: '4px 0 10px 24px' }}>Releases the reserved stock and tells the customer. Cash-on-pickup orders are never cancelled.</p>
+      {cancelOn && (
+        <div style={{ marginLeft: 24, maxWidth: 220, marginBottom: 14 }}>
+          <label style={lbl}>After (hours unpaid)</label>
+          <input type="number" min={1} max={168} style={input} value={v.autoCancelUnpaidHours} onChange={f.set('autoCancelUnpaidHours')} />
+        </div>
+      )}
+
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13.5, color: 'var(--admin-text)', fontWeight: 600, marginTop: 10 }}>
+        <input type="checkbox" checked={!!v.cartReminders} onChange={f.set('cartReminders')} /> Remind signed-in customers about items left in their cart
+      </label>
+      {v.cartReminders && (
+        <div style={{ marginLeft: 24, maxWidth: 220, margin: '8px 0 14px 24px' }}>
+          <label style={lbl}>After (hours untouched)</label>
+          <input type="number" min={1} max={72} style={input} value={v.cartReminderHours} onChange={f.set('cartReminderHours')} />
+        </div>
+      )}
+
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13.5, color: 'var(--admin-text)', fontWeight: 600, marginTop: 10 }}>
+        <input type="checkbox" checked={!!v.reviewRequests} onChange={f.set('reviewRequests')} /> Ask for a review after delivery
+      </label>
+      {v.reviewRequests && (
+        <div style={{ marginLeft: 24, maxWidth: 220, margin: '8px 0 0 24px' }}>
+          <label style={lbl}>Days after delivery</label>
+          <input type="number" min={1} max={30} style={input} value={v.reviewRequestDays} onChange={f.set('reviewRequestDays')} />
+        </div>
       )}
       <SaveBtn saving={f.saving} dirty={f.dirty} onClick={f.save} />
     </div>
