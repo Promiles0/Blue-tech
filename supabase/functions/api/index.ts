@@ -2205,9 +2205,18 @@ function slimCatalog(messages: ChatMessage[], rows: CatalogRow[]) {
     `\n\nOnly state specs that appear in the details above; if a spec isn't listed, say the product page has the full details.`;
 }
 
+// Rough guess at the language of a message from common words; null when unclear.
+const RW_WORDS = new Set(["ndashaka", "nshaka", "muraho", "mwaramutse", "mwiriwe", "mudasobwa", "ihendutse", "ese", "ni", "mfite", "amafaranga", "igiciro", "murakoze", "ndifuza", "mufite", "gute", "iki", "ki", "cyane", "kandi", "na", "mu", "kuri", "ishobora", "igendanwa"]);
+const FR_WORDS = new Set(["je", "cherche", "pour", "bonjour", "un", "une", "des", "le", "la", "les", "avec", "prix", "moins", "vous", "avez", "quel", "quelle", "est", "ordinateur", "portable", "livraison", "imprimante", "merci", "combien"]);
+function guessLang(text: string) {
+  const words = text.toLowerCase().split(/[^a-zàâçéèêëîïôûùüÿœ']+/).filter(Boolean);
+  const rw = words.filter((w) => RW_WORDS.has(w)).length, fr = words.filter((w) => FR_WORDS.has(w)).length;
+  return rw >= 1 && rw > fr ? "rw" : fr >= 2 && fr > rw ? "fr" : null;
+}
+
 function offlineReply(messages: ChatMessage[], lang: string, catalog: { rows: CatalogRow[] }, delivery = DEFAULT_DELIVERY) {
-  const T = OFFLINE_TEXT[lang] ?? OFFLINE_TEXT.en;
   const q = (messages.filter((m) => m.role === "user").pop()?.text ?? "").toLowerCase();
+  const T = OFFLINE_TEXT[guessLang(q) ?? lang] ?? OFFLINE_TEXT.en;
   const tokens = q.split(/[^a-z0-9àâçéèêëîïôûùüÿœ]+/i).filter(Boolean);
   const has = (w: string) => (w.includes(" ") ? q.includes(w) : tokens.some((t) => t.startsWith(w)));
   const wanted = CATEGORY_WORDS.filter((c) => c.words.some(has));
@@ -2288,7 +2297,7 @@ async function chatReply(messages: ChatMessage[], lang = "en") {
 
   const ownerNotes = extra ? `\n\nSTORE NOTES FROM THE OWNER (facts to rely on; still follow the rules above):\n${extra}` : "";
   // The site language the shopper picked; the language they actually write in still wins.
-  const langNote = `\n\nThe customer is browsing the site in ${CHAT_LANGUAGES[lang] ?? "English"}. Reply in that language unless they write to you in a different one.`;
+  const langNote = `\n\nLANGUAGE: write the whole reply in the language of the customer's latest message (Kinyarwanda, French or English) — never mix languages. Only if their message has no clear language (e.g. just a product name), use ${CHAT_LANGUAGES[lang] ?? "English"}, the language they picked on the site.`;
   const facts = `\n\n${deliveryFactsText(delivery)}`;
   const system = `${CHAT_SYSTEM_PROMPT}${facts}${ownerNotes}${langNote}\n\nCATALOGUE:\n${catalog.text}`;
   let slimSystem: string | null = null;
