@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Sparkles, MessagesSquare, UserRound, FileText, SearchX, Save, ChevronDown, Cpu, RotateCcw } from 'lucide-react'
+import { Sparkles, MessagesSquare, UserRound, FileText, SearchX, Save, ChevronDown, Cpu, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'
 import { dateShort } from '../../lib/format'
@@ -51,6 +51,7 @@ export default function AdminBlue() {
         <Stat icon={UserRound} label="Handed to a person" value={t?.handoffsHuman} loading={isLoading} />
         <Stat icon={FileText} label="Sent to quote form" value={t?.handoffsQuote} loading={isLoading} />
         <Stat icon={SearchX} label="Couldn't find a match" value={t?.noMatch} loading={isLoading} tone="var(--admin-warning)" />
+        <Stat icon={ThumbsUp} label="Rated helpful" value={t?.liked} sub={t ? `${t.disliked} marked not helpful` : null} loading={isLoading} />
       </div>
 
       <ProvidersPanel />
@@ -65,6 +66,22 @@ export default function AdminBlue() {
           <BarList rows={(data?.topProducts ?? []).map(r => ({ label: r.name, count: r.count, to: `/products/${r.productId}` }))} empty="Blue hasn't recommended products yet." loading={isLoading} />
         </div>
       </div>
+
+      {data?.disliked?.length > 0 && (
+        <div className="surface" style={{ ...card, marginBottom: 20 }}>
+          <h2 style={{ ...h2, display: 'flex', alignItems: 'center', gap: 8 }}><ThumbsDown size={15} style={{ color: 'var(--admin-danger)' }} /> Answers customers marked not helpful</h2>
+          <p style={{ fontSize: 12.5, color: 'var(--admin-muted)', margin: '-6px 0 12px' }}>Check these for mistakes. If Blue got a fact wrong, add the correct fact under Teach Blue.</p>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {data.disliked.map((m, i) => (
+              <li key={i} style={{ padding: '10px 0', borderTop: i ? '1px solid var(--admin-border)' : 'none' }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>“{m.question}”</div>
+                <div style={{ fontSize: 12.5, color: 'var(--admin-muted)', marginTop: 3, whiteSpace: 'pre-line' }}>Blue: {m.reply}</div>
+                <div style={{ fontSize: 11, color: 'var(--admin-muted)', marginTop: 3 }}>{dateShort(m.createdAt)}{m.provider ? ` · answered by ${m.provider}` : ''}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="surface" style={{ ...card, marginBottom: 20 }}>
         <h2 style={h2}>Missed demand — things customers wanted that you don't stock</h2>
@@ -140,6 +157,7 @@ function Conversation({ c }) {
       <button onClick={() => setOpen(o => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 0, color: 'var(--text)', cursor: 'pointer', padding: 0, textAlign: 'left' }}>
         <ChevronDown size={14} style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0, color: 'var(--admin-muted)' }} />
         <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{first?.question}</span>
+        {c.disliked && <Tag tone="var(--admin-danger)">Not helpful</Tag>}
         {c.noMatch && <Tag tone="var(--admin-warning)">No match</Tag>}
         {c.handoff && <Tag tone="#3b82f6">Handoff</Tag>}
         <span style={{ fontSize: 11, color: 'var(--admin-muted)', whiteSpace: 'nowrap' }}>{c.turns.length} msg · {timeShort(c.lastAt)}</span>
@@ -150,10 +168,12 @@ function Conversation({ c }) {
             <div key={i}>
               <div style={{ fontSize: 12.5, fontWeight: 600 }}>Customer: <span style={{ fontWeight: 400 }}>{t.question}</span></div>
               <div style={{ fontSize: 12.5, color: 'var(--admin-muted)', marginTop: 3, whiteSpace: 'pre-line' }}>Blue: {t.reply}</div>
-              {(t.productIds?.length > 0 || t.handoff !== 'none') && (
+              {(t.productIds?.length > 0 || t.handoff !== 'none' || t.feedback) && (
                 <div style={{ fontSize: 11, color: 'var(--admin-muted)', marginTop: 3 }}>
                   {t.productIds?.length > 0 && <>Recommended {t.productIds.map((id, j) => <a key={id} href={`/products/${id}`} target="_blank" rel="noreferrer" style={{ color: 'var(--admin-primary)' }}>{j ? ', ' : ' '}#{id}</a>)}</>}
                   {t.handoff !== 'none' && <> · handed off to {t.handoff === 'quote' ? 'quote form' : 'a person'}</>}
+                  {t.feedback === 1 && <> · 👍 helpful</>}
+                  {t.feedback === -1 && <> · <span style={{ color: 'var(--admin-danger)' }}>👎 not helpful</span></>}
                 </div>
               )}
             </div>

@@ -1979,7 +1979,7 @@ How to behave:
 - Friendly, concise, practical. 1-4 short sentences, or a short bulleted list when comparing. Reply in the customer's language (English, Kinyarwanda, or French).
 - Only recommend products from the CATALOGUE below, and never invent products, prices, specs, stock, or discounts. If nothing fits, say so honestly and offer to connect them with the team.
 - To find the right machine, ask at most one clarifying question at a time (use case, budget, preferred size or brand), but if you already have enough, just recommend.
-- Catalogue prices are in Rwandan francs (RWF). Quote them as e.g. "450,000 RWF"; the site can also show USD.
+- Catalogue prices are in Rwandan francs (RWF). Always write a price as digits with commas followed by RWF, e.g. "450,000 RWF" — never convert to dollars or any other currency yourself; the site converts it for customers who view prices in USD.
 - Store policies: free standard delivery (express next-day available), every product page shows its warranty, 30-day returns. You cannot see orders, payments, or accounts: for those, hand off to a human.
 - For interactive screens / smart boards for schools or offices, or bulk orders, set handoff to "quote".
 - If the customer asks for a person, is upset, or asks something you cannot answer from this information, set handoff to "human".
@@ -2843,7 +2843,9 @@ async function handle(request: Request) {
       const { topic, noMatch, provider, ...result } = await chatReply(messages, String(body.lang ?? "en").slice(0, 2));
       // Best-effort log for Admin → Blue insights; a logging failure never blocks the reply.
       const sessionId = String(body.sessionId ?? "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64) || "anonymous";
+      const turnId = crypto.randomUUID();
       adminClient.from("chat_logs").insert({
+        turn_id: turnId,
         session_id: sessionId,
         question: messages[messages.length - 1].text,
         reply: result.reply,
@@ -2853,11 +2855,26 @@ async function handle(request: Request) {
         topic,
         provider,
       }).then(({ error }) => { if (error) console.error("chat_logs insert failed:", error.message); });
-      return success("Chat reply", result, request);
+      return success("Chat reply", { ...result, turnId }, request);
     } catch (error) {
       console.error("Chat assistant failed:", error);
       return failure("The assistant is unavailable right now", 503, request);
     }
+  }
+
+  // 👍/👎 on one of Blue's answers. Only the chat session that got the answer can rate it.
+  if (method === "POST" && path === "/chat/feedback") {
+    await enforceRateLimit(rateLimiters?.chat, `ip:${clientIp(request)}`, request);
+    const body = await readJson(request);
+    const turnId = String(body.turnId ?? "");
+    const sessionId = String(body.sessionId ?? "").replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64);
+    const value = Number(body.value);
+    if (!/^[0-9a-f-]{36}$/i.test(turnId) || !sessionId || ![1, -1, 0].includes(value)) return failure("Invalid feedback", 400, request);
+    const { error } = await adminClient.from("chat_logs")
+      .update({ feedback: value === 0 ? null : value, feedback_at: value === 0 ? null : new Date().toISOString() })
+      .eq("turn_id", turnId).eq("session_id", sessionId);
+    if (error) return failure("Could not save feedback", 500, request);
+    return success("Thanks for the feedback", null, request);
   }
 
   const user = await requireUser(request);
@@ -3761,7 +3778,7 @@ async function handle(request: Request) {
     }
     const turn = (r: Record<string, unknown>) => ({
       question: r.question, reply: r.reply, handoff: r.handoff, noMatch: r.no_match, topic: r.topic,
-      productIds: r.product_ids, createdAt: r.created_at,
+      productIds: r.product_ids, createdAt: r.created_at, feedback: r.feedback ?? 0, provider: r.provider ?? null,
     });
     const conversations = [...sessions.entries()].slice(0, 60).map(([sessionId, turns]) => ({
       sessionId,
@@ -3769,6 +3786,7 @@ async function handle(request: Request) {
       lastAt: turns[0].created_at,
       handoff: turns.some((t) => t.handoff !== "none"),
       noMatch: turns.some((t) => t.no_match),
+      disliked: turns.some((t) => t.feedback === -1),
       turns: turns.slice().reverse().map(turn),
     }));
 
@@ -3781,7 +3799,10 @@ async function handle(request: Request) {
         handoffsQuote: rows.filter((r) => r.handoff === "quote").length,
         noMatch: rows.filter((r) => r.no_match).length,
         withProducts: rows.filter((r) => ((r.product_ids as unknown[] | null) ?? []).length > 0).length,
+        liked: rows.filter((r) => r.feedback === 1).length,
+        disliked: rows.filter((r) => r.feedback === -1).length,
       },
+      disliked: rows.filter((r) => r.feedback === -1).slice(0, 40).map(turn),
       topTopics: [...topics.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([topic, count]) => ({ topic, count })),
       topProducts: topProductIds.map(([id, count]) => ({ productId: id, name: productNames.get(id) ?? `#${id}`, count })),
       missedDemand: rows.filter((r) => r.no_match).slice(0, 40).map(turn),
