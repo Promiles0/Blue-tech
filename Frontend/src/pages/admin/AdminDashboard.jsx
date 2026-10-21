@@ -2,14 +2,15 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ActionCenter, QuickActions, Delta, RestockInput } from './DashboardExtras'
 import {
   DollarSign, TrendingUp, ShoppingBag, Users,
-  AlertTriangle, Clock, UserPlus,
+  AlertTriangle, Clock, UserPlus, HeartPulse,
 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   CartesianGrid, ResponsiveContainer,
   BarChart, Bar, Cell,
 } from 'recharts'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useCatalogHealth } from './AdminCatalogHealth'
 import apiService from '../../api/service'
 import { money } from '../../lib/format'
 
@@ -77,6 +78,8 @@ export default function AdminDashboard() {
         <KPI icon={AlertTriangle} label="Low Stock"      value={isLoading ? '—' : (data?.lowStockCount ?? 0).toLocaleString()} accent="var(--admin-warning)" />
         <KPI icon={TrendingUp}    label="AOV (30d)"      value={isLoading ? '—' : money(data?.aov)} />
       </div>
+
+      <CatalogHealthBanner />
 
       {/* Row 2: Revenue chart + Low stock */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 20, marginBottom: 20 }}>
@@ -285,5 +288,23 @@ function ErrorBanner({ msg }) {
     <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: 'var(--admin-danger)' }}>
       {msg}
     </div>
+  )
+}
+
+// Catalogue health score (7a), shown here so problems get noticed without opening the page.
+function CatalogHealthBanner() {
+  const { data, isLoading } = useCatalogHealth()
+  if (isLoading || !data) return null
+  const toFix = (data.counts?.high ?? 0) + (data.counts?.medium ?? 0)
+  const tone = data.score >= 90 ? 'var(--admin-success, #22c55e)' : data.score >= 70 ? 'var(--admin-warning)' : 'var(--admin-danger)'
+  return (
+    <Link to="/admin/catalog-health" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', marginBottom: 24, borderRadius: 12, border: '1px solid var(--admin-border)', textDecoration: 'none', color: 'var(--text)' }}>
+      <HeartPulse size={18} style={{ color: tone, flexShrink: 0 }} />
+      <span style={{ fontSize: 13.5, flex: 1 }}>
+        Catalogue health <strong style={{ color: tone }}>{data.score}%</strong>
+        <span style={{ color: 'var(--admin-muted)' }}> · {toFix ? `${toFix} product${toFix === 1 ? '' : 's'} need attention` : 'nothing urgent to fix'}</span>
+      </span>
+      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--admin-primary)' }}>Review →</span>
+    </Link>
   )
 }

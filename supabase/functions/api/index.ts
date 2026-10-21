@@ -1014,6 +1014,233 @@ async function restoreVariantStock(variantId: number, quantity: number) {
   await adminClient.from("product_variants").update({ stock_quantity: current + quantity }).eq("id", variantId);
 }
 
+// ── Product feeds for Google Merchant Center and Meta Commerce Manager (6a) ──
+const GOOGLE_CATEGORY: [RegExp, string][] = [
+  [/laptop/i, "Electronics > Computers > Laptops"],
+  [/desktop/i, "Electronics > Computers > Desktop Computers"],
+  [/tablet/i, "Electronics > Computers > Tablet Computers"],
+  [/monitor/i, "Electronics > Video > Computer Monitors"],
+  [/printer|photocop/i, "Electronics > Print, Copy, Scan & Fax > Printers, Copiers & Fax Machines"],
+  [/network/i, "Electronics > Networking"],
+  [/accessor/i, "Electronics > Electronics Accessories > Computer Accessories"],
+];
+
+// "HP PROBOOK 440G11 U7" → "HP Probook 440G11 U7": shops' feeds reject shouting titles.
+function feedTitle(name: string) {
+  return name.trim().split(/\s+/).map((w) => /\d/.test(w) || (w.length <= 3 && w === w.toUpperCase()) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+
+async function feedItems() {
+  const { data: products } = await adminClient.from("products").select("*, categories(name)").eq("is_active", true).gt("price", 0).limit(2000);
+  const rows = (products ?? []) as Record<string, unknown>[];
+  const ids = rows.map((p) => p.id);
+  const [{ data: images }, { data: variants }] = await Promise.all([
+    adminClient.from("product_images").select("product_id,image_url,is_primary").in("product_id", ids),
+    adminClient.from("product_variants").select("product_id,stock_quantity,sku_code").in("product_id", ids),
+  ]);
+  return rows.map((p) => {
+    const imgs = ((images ?? []) as Record<string, unknown>[]).filter((i) => i.product_id === p.id)
+      .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))).map((i) => String(i.image_url));
+    const stock = ((variants ?? []) as Record<string, unknown>[]).filter((v) => v.product_id === p.id).reduce((s, v) => s + toNumber(v.stock_quantity), 0);
+    const category = String((p.categories as Record<string, unknown> | null)?.name ?? "");
+    const cond = String(p.condition ?? "").toLowerCase();
+    return {
+      id: String(p.id),
+      title: feedTitle(String(p.name)).slice(0, 150),
+      description: String(p.description || p.short_description || p.name).replace(/\s+/g, " ").trim().slice(0, 4900),
+      link: `${SITE}/products/${p.id}`,
+      image: imgs[0] ?? "",
+      extraImages: imgs.slice(1, 10),
+      inStock: stock > 0,
+      price: `${Math.round(toNumber(p.price))} RWF`,
+      brand: String(p.brand ?? "").trim(),
+      mpn: String(p.model_number ?? "").trim(),
+      condition: cond.includes("refurb") ? "refurbished" : /used|second/.test(cond) ? "used" : "new",
+      category,
+      googleCategory: GOOGLE_CATEGORY.find(([re]) => re.test(category))?.[1] ?? "",
+    };
+  }).filter((i) => i.image);
+}
+
+const xmlEscape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+const csvCell = (s: string) => /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+
+async function googleFeed() {
+  const items = await feedItems();
+  const item = (i: Awaited<ReturnType<typeof feedItems>>[number]) => [
+    `<g:id>${i.id}</g:id>`, `<title>${xmlEscape(i.title)}</title>`, `<description>${xmlEscape(i.description)}</description>`,
+    `<link>${i.link}</link>`, `<g:image_link>${xmlEscape(i.image)}</g:image_link>`,
+    ...i.extraImages.map((u) => `<g:additional_image_link>${xmlEscape(u)}</g:additional_image_link>`),
+    `<g:availability>${i.inStock ? "in_stock" : "out_of_stock"}</g:availability>`, `<g:price>${i.price}</g:price>`,
+    `<g:condition>${i.condition}</g:condition>`,
+    i.brand ? `<g:brand>${xmlEscape(i.brand)}</g:brand>` : "",
+    i.mpn ? `<g:mpn>${xmlEscape(i.mpn)}</g:mpn>` : "",
+    !i.mpn ? "<g:identifier_exists>no</g:identifier_exists>" : "",
+    i.googleCategory ? `<g:google_product_category>${xmlEscape(i.googleCategory)}</g:google_product_category>` : "",
+    i.category ? `<g:product_type>${xmlEscape(i.category)}</g:product_type>` : "",
+    "<g:shipping><g:country>RW</g:country><g:service>Standard</g:service><g:price>0 RWF</g:price></g:shipping>",
+  ].filter(Boolean).join("");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel>
+<title>Blue-Tech</title><link>${SITE}</link><description>Laptops, computers, printers and interactive screens in Rwanda</description>
+${items.map((i) => `<item>${item(i)}</item>`).join("\n")}
+</channel></rss>
+`;
+}
+
+async function metaFeed() {
+  const items = await feedItems();
+  const head = "id,title,description,availability,condition,price,link,image_link,additional_image_link,brand,google_product_category,product_type";
+  const lines = items.map((i) => [
+    i.id, i.title, i.description, i.inStock ? "in stock" : "out of stock", i.condition, i.price, i.link, i.image,
+    i.extraImages.join(","), i.brand || "Blue-Tech", i.googleCategory, i.category,
+  ].map((v) => csvCell(String(v))).join(","));
+  return [head, ...lines].join("\n") + "\n";
+}
+
+// ── Catalogue health (7a) ──
+// Finds products with problems a shopper (or Google) would notice: missing photos, prices
+// or specs, descriptions that contradict the specs, unbuyable listings, duplicates.
+const KEY_SPECS: Record<string, string[][]> = {
+  laptop: [["processor", "cpu_family"], ["ram"], ["storage"], ["screen_size"]],
+  desktop: [["processor", "cpu_family"], ["ram"], ["storage"]],
+  monitor: [["screen_size"], ["resolution"]],
+  tablet: [["screen_size"], ["storage"]],
+};
+const SPEC_LABEL: Record<string, string> = { processor: "processor", ram: "RAM", storage: "storage", screen_size: "screen size", resolution: "resolution" };
+
+// The facts a description or spec value states, in comparable form.
+function statedFacts(text: string) {
+  // "microSD up to 1 TB" or "expandable to 64GB" describe options, not what's built in.
+  const t = text.replace(/[“”]/g, '"').replace(/''/g, '"')
+    .replace(/\(?\s*(?:micro\s?sd|sd card|expandable|upgradeable|upgradable|up to|supports?)\b[^.,;)]{0,30}\)?/gi, " ");
+  const screen = t.match(/(\d{1,2}(?:\.\d)?)\s*(?:"|-?\s?inch(?:es)?\b|in\b)/i)?.[1];
+  const ram = t.match(/(\d{1,3})\s*GB\s*(?:of\s+)?(?:RAM|DDR\d?|memory|LPDDR\d?)/i)?.[1] ?? t.match(/\bRAM[:\s]+(\d{1,3})\s*GB/i)?.[1];
+  const tb = t.match(/(\d)\s*TB\b/i)?.[1];
+  const gbSsd = t.match(/(\d{3,4})\s*GB\s*(?:SSD|NVMe|HDD|eMMC|storage)/i)?.[1];
+  const cpu = t.match(/\b(?:core\s*)?(ultra\s*[3579]|i[3579])\b/i)?.[1] ?? t.match(/\bcore\s*([3579])\b/i)?.[1];
+  return {
+    screen: screen ? parseFloat(screen) : null,
+    ram: ram ? Number(ram) : null,
+    storage: tb ? Number(tb) * 1000 : gbSsd ? Number(gbSsd) : null,
+    cpu: cpu ? cpu.toLowerCase().replace(/\s+/g, "").replace(/^([3579])$/, "core$1") : null,
+  };
+}
+
+async function catalogHealth() {
+  const [{ data: products }, { data: variants }, { data: images }] = await Promise.all([
+    adminClient.from("products").select("id,name,brand,price,short_description,description,specs,is_active,category_id,categories(name)").limit(2000),
+    adminClient.from("product_variants").select("id,product_id,sku_code,stock_quantity").limit(5000),
+    adminClient.from("product_images").select("product_id").limit(10000),
+  ]);
+  const rows = ((products ?? []) as Record<string, unknown>[]).filter((p) => p.is_active !== false);
+  const imageCount = new Map<number, number>();
+  for (const i of (images ?? []) as Record<string, unknown>[]) imageCount.set(Number(i.product_id), (imageCount.get(Number(i.product_id)) ?? 0) + 1);
+  const variantsOf = new Map<number, Record<string, unknown>[]>();
+  for (const v of (variants ?? []) as Record<string, unknown>[]) {
+    const list = variantsOf.get(Number(v.product_id)) ?? [];
+    list.push(v); variantsOf.set(Number(v.product_id), list);
+  }
+  const catName = (p: Record<string, unknown>) => String((p.categories as Record<string, unknown> | null)?.name ?? "");
+  const catKind = (p: Record<string, unknown>) => Object.keys(KEY_SPECS).find((k) => catName(p).toLowerCase().includes(k)) ?? null;
+
+  // Typical price per category, to catch a missing or extra zero.
+  const byCat = new Map<string, number[]>();
+  for (const p of rows) if (toNumber(p.price) > 0) byCat.set(catName(p), [...(byCat.get(catName(p)) ?? []), toNumber(p.price)]);
+  const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[Math.floor(s.length / 2)] ?? 0; };
+
+  // Same name, or the same model sold in several versions (U5/U7, i5/i7) with different screens.
+  const nameCount = new Map<string, number>();
+  for (const p of rows) { const k = String(p.name ?? "").trim().toLowerCase(); nameCount.set(k, (nameCount.get(k) ?? 0) + 1); }
+  const modelKey = (name: string) => name.toUpperCase().replace(/\b(U|I|R|ULTRA ?)[3579]\b/g, "").replace(/\s+/g, " ").trim();
+  const screensByModel = new Map<string, Set<number>>();
+  // Hidden versions count too: a hidden 14" twin is how a wrong 15.6" gets noticed.
+  for (const p of (products ?? []) as Record<string, unknown>[]) {
+    if (!["laptop", "monitor", "tablet"].includes(catKind(p) ?? "")) continue;
+    const specs = (p.specs ?? {}) as Record<string, unknown>;
+    const s = statedFacts(`${specs.screen_size ?? ""}"`).screen ?? statedFacts(String(p.short_description ?? "")).screen;
+    if (s) { const k = modelKey(String(p.name)); screensByModel.set(k, new Set([...(screensByModel.get(k) ?? []), s])); }
+  }
+  const skuCount = new Map<string, number>();
+  for (const v of (variants ?? []) as Record<string, unknown>[]) if (v.sku_code) skuCount.set(String(v.sku_code), (skuCount.get(String(v.sku_code)) ?? 0) + 1);
+
+  const issues = rows.map((p) => {
+    const problems: { level: "high" | "medium" | "low"; text: string }[] = [];
+    const add = (level: "high" | "medium" | "low", text: string) => problems.push({ level, text });
+    const price = toNumber(p.price);
+    const specs = (p.specs && typeof p.specs === "object" ? p.specs : {}) as Record<string, unknown>;
+    const desc = `${p.short_description ?? ""} ${p.description ?? ""}`.trim();
+    const vs = variantsOf.get(Number(p.id)) ?? [];
+    const photos = imageCount.get(Number(p.id)) ?? 0;
+
+    if (!photos) add("high", "No photo");
+    else if (photos === 1) add("low", "Only one photo — add a few angles");
+    if (price <= 0) add("high", "No price");
+    else {
+      const peers = byCat.get(catName(p)) ?? [];
+      const m = peers.length >= 5 ? median(peers) : 0;
+      if (m && (price > m * 10 || price < m / 10)) add("low", `Price looks unusual for ${catName(p) || "its category"} (typical ${Math.round(m).toLocaleString("en-US")} RWF) — check for a missing or extra zero`);
+    }
+    if (!vs.length) add("high", "No variant, so it can't be added to the cart");
+    else if (vs.every((v) => toNumber(v.stock_quantity) <= 0)) add("medium", "Live but out of stock");
+    if (!String(p.short_description ?? "").trim()) add("medium", "No short description");
+    if (!String(p.brand ?? "").trim()) add("medium", "No brand");
+    if (!catName(p)) add("medium", "No category");
+
+    const kind = catKind(p);
+    if (kind) {
+      const missing = KEY_SPECS[kind].filter((keys) => !keys.some((k) => String(specs[k] ?? "").trim())).map((keys) => SPEC_LABEL[keys[0]] ?? keys[0]);
+      if (missing.length) add("medium", `Missing key specs: ${missing.join(", ")}`);
+    }
+
+    // Description vs specs.
+    if (desc) {
+      const said = statedFacts(desc);
+      const spec = {
+        screen: statedFacts(`${specs.screen_size ?? ""}"`).screen,
+        ram: statedFacts(`${specs.ram ?? ""} RAM`).ram,
+        storage: statedFacts(`${specs.storage ?? ""} storage`).storage,
+        cpu: statedFacts(String(specs.processor ?? specs.cpu_family ?? "")).cpu,
+      };
+      if (said.screen && spec.screen && Math.abs(said.screen - spec.screen) > 0.2) add("high", `Description says ${said.screen}" but specs say ${spec.screen}"`);
+      if (said.ram && spec.ram && said.ram !== spec.ram) add("high", `Description says ${said.ram}GB RAM but specs say ${spec.ram}GB`);
+      if (said.storage && spec.storage && said.storage !== spec.storage) add("high", `Description says ${said.storage >= 1000 ? `${said.storage / 1000}TB` : `${said.storage}GB`} storage but specs say ${spec.storage >= 1000 ? `${spec.storage / 1000}TB` : `${spec.storage}GB`}`);
+      if (said.cpu && spec.cpu && said.cpu !== spec.cpu) add("high", `Description and specs name different processors (${said.cpu} vs ${spec.cpu})`);
+    }
+    const screens = screensByModel.get(modelKey(String(p.name)));
+    if (screens && screens.size > 1) add("medium", `Other versions of this model list a different screen size (${[...screens].map((s) => `${s}"`).join(" vs ")}) — check which is right`);
+
+    if ((nameCount.get(String(p.name ?? "").trim().toLowerCase()) ?? 0) > 1) add("medium", "Another live product has exactly the same name");
+    if (vs.some((v) => v.sku_code && (skuCount.get(String(v.sku_code)) ?? 0) > 1)) add("high", "SKU code used by more than one variant");
+    const name = String(p.name ?? "");
+    if (name && name === name.toLowerCase() && /[a-z]/.test(name)) {
+      const suggested = name.replace(/\b([a-z])([a-z]*)/g, (_, a: string, b: string) => /\d/.test(b) ? a + b : a.toUpperCase() + b);
+      add("low", `Name is all lowercase — e.g. "${suggested}"`);
+    }
+
+    const rank = { high: 3, medium: 2, low: 1 };
+    return {
+      productId: p.id, name: p.name, category: catName(p) || null, price,
+      worst: problems.reduce((w, x) => Math.max(w, rank[x.level]), 0),
+      problems: problems.sort((a, b) => rank[b.level] - rank[a.level]),
+    };
+  }).filter((p) => p.problems.length).sort((a, b) => b.worst - a.worst || b.problems.length - a.problems.length);
+
+  const serious = issues.filter((i) => i.worst >= 2).length;
+  return {
+    checked: rows.length,
+    hidden: ((products ?? []) as Record<string, unknown>[]).length - rows.length,
+    // Share of live products with nothing high or medium to fix.
+    score: rows.length ? Math.round(100 * (rows.length - serious) / rows.length) : 100,
+    counts: {
+      high: issues.filter((i) => i.worst === 3).length,
+      medium: issues.filter((i) => i.worst === 2).length,
+      low: issues.filter((i) => i.worst === 1).length,
+    },
+    issues: issues.map(({ worst, ...rest }) => ({ ...rest, level: worst === 3 ? "high" : worst === 2 ? "medium" : "low" })),
+  };
+}
+
 // Puts an order's reserved stock back — once only, however many times it's called.
 async function releaseOrderStock(orderId: number | string) {
   const { data: claimed } = await adminClient.from("orders").update({ stock_released: true })
@@ -3192,6 +3419,19 @@ async function handle(request: Request) {
     }
   }
 
+  // Product feeds (6a): public, always live from the catalogue; Google/Meta fetch them on a schedule.
+  if (method === "GET" && (path === "/feeds/google.xml" || path === "/feeds/meta.csv")) {
+    const isGoogle = path.endsWith(".xml");
+    const body = isGoogle ? await googleFeed() : await metaFeed();
+    return new Response(body, {
+      status: 200,
+      headers: {
+        "Content-Type": isGoogle ? "application/xml; charset=utf-8" : "text/csv; charset=utf-8",
+        "Cache-Control": "public, max-age=1800",
+      },
+    });
+  }
+
   // The hourly job, called by pg_cron with a shared secret (never by browsers).
   if (method === "POST" && path === "/cron/hourly") {
     const secret = Deno.env.get("CRON_SECRET") ?? "";
@@ -4210,6 +4450,11 @@ async function handle(request: Request) {
       missedDemand: rows.filter((r) => r.no_match).slice(0, 40).map(turn),
       conversations,
     }, request);
+  }
+
+  if (method === "GET" && path === "/admin/catalog/health") {
+    await requireStaff(request, user);
+    return success("Catalogue health", await catalogHealth(), request);
   }
 
   if (method === "GET" && path === "/admin/errors") {

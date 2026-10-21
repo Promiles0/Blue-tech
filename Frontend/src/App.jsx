@@ -44,6 +44,7 @@ const AdminQuoteRequests = lazy(() => import('./pages/admin/AdminQuoteRequests')
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'))
 const AdminAudit = lazy(() => import('./pages/admin/AdminAudit'))
 const AdminErrors = lazy(() => import('./pages/admin/AdminErrors'))
+const AdminCatalogHealth = lazy(() => import('./pages/admin/AdminCatalogHealth'))
 const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
 const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'))
 const AdminHeroSlides = lazy(() => import('./pages/admin/AdminHeroSlides'))
@@ -191,6 +192,7 @@ function AdminSection() {
         <Route path="analytics"    element={<AdminOnly><AdminAnalytics /></AdminOnly>} />
         <Route path="audit"          element={<AdminOnly><AdminAudit /></AdminOnly>} />
         <Route path="errors"         element={<AdminOnly><AdminErrors /></AdminOnly>} />
+        <Route path="catalog-health" element={<AdminCatalogHealth />} />
         <Route path="notifications"  element={<AdminNotifications />} />
         <Route path="settings"       element={<AdminOnly><AdminSettings /></AdminOnly>} />
         <Route path="blue"           element={<AdminOnly><AdminBlue /></AdminOnly>} />

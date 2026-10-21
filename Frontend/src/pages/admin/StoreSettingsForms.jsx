@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Truck, FileText, Timer } from 'lucide-react'
+import { Save, Truck, FileText, Timer, Rss, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import apiService from '../../api/service'
@@ -82,6 +82,34 @@ export function DeliverySettings() {
         <div style={{ marginTop: 14 }}><label style={lbl}>Pickup address</label><input style={input} value={v.pickupAddress ?? ''} onChange={f.set('pickupAddress')} /></div>
       )}
       <SaveBtn saving={f.saving} dirty={f.dirty} onClick={f.save} />
+    </div>
+  )
+}
+
+// Product feed links for Google Merchant Center and Meta Commerce Manager (6a).
+const API_BASE = (import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || '/functions/v1/api').replace(/\/$/, '')
+export function ProductFeeds() {
+  const feeds = [
+    { name: 'Google Merchant Center', url: `${API_BASE}/feeds/google.xml`, steps: 'Merchant Center → Products → Add products → "Add products from a file" → "Enter a link to your file" → paste this link and choose a daily schedule.' },
+    { name: 'Meta (Facebook, Instagram, WhatsApp catalogue)', url: `${API_BASE}/feeds/meta.csv`, steps: 'Commerce Manager → Catalogue → Data sources → Add items → Data feed → "Use a URL" → paste this link and choose a daily schedule.' },
+  ]
+  const copy = (url) => navigator.clipboard?.writeText(url).then(() => toast.success('Link copied'), () => toast.error('Could not copy'))
+  return (
+    <div style={card}>
+      <h2 style={h2}><Rss size={17} /> Product feeds</h2>
+      <p style={hint}>Your live products (photo, price in RWF, stock, brand) for Google and Meta. Paste a link once; they re-read it on their schedule, so new products and price changes flow through automatically.</p>
+      {feeds.map((f) => (
+        <div key={f.url} style={{ marginBottom: 16 }}>
+          <label style={lbl}>{f.name}</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input readOnly value={f.url} style={{ ...input, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} onFocus={(e) => e.target.select()} />
+            <button type="button" onClick={() => copy(f.url)} title="Copy link" style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 14px', borderRadius: 9, border: '1px solid var(--admin-border)', background: 'transparent', color: 'var(--admin-text)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+              <Copy size={14} /> Copy
+            </button>
+          </div>
+          <p style={{ ...hint, margin: '6px 0 0' }}>{f.steps}</p>
+        </div>
+      ))}
     </div>
   )
 }

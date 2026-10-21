@@ -172,6 +172,9 @@ const apiService = {
       update: (id, data) => api.put(`/categories/${id}`, data),
       delete: (id) => api.delete(`/categories/${id}`),
     },
+    catalog: {
+      health: () => api.get('/admin/catalog/health'),
+    },
     errors: {
       getAll: () => api.get('/admin/errors'),
       setStatus: (id, status) => api.post(`/admin/errors/${id}/${status}`),

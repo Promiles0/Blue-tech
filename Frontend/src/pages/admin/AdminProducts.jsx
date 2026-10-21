@@ -167,6 +167,16 @@ export default function AdminProducts() {
     setModal('create')
   }
 
+  // /admin/products?edit=ID (e.g. from Catalogue health) opens that product straight away,
+  // once categories are loaded so the form maps its category correctly.
+  const [deepLinkDone, setDeepLinkDone] = useState(false)
+  useEffect(() => {
+    if (deepLinkDone || !categories.length) return
+    const id = new URLSearchParams(window.location.search).get('edit')
+    setDeepLinkDone(true)
+    if (id) openEdit({ productId: Number(id) })
+  }, [categories, deepLinkDone]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const openEdit = async (product) => {
     setError(null)
     setFileUploads([])
