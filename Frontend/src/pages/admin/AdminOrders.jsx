@@ -319,6 +319,12 @@ function ShipmentEditor({ shipment, onSaved }) {
     onSuccess: () => { toast.success('Shipment updated'); onSaved?.() },
     onError: () => toast.error('Could not update the shipment'),
   })
+  // One click on delivery day: marks it out for delivery and messages the customer (5a).
+  const outToday = useMutation({
+    mutationFn: () => apiService.admin.shipments.update(shipment.shipmentId, { status: 'OUT_FOR_DELIVERY' }),
+    onSuccess: () => { setStatus('OUT_FOR_DELIVERY'); toast.success('Marked out for delivery — the customer has been told'); onSaved?.() },
+    onError: () => toast.error('Could not update the shipment'),
+  })
   const dirty = carrier !== (shipment.carrier ?? '') || tracking !== (shipment.trackingNumber ?? '') || status !== shipment.status
   const options = SHIPMENT_STATUSES.includes(status) ? SHIPMENT_STATUSES : [status, ...SHIPMENT_STATUSES]
   return (
@@ -331,6 +337,14 @@ function ShipmentEditor({ shipment, onSaved }) {
       <button onClick={() => save.mutate()} disabled={!dirty || save.isPending} style={{ ...primaryBtn, opacity: dirty ? 1 : 0.5 }}>
         {save.isPending ? '…' : 'Save'}
       </button>
+      {shipment.status === 'IN_TRANSIT' && (
+        <button onClick={() => outToday.mutate()} disabled={outToday.isPending} style={{ ...primaryBtn, background: 'var(--admin-success, #16a34a)' }}>
+          {outToday.isPending ? '…' : 'Out for delivery today'}
+        </button>
+      )}
+      <p style={{ width: '100%', margin: 0, fontSize: 11.5, color: 'var(--admin-muted)' }}>
+        The customer is messaged when it's out for delivery and when it's delivered.
+      </p>
     </div>
   )
 }

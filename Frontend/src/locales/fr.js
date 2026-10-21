@@ -611,4 +611,17 @@ export default {
   'Hi Blue-Tech! I have a question about: {name}': 'Bonjour Blue-Tech ! J\'ai une question sur : {name}',
   'Back in stock': 'De nouveau en stock',
   '{n} sold in the last 30 days': '{n} vendus ces 30 derniers jours',
+  // ── Round 2: after the order ──
+  'Paid': 'Payée',
+  'Ready for pickup': 'Prête à retirer',
+  'Picked up': 'Retirée',
+  'Hi Blue-Tech! A question about my order #{id}': 'Bonjour Blue-Tech ! Une question sur ma commande n°{id}',
+  'Thank you! Your order number is': 'Merci ! Votre numéro de commande est le',
+  'Ready for pickup:': 'Prête à retirer :',
+  'Expected delivery:': 'Livraison prévue :',
+  'We\'ll send you an update at every step. You can follow it any time on your order page.': 'Nous vous tiendrons informé à chaque étape. Vous pouvez la suivre à tout moment sur la page de votre commande.',
+  'WhatsApp us': 'Écrivez-nous sur WhatsApp',
+  'Keep shopping': 'Continuer mes achats',
+  'Not available right now: {names}': 'Indisponible pour le moment : {names}',
+  'Buy again': 'Racheter',
 }

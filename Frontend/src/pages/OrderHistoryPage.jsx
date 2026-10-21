@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Package, Search, ChevronRight, ShoppingBag, Clock, Loader2, SendHorizonal, BadgeCheck, Undo2, X } from 'lucide-react'
 import { m as motion, AnimatePresence } from 'framer-motion'
 import apiService from '../api/service'
+import BuyAgainButton from '../components/site/BuyAgainButton'
 import { getProductImage, handleProductImageError } from '../lib/productImage'
 
 const TABS = [
@@ -262,6 +263,11 @@ export default function OrderHistoryPage() {
                         )}
                       </div>
                     </Link>
+                    {['DELIVERED', 'SHIPPED'].includes(order.status) && items.length > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                        <BuyAgainButton order={order} compact />
+                      </div>
+                    )}
                   </motion.div>
                 )
               })}

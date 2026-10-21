@@ -612,4 +612,17 @@ export default {
   'Hi Blue-Tech! I have a question about: {name}': 'Muraho Blue-Tech! Mfite ikibazo kuri: {name}',
   'Back in stock': 'Byongeye kuboneka',
   '{n} sold in the last 30 days': '{n} byaguzwe mu minsi 30 ishize',
+  // ── Round 2: after the order ──
+  'Paid': 'Byishyuwe',
+  'Ready for pickup': 'Riteguye gufatwa',
+  'Picked up': 'Ryafashwe',
+  'Hi Blue-Tech! A question about my order #{id}': 'Muraho Blue-Tech! Mfite ikibazo ku itegeko ryanjye #{id}',
+  'Thank you! Your order number is': 'Murakoze! Nimero y\'itegeko ryanyu ni',
+  'Ready for pickup:': 'Riteguye gufatwa:',
+  'Expected delivery:': 'Igihe rizakugeraho:',
+  'We\'ll send you an update at every step. You can follow it any time on your order page.': 'Tuzakumenyesha kuri buri ntambwe. Ushobora kurikurikirana igihe icyo ari cyo cyose kuri paji y\'itegeko ryawe.',
+  'WhatsApp us': 'Twandikire kuri WhatsApp',
+  'Keep shopping': 'Komeza guhaha',
+  'Not available right now: {names}': 'Ntibiboneka ubu: {names}',
+  'Buy again': 'Ongera ugure',
 }

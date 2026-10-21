@@ -10,6 +10,7 @@ import { useCurrency } from '../context/CurrencyContext'
 import { StarInput } from '../components/site/StarRating'
 import InvoiceButton from '../components/site/InvoiceButton'
 import PayForOrder from '../components/site/PayForOrder'
+import BuyAgainButton from '../components/site/BuyAgainButton'
 import ReviewPhotoPicker from '../components/site/ReviewPhotoPicker'
 import { useStoreSettings, deliveryWindow, formatWindow } from '../lib/delivery'
 
@@ -194,6 +195,7 @@ export default function OrderDetailPage() {
               <span style={{ fontSize: 24, fontWeight: 900, color: 'var(--price-color, #f59e0b)' }}>{formatPrice(order.totalAmount)}</span>
               <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Items: {order.items?.length ?? 0}</p>
               <InvoiceButton order={order} />
+              {['DELIVERED', 'SHIPPED'].includes(order.status) && <BuyAgainButton order={order} compact />}
             </div>
           </div>
 

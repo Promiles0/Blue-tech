@@ -1810,6 +1810,7 @@ async function orderItemsForOrder(orderId: number) {
     return {
       productId: product.id,
       productName: product.name ?? "Product",
+      variantId: variant.id ?? null,
       variantInfo: variant.size_or_color ?? null,
       quantity,
       priceAtPurchase: unitPrice,
@@ -4389,9 +4390,24 @@ async function handle(request: Request) {
       if (body.carrier !== undefined) updates.carrier = body.carrier;
       if (body.trackingNumber !== undefined) updates.tracking_number = body.trackingNumber;
       if (body.status !== undefined) updates.status = String(body.status).toUpperCase();
+      const { data: before } = await adminClient.from("shipments").select("status,order_id").eq("id", shipmentId).maybeSingle();
       const { data, error } = await adminClient.from("shipments").update(updates).eq("id", shipmentId).select("*, orders(user_id, users(email))").maybeSingle();
       if (error) return failure(error.message, 400, request);
       if (!data) return failure("Shipment not found", 404, request);
+
+      const changedTo = updates.status && updates.status !== String(before?.status ?? "").toUpperCase() ? String(updates.status) : null;
+      const orderId = data.order_id as number;
+      const { data: order } = await adminClient.from("orders").select("id,user_id,status,order_address_phone_number").eq("id", orderId).maybeSingle();
+      // Delivery day (5a): tell the customer to expect the driver's call.
+      if (changedTo === "OUT_FOR_DELIVERY" && order?.user_id) {
+        const phone = order.order_address_phone_number ? ` on ${order.order_address_phone_number}` : "";
+        await notifyUser(order.user_id as string, `Your order #${orderId} is out for delivery today. Our driver will call you${phone} — please keep your phone nearby.`, orderId);
+      }
+      // Delivered by the courier: the order is delivered too (which starts the review request clock).
+      if (changedTo === "DELIVERED" && order && String(order.status).toLowerCase() !== "delivered") {
+        await adminClient.from("orders").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("id", orderId);
+        if (order.user_id) await notifyUser(order.user_id as string, `Your order #${orderId} has been delivered. Enjoy! You can review your items from your order page.`, orderId);
+      }
       return success("Shipment updated", adminShipmentResult(data), request);
     }
   }

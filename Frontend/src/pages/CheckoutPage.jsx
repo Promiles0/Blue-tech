@@ -5,7 +5,7 @@ import { usePrograms, useRewards } from "../lib/programs";
 import RwandaAddressFields from "../components/site/RwandaAddressFields";
 import { EMPTY_RW_ADDRESS, addressStreet } from "../lib/rwandaAddress";
 import { useNavigate, Link } from "react-router-dom";
-import { CheckCircle, Clock, ArrowLeft, MapPin, Truck, Wallet } from "lucide-react";
+import { Clock, ArrowLeft, MapPin, Truck, Wallet } from "lucide-react";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import apiService from "../api/service";
 import { useAuth } from "../context/AuthContext";
@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import CouponInput from "../components/site/CouponInput";
 import { useCurrency } from "../context/CurrencyContext";
 import PayForOrder from "../components/site/PayForOrder";
+import OrderPlaced from "../components/site/OrderPlaced";
+import { loadCheckoutMemory, saveCheckoutMemory } from "../lib/checkoutMemory";
 import { CARD_ELEMENT_OPTIONS, MOMO_POLL_INTERVAL_MS, MOMO_POLL_TIMEOUT_MS, getStripe, momoProviderFor, normalizeRwandaPhone } from "../lib/payments";
 
 const EXPRESS_SHIPPING_FEE_RWF = 7500;
@@ -51,11 +53,17 @@ function CheckoutForm() {
       navigate("/login", { state: { from: "/checkout" } });
       return;
     }
+    // Returning customers start with what they chose last time (1d).
+    const memory = loadCheckoutMemory(user.id);
+    if (["CARD", "MOMO", "AIRTEL_MONEY"].includes(memory.paymentMethod)) setPaymentMethod(memory.paymentMethod);
+    if (["STANDARD", "EXPRESS"].includes(memory.shippingMethod)) setShippingMethod(memory.shippingMethod);
+    setMomoPhone(memory.momoPhone || user.phone || "");
     apiService.addresses.list()
       .then(({ data }) => {
         const list = Array.isArray(data) ? data : [];
         setAddresses(list);
-        const def = list.find((a) => a.isDefault);
+        const last = list.find((a) => a.addressId === memory.addressId);
+        const def = last ?? list.find((a) => a.isDefault);
         if (def) setSelectedAddressId(def.addressId);
         else if (list.length > 0) setSelectedAddressId(list[0].addressId);
         else setShowNewAddressForm(true);
@@ -184,6 +192,7 @@ function CheckoutForm() {
       // retried on it instead of placing a duplicate order.
       createdOrderId = orderId;
       setPendingOrderId(orderId);
+      saveCheckoutMemory(user.id, { paymentMethod, momoPhone: normalizedPhone ?? momoPhone, addressId: showNewAddressForm ? null : selectedAddressId, shippingMethod });
       setPendingTotal(orderData?.totalAmount ?? total);
 
       // 2. CARD: Stripe flow
@@ -240,22 +249,8 @@ function CheckoutForm() {
   };
 
   if (step === "success") {
-    return (
-      <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div className="fade-in" style={{ textAlign: "center", maxWidth: 400 }}>
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "var(--success-soft)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 24px", color: "var(--success)" }}>
-            <CheckCircle size={40} />
-          </div>
-          <h1 style={{ fontSize: 32, fontWeight: 900, color: "var(--text-primary)", marginBottom: 12 }}>{t("Order confirmed")}</h1>
-          <p style={{ color: "var(--text-secondary)", fontSize: 16, lineHeight: 1.6, marginBottom: 32 }}>
-            {t("Thank you for your purchase. We've received your order and will start preparing it for delivery immediately.")}
-          </p>
-          <Link to="/orders" className="noir-btn-primary" style={{ padding: "14px 32px" }}>
-            {t("Track my order")}
-          </Link>
-        </div>
-      </div>
-    );
+    const deliveryText = deliveryConfig ? formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, shippingMethod), intlLocale) : null;
+    return <OrderPlaced orderId={pendingOrderId} deliveryText={deliveryText} cashOnPickup={paymentMethod === "CASH"} />;
   }
 
   if (step === "pay-rescue" && pendingOrderId) {
