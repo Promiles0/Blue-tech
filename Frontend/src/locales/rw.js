@@ -678,4 +678,7 @@ export default {
   'Please confirm the item is unused and in its original packaging': 'Emeza ko igicuruzwa kitakoreshejwe kandi kiri mu ipaki yacyo',
   'Request sent — we\'ll reply within one working day': 'Icyifuzo cyoherejwe — turagusubiza mu munsi umwe w\'akazi',
   'Could not send your request': 'Ntibyashobotse kohereza icyifuzo cyawe',
+  // ── Help: self-service returns ──
+  'To start a return, open the order in My orders and choose "Return or warranty" on the item. We reply within one working day and tell you how to drop it off at our shop in Kigali or have it collected. You can also contact us by WhatsApp, phone or email (below).': 'Kugira ngo usubize igicuruzwa, fungura itegeko muri "Ibyo natumije" maze uhitemo "Gusubiza cyangwa garanti" ku gicuruzwa. Dusubiza mu munsi umwe w\'akazi tukakubwira uko wakizana mu iduka ryacu i Kigali cyangwa uko twagitwara. Ushobora no kutwandikira kuri WhatsApp, guhamagara cyangwa email (hepfo).',
+  'To make a claim, open the order in My orders and choose "Return or warranty" on the item, with a short description and photos of the problem. You can follow the claim on the order page. You can also contact us directly (below).': 'Kugira ngo usabe garanti, fungura itegeko muri "Ibyo natumije" maze uhitemo "Gusubiza cyangwa garanti" ku gicuruzwa, wandike ikibazo muri make kandi ushyireho amafoto. Ushobora gukurikirana icyifuzo cyawe kuri paji y\'itegeko. Ushobora no kutwandikira (hepfo).',
 }

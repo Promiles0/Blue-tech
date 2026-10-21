@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Truck, FileText, Timer, Rss, Copy, Store, BarChart3 } from 'lucide-react'
+import { Save, Truck, FileText, Timer, Rss, Copy, Store, BarChart3, DatabaseBackup } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import apiService from '../../api/service'
@@ -82,6 +82,41 @@ export function DeliverySettings() {
         <div style={{ marginTop: 14 }}><label style={lbl}>Pickup address</label><input style={input} value={v.pickupAddress ?? ''} onChange={f.set('pickupAddress')} /></div>
       )}
       <SaveBtn saving={f.saving} dirty={f.dirty} onClick={f.save} />
+    </div>
+  )
+}
+
+// Backups (8c) and uptime (8b): last backup runs from scripts/backup-db.ps1, the hourly site check,
+// and the health link to give an external monitor such as UptimeRobot.
+export function BackupStatus() {
+  const [data, setData] = useState(null)
+  useEffect(() => { apiService.admin.backups().then(({ data }) => setData(data)).catch(() => setData({ runs: [] })) }, [])
+  const runs = data?.runs ?? []
+  const lastOk = runs.find((r) => r.ok)
+  const days = lastOk ? Math.floor((Date.now() - new Date(lastOk.ran_at).getTime()) / 86400000) : null
+  const tone = lastOk && days <= 8 ? 'var(--admin-success, #22c55e)' : 'var(--admin-danger, #ef4444)'
+  const health = `${API_BASE}/health`
+  return (
+    <div style={card}>
+      <h2 style={h2}><DatabaseBackup size={17} /> Backups and uptime</h2>
+      {!data ? <p style={hint}>Loading…</p> : (
+        <>
+          <p style={{ fontSize: 14, margin: '0 0 6px', color: tone, fontWeight: 700 }}>
+            {lastOk ? `Last backup: ${days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} ago`} (${(lastOk.db_bytes / 1048576).toFixed(1)} MB database, ${lastOk.files} files)` : 'No backup yet'}
+          </p>
+          {runs[0] && !runs[0].ok && <p style={{ ...hint, color: 'var(--admin-danger)' }}>Last attempt failed: {runs[0].note}</p>}
+          <p style={hint}>
+            Supabase's free plan keeps no backups. Run <code>scripts/backup-db.ps1</code> on your PC weekly (setup in <code>docs/BACKUPS.md</code>);
+            you'll be reminded here if there's been none for 8 days.
+          </p>
+          <p style={{ fontSize: 13, margin: '0 0 6px', color: 'var(--admin-text)' }}>
+            Website check: {data.site ? `${data.site.lastResult ?? '—'}${data.site.failStreak ? ` · ${data.site.failStreak} failed check(s) in a row` : ' · OK'} (checked ${new Date(data.site.lastCheck).toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })})` : 'first check within the hour'}
+          </p>
+          <label style={{ ...lbl, marginTop: 12 }}>Health link for an uptime monitor (e.g. UptimeRobot, free)</label>
+          <input readOnly value={health} style={{ ...input, fontFamily: 'ui-monospace, monospace', fontSize: 12 }} onFocus={(e) => e.target.select()} />
+          <p style={{ ...hint, margin: '6px 0 0' }}>UptimeRobot → Add monitor → HTTP(s) → paste this link → every 5 minutes → alert by email/SMS. It also catches a full outage the shop can't report itself.</p>
+        </>
+      )}
     </div>
   )
 }

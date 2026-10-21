@@ -185,6 +185,7 @@ const apiService = {
     catalog: {
       health: () => api.get('/admin/catalog/health'),
     },
+    backups: () => api.get('/admin/backups'),
     restock: (cover = 30, lead = 7) => api.get(`/admin/restock?cover=${cover}&lead=${lead}`),
     spreadsheets: {
       exportProducts: () => api.get('/admin/export/products.csv', { responseType: 'blob' }),

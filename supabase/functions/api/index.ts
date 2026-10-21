@@ -1683,6 +1683,75 @@ async function sendReviewRequests(days: number) {
   return sent;
 }
 
+// ── Safety net (round 3: 8b uptime, 8c backups, 8d data minimisation) ──
+// Runs `fn` at most once per Kigali day (the key in site_settings remembers the date).
+async function oncePerDay(key: string, fn: () => Promise<number>) {
+  const today = new Date(Date.now() + 2 * 3600_000).toISOString().slice(0, 10);
+  const { data } = await adminClient.from("site_settings").select("value").eq("key", key).maybeSingle();
+  if (data?.value === today) return 0;
+  await adminClient.from("site_settings").upsert({ key, value: today, is_public: false, updated_at: new Date().toISOString() }, { onConflict: "key" });
+  return await fn();
+}
+
+// The storefront (Render) is checked every hour; two failures in a row alert the team,
+// and so does the recovery.
+async function checkStorefront() {
+  let ok = false, detail = "";
+  try {
+    const res = await fetch(SITE, { signal: AbortSignal.timeout(15000), headers: { "User-Agent": "Blue-Tech uptime check" } });
+    ok = res.ok;
+    detail = `HTTP ${res.status}`;
+  } catch (e) {
+    detail = errorMessage(e, "no response");
+  }
+  const { data } = await adminClient.from("site_settings").select("value").eq("key", "site_check").maybeSingle();
+  let state = { failStreak: 0, alerted: false };
+  try { state = { ...state, ...JSON.parse(String(data?.value ?? "{}")) }; } catch { /* fresh */ }
+  if (ok) {
+    if (state.alerted) await notifyAdmins("The shop is back online", `${SITE} answers normally again.`, { severity: "info", category: "system", href: "/admin" });
+    state = { failStreak: 0, alerted: false };
+  } else {
+    state.failStreak += 1;
+    if (state.failStreak >= 2 && !state.alerted) {
+      await notifyAdmins("The shop website is not responding", `${SITE} failed two checks in a row (${detail}). Check Render.`, { severity: "error", category: "system", href: "/admin/errors" });
+      const { data: admins } = await adminClient.from("users").select("email,phone").eq("role", "admin");
+      for (const a of (admins ?? []) as Record<string, unknown>[]) {
+        await messageCustomer("uptime_alert", { email: a.email, phone: a.phone }, "Blue-Tech website is down", `${SITE} isn't responding (${detail}). Check the Render dashboard.`);
+      }
+      state.alerted = true;
+    }
+  }
+  await adminClient.from("site_settings").upsert({ key: "site_check", value: JSON.stringify({ ...state, lastCheck: new Date().toISOString(), lastResult: detail }), is_public: false, updated_at: new Date().toISOString() }, { onConflict: "key" });
+  return ok ? 1 : 0;
+}
+
+// Backups are made by scripts/backup-db.ps1 on the owner's PC; nag every 3 days if none in 8.
+async function checkBackupAge() {
+  const { data } = await adminClient.from("backup_log").select("ran_at").eq("ok", true).order("ran_at", { ascending: false }).limit(1);
+  const last = data?.[0]?.ran_at ? new Date(String(data[0].ran_at)).getTime() : 0;
+  if (last && Date.now() - last < 8 * 86400_000) return 0;
+  const { count } = await adminClient.from("admin_notifications").select("id", { count: "exact", head: true })
+    .eq("title", "No recent backup").gte("created_at", new Date(Date.now() - 3 * 86400_000).toISOString());
+  if ((count ?? 0) > 0) return 0;
+  await notifyAdmins("No recent backup", last
+    ? `The last successful backup was ${Math.floor((Date.now() - last) / 86400_000)} days ago. Run scripts/backup-db.ps1 on your PC.`
+    : "There is no backup of the shop's database yet. Run scripts/backup-db.ps1 on your PC (see docs/BACKUPS.md).",
+    { severity: "warning", category: "system", href: "/admin/settings" });
+  return 1;
+}
+
+// Keep only what's needed (data minimisation): old chat logs and fixed site errors go.
+async function tidyOldData() {
+  const yearAgo = new Date(Date.now() - 365 * 86400_000).toISOString();
+  const quarterAgo = new Date(Date.now() - 90 * 86400_000).toISOString();
+  const [{ count: chats }, { count: errors }] = await Promise.all([
+    adminClient.from("chat_logs").delete({ count: "exact" }).lt("created_at", yearAgo),
+    adminClient.from("client_errors").delete({ count: "exact" }).eq("status", "fixed").lt("last_seen", quarterAgo),
+  ]);
+  await adminClient.from("ai_answer_cache").delete().lt("created_at", new Date(Date.now() - 86400_000).toISOString());
+  return (chats ?? 0) + (errors ?? 0);
+}
+
 async function runHourlyJob() {
   const settings = { ...DEFAULT_AUTOMATION, ...(await jsonSetting("automation", DEFAULT_AUTOMATION)) };
   const result: Record<string, number | string> = {};
@@ -1696,6 +1765,9 @@ async function runHourlyJob() {
   if (settings.cartReminders) await task("cartReminders", () => sendCartReminders(settings.cartReminderHours));
   if (settings.reviewRequests) await task("reviewRequests", () => sendReviewRequests(settings.reviewRequestDays));
   if (settings.dailySummary !== false) await task("dailySummary", () => sendDailySummary());
+  await task("storefront", () => checkStorefront());
+  await task("backupAge", () => oncePerDay("backup_check_last", checkBackupAge));
+  await task("tidy", () => oncePerDay("tidy_last", tidyOldData));
   console.log("[cron] hourly:", JSON.stringify(result));
   return result;
 }
@@ -3794,6 +3866,14 @@ async function handle(request: Request) {
     }
   }
 
+  // Health check (8b) for uptime monitors: the API answers and the database responds.
+  if (method === "GET" && path === "/health") {
+    const started = Date.now();
+    const { error } = await adminClient.from("site_settings").select("key").limit(1);
+    const body = { ok: !error, api: "ok", database: error ? "error" : "ok", ms: Date.now() - started, at: new Date().toISOString() };
+    return new Response(JSON.stringify(body), { status: error ? 503 : 200, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+  }
+
   // Product feeds (6a): public, always live from the catalogue; Google/Meta fetch them on a schedule.
   if (method === "GET" && (path === "/feeds/google.xml" || path === "/feeds/meta.csv")) {
     const isGoogle = path.endsWith(".xml");
@@ -5000,6 +5080,17 @@ async function handle(request: Request) {
     for (const pid of touched) { await refreshStockState(pid); await sendStockAlerts(pid); }
     chatCatalogCache = null; // Blue sees the new prices straight away
     return success(`${applied} change${applied === 1 ? "" : "s"} saved`, { applied, errors: result.errors }, request);
+  }
+
+  if (method === "GET" && path === "/admin/backups") {
+    await requireAdmin(request, user);
+    const [{ data: runs }, { data: check }] = await Promise.all([
+      adminClient.from("backup_log").select("*").order("ran_at", { ascending: false }).limit(10),
+      adminClient.from("site_settings").select("value").eq("key", "site_check").maybeSingle(),
+    ]);
+    let site = null;
+    try { site = JSON.parse(String(check?.value ?? "null")); } catch { /* none yet */ }
+    return success("Backups", { runs: runs ?? [], site }, request);
   }
 
   if (method === "GET" && path === "/admin/catalog/health") {

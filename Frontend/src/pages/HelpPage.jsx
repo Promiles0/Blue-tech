@@ -42,7 +42,7 @@ const SECTIONS = {
     paras: [
       'You can return or exchange a product within 30 days of delivery.',
       '• The product must be unused, complete and in its original packaging.\n• Have your order number ready.',
-      'To start a return, contact us by WhatsApp, phone or email (below) with your order number and the reason. We will tell you how to send or drop off the product.',
+      'To start a return, open the order in My orders and choose "Return or warranty" on the item. We reply within one working day and tell you how to drop it off at our shop in Kigali or have it collected. You can also contact us by WhatsApp, phone or email (below).',
       'A faulty product is handled under its warranty — see Warranty.',
     ],
   },
@@ -52,7 +52,7 @@ const SECTIONS = {
     paras: [
       'Every product page lists that product\'s warranty period. It covers manufacturing faults from the delivery date.',
       'It does not cover accidental damage (drops, liquid, broken screens), normal wear, or repairs and modifications made elsewhere.',
-      'To make a claim, contact us with your order number and a short description or photo of the problem.',
+      'To make a claim, open the order in My orders and choose "Return or warranty" on the item, with a short description and photos of the problem. You can follow the claim on the order page. You can also contact us directly (below).',
     ],
   },
   payments: {
@@ -69,12 +69,13 @@ const SECTIONS = {
     title: 'Privacy policy',
     draft: true,
     paras: [
-      'Blue-Tech ("we") respects your privacy and handles personal data in line with Rwanda\'s Law No. 058/2021 on the protection of personal data and privacy.',
-      'What we collect\n• Account details: name, email, phone number and password (stored only as a secure hash, never in readable form).\n• Delivery addresses you give us.\n• Orders, payments status and reviews you write.\n• Questions you send to Blue, our AI assistant — stored without your name or account, to improve its answers.\n• Basic technical data needed to run the site securely (for example your IP address for fraud and abuse protection).',
-      'Why we use it\nTo process and deliver your orders, take payment, provide warranty and support, keep your account secure, and — only if you subscribe — send our newsletter.',
-      'Who we share it with\nOnly the services needed to run the shop: our payment providers (mobile money and card), our delivery partners, our hosting and email providers, and Google\'s AI service, which answers chat questions. We do not sell your data.',
-      'Your rights\nYou can ask to see, correct or delete your personal data, or unsubscribe from emails at any time. Contact us using the details below.',
-      'We keep order records for as long as the law requires for accounting and warranty purposes, and other data only as long as needed.',
+      'Blue-Tech ("we") respects your privacy and handles personal data in line with Rwanda\'s Law No. 058/2021 on the protection of personal data and privacy. This page explains what we collect, why, who helps us process it, and your rights.',
+      'What we collect\n• Account details: name, email, phone number and password (stored only as a secure hash, never in readable form). If you sign in with Google, your name, email and profile picture from Google.\n• Delivery addresses and the phone number for delivery.\n• Orders, payment status (never your card number), reviews, returns and warranty requests, including photos you add.\n• Questions you send to Blue, our AI assistant. They are stored without your name, unless you ask about your own orders while signed in, in which case Blue uses your order details to answer.\n• Technical data needed to run the site securely (for example your IP address, to stop fraud and abuse) and error reports when a page crashes.\n• Only if you accept analytics cookies: which pages and products you view and what you add to your cart (see Cookies).',
+      'Why we use it\nTo take and deliver your orders, take payment, handle returns, warranty and support, keep your account secure, and send the messages you would expect: order updates, a reminder about items left in your cart, and a request to review what you bought (you can turn these reminders off in your account). Our newsletter is sent only if you subscribe. Analytics, only with your consent, helps us improve the shop and our advertising.',
+      'Who helps us (processors)\n• Supabase (database, sign-in and file storage), Render (website hosting).\n• Paypack (MTN MoMo and Airtel Money) and Stripe (cards).\n• AI services that answer chat questions: Google Gemini, Groq, OpenRouter and Mistral.\n• Email, SMS and WhatsApp providers for messages: Resend, Africa\'s Talking, Meta (WhatsApp).\n• Only with your consent: Google Analytics and Meta (Facebook) Pixel.\n• Our delivery partners receive your name, phone and address to deliver your order.\nWe do not sell your personal data.',
+      'Where it is stored\nOur database and files are hosted by Supabase in the European Union (Frankfurt, Germany), and some of the services above are based outside Rwanda. We use providers that protect data with encryption and access controls, and transfer only what each service needs.',
+      'How long we keep it\nOrders, invoices and payment records: as long as the law requires for accounting and tax (and at least for the warranty period). Chat questions: up to 12 months. Error reports: up to 90 days after the problem is fixed. Account data: until you ask us to delete your account.',
+      'Your rights\nYou can ask to see, correct or delete your personal data, object to its use, withdraw consent (for example to analytics or reminders) and ask for a copy of it. Contact us using the details below; we answer within 30 days. You can also complain to Rwanda\'s data protection authority (the National Cyber Security Authority, NCSA).',
     ],
   },
   terms: {
@@ -84,8 +85,8 @@ const SECTIONS = {
     paras: [
       'These terms apply to orders placed on the Blue-Tech website.',
       'Prices and availability\nPrices are in Rwandan francs and include applicable taxes unless stated otherwise. We may correct obvious pricing errors; if that affects your order we will contact you before processing it.',
-      'Orders and payment\nAn order is confirmed once payment succeeds. We may cancel an order (with a full refund) if a product turns out to be unavailable.',
-      'Delivery, returns and warranty\nSee the Delivery, Returns and Warranty sections of this help page — they form part of these terms.',
+      'Orders and payment\nAn order is confirmed once payment succeeds. If a mobile money or card payment fails, your order stays reserved and you can pay again from the order page. Unpaid orders may be cancelled automatically after a set time, and the items released. We may cancel an order (with a full refund) if a product turns out to be unavailable.',
+      'Delivery, returns and warranty\nSee the Delivery, Returns and Warranty sections of this help page — they form part of these terms. Returns and warranty claims are made from the order page; refunds are paid back by mobile money, card refund or bank transfer once the returned item has been received and checked.',
       'Your account\nKeep your password private. You are responsible for orders placed from your account.',
       'Contact\nQuestions about these terms: use the contact details below.',
     ],
@@ -95,9 +96,10 @@ const SECTIONS = {
     title: 'Cookies & local storage',
     draft: true,
     paras: [
-      'We use your browser\'s storage only for things the site needs to work and to remember your choices:',
-      '• Keeping you signed in.\n• Your cart (also before you sign in), wishlist and products picked for comparison.\n• Your theme (light/dark) and currency choice.\n• Your recent chat with Blue for the current visit.',
-      'We do not use advertising cookies. Clearing your browser data removes all of the above.',
+      'We use your browser\'s storage for things the site needs to work and to remember your choices. These are always on:',
+      '• Keeping you signed in.\n• Your cart (also before you sign in), wishlist and products picked for comparison.\n• Your theme (light/dark), language and currency.\n• Your recent chat with Blue for the current visit.\n• Your last checkout choices (payment method, mobile money number, address), on your own device only.\n• Your answer to the cookie question.',
+      'Analytics and advertising cookies (optional)\nIf the shop turns them on, we ask first. Only if you accept do we load Google Analytics and the Meta (Facebook) Pixel, which set cookies to measure which pages, products and ads work. If you decline, nothing is loaded and nothing is shared. You can change your mind by clearing this site\'s data in your browser; the question will then appear again.',
+      'Clearing your browser data removes all of the above.',
     ],
   },
 }
