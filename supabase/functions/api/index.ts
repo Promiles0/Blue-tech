@@ -1950,7 +1950,7 @@ const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.8-flash";
 
 // The published catalogue is small and changes rarely, so a compact copy is cached per
 // instance for a few minutes instead of re-querying on every chat turn.
-type CatalogRow = { id: string; name: string; brand: string; category: string; price: number; haystack: string };
+type CatalogRow = { id: string; name: string; brand: string; category: string; price: number; haystack: string; line: string };
 let chatCatalogCache: { at: number; text: string; ids: Set<string>; rows: CatalogRow[] } | null = null;
 async function chatCatalog() {
   if (chatCatalogCache && Date.now() - chatCatalogCache.at < 5 * 60_000) return chatCatalogCache;
@@ -1967,7 +1967,7 @@ async function chatCatalog() {
   const compact: CatalogRow[] = rows.map((p, i) => ({
     id: String(p.id), name: String(p.name ?? ""), brand: String(p.brand ?? ""),
     category: String((p.categories as Record<string, unknown> | null)?.name ?? ""), price: toNumber(p.price),
-    haystack: lines[i].toLowerCase(),
+    haystack: lines[i].toLowerCase(), line: lines[i],
   }));
   chatCatalogCache = { at: Date.now(), text: lines.join("\n"), ids: new Set(rows.map((p) => String(p.id))), rows: compact };
   return chatCatalogCache;
@@ -1998,6 +1998,20 @@ async function blueInstructions() {
   return blueInstructionsCache.text;
 }
 
+// Delivery facts from Admin → Settings, so Blue quotes the same times as checkout.
+let blueDeliveryCache: { at: number; cfg: typeof DEFAULT_DELIVERY } | null = null;
+async function blueDelivery() {
+  if (blueDeliveryCache && Date.now() - blueDeliveryCache.at < 5 * 60_000) return blueDeliveryCache.cfg;
+  blueDeliveryCache = { at: Date.now(), cfg: { ...DEFAULT_DELIVERY, ...(await jsonSetting("delivery_config", DEFAULT_DELIVERY)) } };
+  return blueDeliveryCache.cfg;
+}
+const span = (r: number[]) => (r[0] === r[1] ? `${r[0]}` : `${r[0]}–${r[1]}`);
+function deliveryFactsText(d: typeof DEFAULT_DELIVERY) {
+  return `DELIVERY (exact; use these numbers): standard delivery is free — ${span(d.kigaliStandard)} working days in Kigali (${d.kigaliDistricts.join(", ")}), ${span(d.provinceStandard)} working days to other districts. ` +
+    `Express costs ${EXPRESS_SHIPPING_FEE_RWF.toLocaleString("en-US")} RWF and arrives in ${d.expressDays} working day(s). Orders placed after ${d.cutoffHour}:00 leave the next working day. ` +
+    `${d.deliverSunday ? "We deliver on Sundays." : "No deliveries on Sunday."} ${d.pickupEnabled ? `Free pickup at ${d.pickupAddress}.` : "In-store pickup is not offered for online orders."}`;
+}
+
 const CHAT_LANGUAGES: Record<string, string> = { en: "English", rw: "Kinyarwanda", fr: "French" };
 
 // ── Blue's AI providers ─────────────────────────────────────────────────────────
@@ -2005,12 +2019,16 @@ const CHAT_LANGUAGES: Record<string, string> = { en: "English", rw: "Kinyarwanda
 // ai_provider_status), so a rate-limited one doesn't slow every message down. Each one
 // switches on when its secret is set. If all fail, Blue answers from the catalogue (no AI).
 type ChatMessage = { role: string; text: string };
-type Provider = { id: string; label: string; timeoutMs?: number; enabled: () => boolean; call: (system: string, messages: ChatMessage[], signal: AbortSignal) => Promise<string> };
+// slimPrompt: the provider gets every product's name and price but full specs only for the
+// products that match the question — free tiers like Groq's cap tokens per minute.
+type Provider = { id: string; label: string; timeoutMs?: number; slimPrompt?: boolean; enabled: () => boolean; call: (system: string, messages: ChatMessage[], signal: AbortSignal) => Promise<string> };
 
-const BLUE_JSON_SHAPE = `Respond ONLY with one JSON object, no other text: {"reply": string, "productIds": string[], "handoff": "none"|"quote"|"human", "topic": string, "noMatch": boolean}`;
+// Appended last for the OpenAI-style providers: smaller models follow the final instruction most reliably.
+const BLUE_JSON_SHAPE = `Respond ONLY with one JSON object, no other text: {"reply": string, "productIds": string[], "handoff": "none"|"quote"|"human", "topic": string, "noMatch": boolean}
+LANGUAGE: write "reply" in the same language as the customer's latest message — Kinyarwanda if they wrote in Kinyarwanda, French if French, English if English — even though the catalogue is in English.`;
 const PROVIDER_TIMEOUT_MS = 9000;
 
-async function geminiCall(model: string, system: string, messages: ChatMessage[], signal: AbortSignal) {
+async function geminiCall(model: string, system: string, messages: ChatMessage[], signal: AbortSignal, extraConfig: Record<string, unknown> = {}) {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST", signal,
     headers: { "Content-Type": "application/json", "x-goog-api-key": geminiApiKey! },
@@ -2027,6 +2045,7 @@ async function geminiCall(model: string, system: string, messages: ChatMessage[]
           },
           required: ["reply", "productIds", "handoff", "topic", "noMatch"],
         },
+        ...extraConfig,
       },
     }),
   });
@@ -2036,13 +2055,14 @@ async function geminiCall(model: string, system: string, messages: ChatMessage[]
 }
 
 // Groq, OpenRouter and Mistral all speak the OpenAI chat-completions format.
-async function openAiStyleCall(url: string, key: string, model: string, system: string, messages: ChatMessage[], signal: AbortSignal, jsonMode = true, extraHeaders: Record<string, string> = {}) {
+async function openAiStyleCall(url: string, key: string, model: string, system: string, messages: ChatMessage[], signal: AbortSignal, extraHeaders: Record<string, string> = {}, extraBody: Record<string, unknown> = {}) {
   const res = await fetch(url, {
     method: "POST", signal,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, ...extraHeaders },
     body: JSON.stringify({
-      model, temperature: 0.4, max_tokens: 1500,
-      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+      model, temperature: 0.4, max_tokens: 1000,
+      response_format: { type: "json_object" },
+      ...extraBody,
       messages: [
         { role: "system", content: `${system}\n\n${BLUE_JSON_SHAPE}` },
         ...messages.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.text })),
@@ -2077,29 +2097,34 @@ async function resolveGeminiLite(signal: AbortSignal) {
 }
 
 const BLUE_PROVIDERS: Provider[] = [
-  // The main model can think for a while before answering, so it gets a longer timeout.
-  { id: "gemini", label: "Google Gemini", timeoutMs: 15000, enabled: () => Boolean(geminiApiKey),
-    call: (sys, msgs, sig) => geminiCall(GEMINI_MODEL, sys, msgs, sig) },
+  // Low thinking keeps answers quick; a shop assistant doesn't need deep reasoning.
+  { id: "gemini", label: "Google Gemini", timeoutMs: 12000, enabled: () => Boolean(geminiApiKey),
+    call: (sys, msgs, sig) => geminiCall(GEMINI_MODEL, sys, msgs, sig, { thinkingConfig: { thinkingLevel: "low" } }) },
   // Same key, a lighter model with its own separate free quota.
   { id: "gemini-lite", label: "Google Gemini Flash-Lite", enabled: () => Boolean(geminiApiKey),
     call: async (sys, msgs, sig) => geminiCall(await resolveGeminiLite(sig), sys, msgs, sig) },
-  { id: "groq", label: "Groq", enabled: () => Boolean(env("GROQ_API_KEY")),
-    call: (sys, msgs, sig) => openAiStyleCall("https://api.groq.com/openai/v1/chat/completions", env("GROQ_API_KEY"), env("GROQ_MODEL") || "llama-3.3-70b-versatile", sys, msgs, sig) },
-  { id: "openrouter", label: "OpenRouter", enabled: () => Boolean(env("OPENROUTER_API_KEY")),
-    call: (sys, msgs, sig) => openAiStyleCall("https://openrouter.ai/api/v1/chat/completions", env("OPENROUTER_API_KEY"), env("OPENROUTER_MODEL") || "openrouter/free", sys, msgs, sig, false,
-      { "HTTP-Referer": "https://blue-tech.onrender.com", "X-Title": "Blue-Tech" }) },
-  { id: "mistral", label: "Mistral", enabled: () => Boolean(env("MISTRAL_API_KEY")),
+  { id: "groq", label: "Groq", slimPrompt: true, enabled:() => Boolean(env("GROQ_API_KEY")),
+    call: (sys, msgs, sig) => openAiStyleCall("https://api.groq.com/openai/v1/chat/completions", env("GROQ_API_KEY"), env("GROQ_MODEL") || "openai/gpt-oss-120b", sys, msgs, sig,
+      {}, (env("GROQ_MODEL") || "openai/gpt-oss").startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}) },
+  // OpenRouter tries the next free model in the list itself if the first is busy.
+  { id: "openrouter", label: "OpenRouter", timeoutMs: 12000, slimPrompt: true, enabled:() => Boolean(env("OPENROUTER_API_KEY")),
+    call: (sys, msgs, sig) => openAiStyleCall("https://openrouter.ai/api/v1/chat/completions", env("OPENROUTER_API_KEY"), env("OPENROUTER_MODEL") || "google/gemma-4-31b-it:free", sys, msgs, sig,
+      { "HTTP-Referer": "https://blue-tech.onrender.com", "X-Title": "Blue-Tech" },
+      env("OPENROUTER_MODEL") ? {} : { models: ["google/gemma-4-31b-it:free", "minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-super-120b-a12b:free"] }) },
+  { id: "mistral", label: "Mistral", slimPrompt: true, enabled: () => Boolean(env("MISTRAL_API_KEY")),
     call: (sys, msgs, sig) => openAiStyleCall("https://api.mistral.ai/v1/chat/completions", env("MISTRAL_API_KEY"), env("MISTRAL_MODEL") || "mistral-small-latest", sys, msgs, sig) },
 ];
 
-// How long to skip a provider after a failure.
-function pauseFor(err: unknown) {
+// How long to skip a provider after a failure. Blips (timeouts, overload, short rate limits)
+// double with each failure in a row — 2, 4, 8… minutes up to an hour — so a provider that keeps
+// failing rarely makes a customer wait through it.
+function pauseFor(err: unknown, streak: number) {
   const status = err instanceof ProviderError ? err.status : 0;
   const text = String((err as Error)?.message ?? err).toLowerCase();
   if (status === 401 || status === 403 || status === 404) return 6 * 3600_000;   // bad key / model: needs fixing
   if (status === 429 && /quota|per day|daily|exceeded/.test(text)) return 60 * 60_000; // quota used up
-  if (status === 429) return 5 * 60_000;                                            // short rate limit
-  return 2 * 60_000;                                                                // timeout, overload, 5xx
+  const base = status === 429 ? 5 * 60_000 : 2 * 60_000;
+  return Math.min(base * 2 ** Math.max(0, streak - 1), 60 * 60_000);
 }
 
 async function providerStatuses() {
@@ -2108,12 +2133,13 @@ async function providerStatuses() {
 }
 
 async function markProvider(id: string, ok: boolean, err?: unknown) {
-  const { data: cur } = await adminClient.from("ai_provider_status").select("ok_count,fail_count").eq("provider", id).maybeSingle();
+  const { data: cur } = await adminClient.from("ai_provider_status").select("ok_count,fail_count,fail_streak").eq("provider", id).maybeSingle();
   const now = new Date().toISOString();
+  const streak = toNumber(cur?.fail_streak) + 1;
   await adminClient.from("ai_provider_status").upsert(ok
-    ? { provider: id, last_ok_at: now, paused_until: null, ok_count: toNumber(cur?.ok_count) + 1, fail_count: toNumber(cur?.fail_count) }
-    : { provider: id, last_error: String((err as Error)?.message ?? err).slice(0, 300), last_error_at: now,
-        paused_until: new Date(Date.now() + pauseFor(err)).toISOString(), ok_count: toNumber(cur?.ok_count), fail_count: toNumber(cur?.fail_count) + 1 },
+    ? { provider: id, last_ok_at: now, paused_until: null, fail_streak: 0, ok_count: toNumber(cur?.ok_count) + 1, fail_count: toNumber(cur?.fail_count) }
+    : { provider: id, last_error: String((err as Error)?.message ?? err).slice(0, 300), last_error_at: now, fail_streak: streak,
+        paused_until: new Date(Date.now() + pauseFor(err, streak)).toISOString(), ok_count: toNumber(cur?.ok_count), fail_count: toNumber(cur?.fail_count) + 1 },
   { onConflict: "provider" });
 }
 
@@ -2129,9 +2155,9 @@ function parseBlueJson(raw: string) {
 
 // ── Offline Blue: no AI, just the catalogue ──
 const OFFLINE_TEXT: Record<string, Record<string, string>> = {
-  en: { found: "Here's what I found in our catalogue{budget}. Our team can help you choose on WhatsApp:", over: "Nothing in that range fits that budget right now; the closest options start at {price} RWF. Our team can help you on WhatsApp:", none: "I couldn't find an exact match right now. Our team can help you on WhatsApp:", policy: "We deliver across Rwanda; the options and fee for your district are shown at checkout. Every product page shows its warranty, and unused items can be returned within 30 days. For anything else, our team is on WhatsApp:", budget: " within your budget" },
-  fr: { found: "Voici ce que j'ai trouvé dans notre catalogue{budget}. Notre équipe peut vous aider à choisir sur WhatsApp :", over: "Rien dans cette gamme ne correspond à ce budget pour le moment ; les options les plus proches commencent à {price} RWF. Notre équipe peut vous aider sur WhatsApp :", none: "Je n'ai pas trouvé de correspondance exacte. Notre équipe peut vous aider sur WhatsApp :", policy: "Nous livrons partout au Rwanda ; les options et le tarif pour votre district s'affichent au paiement. Chaque fiche produit indique sa garantie et un article inutilisé peut être retourné sous 30 jours. Pour le reste, notre équipe est sur WhatsApp :", budget: " dans votre budget" },
-  rw: { found: "Dore ibyo nabonye mu bicuruzwa byacu{budget}. Itsinda ryacu ryagufasha guhitamo kuri WhatsApp:", over: "Nta gicuruzwa cy'ubu bwoko kiri muri ayo mafaranga ubu; ibyegereye bitangirira kuri {price} RWF. Itsinda ryacu ryagufasha kuri WhatsApp:", none: "Ntabwo mbonye igihuye neza ubu. Itsinda ryacu ryagufasha kuri WhatsApp:", policy: "Tugeza ibicuruzwa hose mu Rwanda; uburyo n'igiciro ku karere kawe bigaragara mu kwishyura. Buri gicuruzwa kigaragaza garanti yacyo, kandi igitarakoreshejwe gishobora gusubizwa mu minsi 30. Ku bindi, itsinda ryacu riri kuri WhatsApp:", budget: " bihuye n'amafaranga ufite" },
+  en: { found: "Here's what I found in our catalogue{budget}. Our team can help you choose on WhatsApp:", over: "Nothing in that range fits that budget right now; the closest options start at {price} RWF. Our team can help you on WhatsApp:", none: "I couldn't find an exact match right now. Our team can help you on WhatsApp:", policy: "Standard delivery is free: {kigali} working days in Kigali, {province} working days to other districts. Express costs {express} RWF. Every product page shows its warranty, and unused items can be returned within 30 days. For anything else, our team is on WhatsApp:", budget: " within your budget" },
+  fr: { found: "Voici ce que j'ai trouvé dans notre catalogue{budget}. Notre équipe peut vous aider à choisir sur WhatsApp :", over: "Rien dans cette gamme ne correspond à ce budget pour le moment ; les options les plus proches commencent à {price} RWF. Notre équipe peut vous aider sur WhatsApp :", none: "Je n'ai pas trouvé de correspondance exacte. Notre équipe peut vous aider sur WhatsApp :", policy: "La livraison standard est gratuite : {kigali} jours ouvrables à Kigali, {province} jours ouvrables vers les autres districts. L'express coûte {express} RWF. Chaque fiche produit indique sa garantie et un article inutilisé peut être retourné sous 30 jours. Pour le reste, notre équipe est sur WhatsApp :", budget: " dans votre budget" },
+  rw: { found: "Dore ibyo nabonye mu bicuruzwa byacu{budget}. Itsinda ryacu ryagufasha guhitamo kuri WhatsApp:", over: "Nta gicuruzwa cy'ubu bwoko kiri muri ayo mafaranga ubu; ibyegereye bitangirira kuri {price} RWF. Itsinda ryacu ryagufasha kuri WhatsApp:", none: "Ntabwo mbonye igihuye neza ubu. Itsinda ryacu ryagufasha kuri WhatsApp:", policy: "Kugezwaho bisanzwe ni ubuntu: iminsi {kigali} y'akazi i Kigali, iminsi {province} y'akazi mu tundi turere. Byihuse ni {express} RWF. Buri gicuruzwa kigaragaza garanti yacyo, kandi igitarakoreshejwe gishobora gusubizwa mu minsi 30. Ku bindi, itsinda ryacu riri kuri WhatsApp:", budget: " bihuye n'amafaranga ufite" },
 };
 // What shoppers type (en/fr/rw) → a word found in the matching category's name.
 const CATEGORY_WORDS: { category: RegExp; words: string[] }[] = [
@@ -2157,7 +2183,29 @@ function parseBudget(q: string) {
   return best >= 20_000 ? best : null; // ignore small numbers like "15.6 inch" or "8GB"
 }
 
-function offlineReply(messages: ChatMessage[], lang: string, catalog: { rows: CatalogRow[] }) {
+// Every product as one short line, plus full specs for the dozen that best match the
+// conversation so far (named category, words, budget).
+function slimCatalog(messages: ChatMessage[], rows: CatalogRow[]) {
+  const q = messages.filter((m) => m.role === "user").map((m) => m.text).join(" ").toLowerCase();
+  const tokens = q.split(/[^a-z0-9àâçéèêëîïôûùüÿœ]+/i).filter(Boolean);
+  const has = (w: string) => (w.includes(" ") ? q.includes(w) : tokens.some((t) => t.startsWith(w)));
+  const wanted = CATEGORY_WORDS.filter((c) => c.words.some(has));
+  const words = tokens.filter((w) => w.length > 2 && !OFFLINE_STOPWORDS.has(w) && !/^\d/.test(w));
+  const budget = parseBudget(q);
+  const relevant = rows.map((r) => {
+    const name = `${r.name} ${r.brand}`.toLowerCase();
+    let score = wanted.some((c) => c.category.test(r.category)) ? 5 : 0;
+    for (const w of words) score += name.includes(w) ? 2 : r.haystack.includes(w) ? 1 : 0;
+    if (score && budget) score += r.price <= budget ? 2 : r.price <= budget * 1.25 ? 1 : 0;
+    return { r, score };
+  }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 12).map((x) => x.r);
+  const index = rows.map((r) => `[${r.id}] ${r.name} | ${r.brand} | ${r.category} | ${r.price} RWF`).join("\n");
+  return `CATALOGUE (every product: id | name | brand | category | price):\n${index}` +
+    (relevant.length ? `\n\nFULL DETAILS FOR THE PRODUCTS MOST RELEVANT TO THIS CONVERSATION:\n${relevant.map((r) => r.line).join("\n")}` : "") +
+    `\n\nOnly state specs that appear in the details above; if a spec isn't listed, say the product page has the full details.`;
+}
+
+function offlineReply(messages: ChatMessage[], lang: string, catalog: { rows: CatalogRow[] }, delivery = DEFAULT_DELIVERY) {
   const T = OFFLINE_TEXT[lang] ?? OFFLINE_TEXT.en;
   const q = (messages.filter((m) => m.role === "user").pop()?.text ?? "").toLowerCase();
   const tokens = q.split(/[^a-z0-9àâçéèêëîïôûùüÿœ]+/i).filter(Boolean);
@@ -2165,7 +2213,9 @@ function offlineReply(messages: ChatMessage[], lang: string, catalog: { rows: Ca
   const wanted = CATEGORY_WORDS.filter((c) => c.words.some(has));
 
   if (!wanted.length && /deliver|shipping|livr|kugeza|return|retour|gusubiza|warrant|garanti/.test(q)) {
-    return { reply: T.policy, ids: [] as string[], handoff: "human", topic: "policies", noMatch: false };
+    const reply = T.policy.replace("{kigali}", span(delivery.kigaliStandard)).replace("{province}", span(delivery.provinceStandard))
+      .replace("{express}", EXPRESS_SHIPPING_FEE_RWF.toLocaleString("en-US"));
+    return { reply, ids: [] as string[], handoff: "human", topic: "policies", noMatch: false };
   }
 
   const budget = parseBudget(q);
@@ -2223,7 +2273,7 @@ async function alertAllProvidersDown(lastError: string) {
 }
 
 async function chatReply(messages: ChatMessage[], lang = "en") {
-  const [catalog, extra] = await Promise.all([chatCatalog(), blueInstructions()]);
+  const [catalog, extra, delivery] = await Promise.all([chatCatalog(), blueInstructions(), blueDelivery()]);
 
   // One-off questions (no earlier turns) are cached for an hour per language.
   const userTurns = messages.filter((m) => m.role === "user");
@@ -2239,7 +2289,11 @@ async function chatReply(messages: ChatMessage[], lang = "en") {
   const ownerNotes = extra ? `\n\nSTORE NOTES FROM THE OWNER (facts to rely on; still follow the rules above):\n${extra}` : "";
   // The site language the shopper picked; the language they actually write in still wins.
   const langNote = `\n\nThe customer is browsing the site in ${CHAT_LANGUAGES[lang] ?? "English"}. Reply in that language unless they write to you in a different one.`;
-  const system = `${CHAT_SYSTEM_PROMPT}${ownerNotes}${langNote}\n\nCATALOGUE:\n${catalog.text}`;
+  const facts = `\n\n${deliveryFactsText(delivery)}`;
+  const system = `${CHAT_SYSTEM_PROMPT}${facts}${ownerNotes}${langNote}\n\nCATALOGUE:\n${catalog.text}`;
+  let slimSystem: string | null = null;
+  const systemFor = (p: Provider) => !p.slimPrompt ? system
+    : (slimSystem ??= `${CHAT_SYSTEM_PROMPT}${facts}${ownerNotes}${langNote}\n\n${slimCatalog(messages, catalog.rows)}`);
 
   async function finish(parsed: { reply?: string; productIds?: unknown[]; handoff?: string; topic?: string; noMatch?: boolean }, provider: string) {
     // Only ids that really exist in the published catalogue become cards — whatever the provider said.
@@ -2263,7 +2317,7 @@ async function chatReply(messages: ChatMessage[], lang = "en") {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), provider.timeoutMs ?? PROVIDER_TIMEOUT_MS);
     try {
-      const parsed = parseBlueJson(await provider.call(system, messages, controller.signal));
+      const parsed = parseBlueJson(await provider.call(systemFor(provider), messages, controller.signal));
       const result = await finish(parsed, provider.id);
       await markProvider(provider.id, true);
       if (cacheKey) {
@@ -2282,7 +2336,7 @@ async function chatReply(messages: ChatMessage[], lang = "en") {
 
   // Every provider failed or is paused: answer from the catalogue so Blue never goes silent.
   await alertAllProvidersDown(lastError);
-  const off = offlineReply(messages, lang, catalog);
+  const off = offlineReply(messages, lang, catalog, delivery);
   return finish({ reply: off.reply, productIds: off.ids, handoff: off.handoff, topic: off.topic, noMatch: off.noMatch }, "offline");
 }
 
