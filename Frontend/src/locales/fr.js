@@ -596,4 +596,9 @@ export default {
   'Complete your payment': 'Finalisez votre paiement',
   'This order is reserved for you but not paid yet. Pay with mobile money or card to confirm it.': 'Cette commande vous est réservée mais n\'est pas encore payée. Payez par mobile money ou par carte pour la confirmer.',
   'Payment received — thank you!': 'Paiement reçu — merci !',
+  // ── Reminders ──
+  'Reminders turned on': 'Rappels activés',
+  'Reminders turned off': 'Rappels désactivés',
+  'Could not save your preference': 'Impossible d\'enregistrer votre préférence',
+  'Remind me about items left in my cart, and ask for my review after delivery': 'Me rappeler les articles laissés dans mon panier et me demander mon avis après la livraison',
 }

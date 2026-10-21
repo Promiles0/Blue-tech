@@ -37,13 +37,31 @@ export default function Account() {
     setDetailsSaving(true)
     try {
       const { data } = await apiService.auth.updateProfile({ name: detailsForm.name.trim(), phone: detailsForm.phone.trim() })
-      updateUser(data.data)
+      // The API client already unwraps { data }; keep the rest of the signed-in user (role etc.).
+      updateUser({ ...user, ...(data ?? {}) })
       setEditingDetails(false)
       toast.success(t('Details updated'))
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update')
     } finally {
       setDetailsSaving(false)
+    }
+  }
+
+  // ── Reminders (cart reminders, review requests) ──────────────────
+  const [remindersOn, setRemindersOn] = useState(true)
+  useEffect(() => {
+    if (!user) return
+    apiService.auth.getProfile().then(({ data }) => setRemindersOn(data?.remindersOptOut !== true)).catch(() => {})
+  }, [user])
+  const toggleReminders = async (on) => {
+    setRemindersOn(on)
+    try {
+      await apiService.auth.updateProfile({ remindersOptOut: !on })
+      toast.success(on ? t('Reminders turned on') : t('Reminders turned off'))
+    } catch {
+      setRemindersOn(!on)
+      toast.error(t('Could not save your preference'))
     }
   }
 
@@ -206,6 +224,10 @@ export default function Account() {
               <InfoRow label={t('Phone')} value={user.phone ?? '—'} last />
             </div>
           )}
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 18, fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5, cursor: 'pointer' }}>
+            <input type="checkbox" checked={remindersOn} onChange={(e) => toggleReminders(e.target.checked)} style={{ marginTop: 3 }} />
+            <span>{t('Remind me about items left in my cart, and ask for my review after delivery')}</span>
+          </label>
         </Section>
 
         {/* ── Section 2: Payment Methods ── */}

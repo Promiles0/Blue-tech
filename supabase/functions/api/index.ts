@@ -1014,6 +1014,124 @@ async function restoreVariantStock(variantId: number, quantity: number) {
   await adminClient.from("product_variants").update({ stock_quantity: current + quantity }).eq("id", variantId);
 }
 
+// Puts an order's reserved stock back — once only, however many times it's called.
+async function releaseOrderStock(orderId: number | string) {
+  const { data: claimed } = await adminClient.from("orders").update({ stock_released: true })
+    .eq("id", orderId).eq("stock_released", false).select("id").maybeSingle();
+  if (!claimed) return false;
+  const { data: items } = await adminClient.from("order_items").select("variant_id,quantity").eq("order_id", orderId);
+  for (const item of (items ?? []) as Record<string, unknown>[]) {
+    if (item.variant_id) await restoreVariantStock(Number(item.variant_id), toNumber(item.quantity));
+  }
+  return true;
+}
+
+// ── The hourly job (round 1, batch 3) ──
+// Called by pg_cron through POST /cron/hourly. Each task is independent: one failing
+// doesn't stop the others, and each run handles a bounded number of rows.
+const SITE = "https://blue-tech.onrender.com";
+
+async function cancelUnpaidOrders(hours: number) {
+  if (hours <= 0) return 0;
+  const cutoff = new Date(Date.now() - hours * 3600_000).toISOString();
+  const { data: orders } = await adminClient.from("orders").select("*")
+    .in("status", ["pending", "PENDING"]).lt("created_at", cutoff).limit(50);
+  let cancelled = 0;
+  for (const order of (orders ?? []) as Record<string, unknown>[]) {
+    // Cash on pickup is paid in person: never cancelled for being "unpaid".
+    if (["CASH", "PICKUP"].includes(String(order.payment_method ?? "").toUpperCase())) continue;
+    // Last check with the provider, so a payment that just went through is never cancelled.
+    if ((await checkPayable(order)) === "This order is already paid.") continue;
+    const { data: done } = await adminClient.from("orders").update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+      .eq("id", order.id).in("status", ["pending", "PENDING"]).select("id").maybeSingle();
+    if (!done) continue;
+    await releaseOrderStock(order.id as number);
+    cancelled++;
+    if (order.user_id) {
+      await notifyUser(order.user_id as string,
+        `Order #${order.id} was cancelled because it wasn't paid within ${hours} hours. Nothing was charged — you can order again any time.`, order.id as number);
+    }
+  }
+  return cancelled;
+}
+
+async function sendCartReminders(hours: number) {
+  const now = Date.now();
+  const { data: carts } = await adminClient.from("carts").select("id,user_id,updated_at,reminded_at")
+    .lt("updated_at", new Date(now - hours * 3600_000).toISOString())
+    .gt("updated_at", new Date(now - 3 * 86400_000).toISOString())
+    .limit(100);
+  let sent = 0;
+  for (const cart of (carts ?? []) as Record<string, unknown>[]) {
+    // One reminder per cart a week, and only for activity after the last reminder.
+    if (cart.reminded_at && (new Date(String(cart.reminded_at)) > new Date(String(cart.updated_at)) || now - new Date(String(cart.reminded_at)).getTime() < 7 * 86400_000)) continue;
+    const { data: items } = await adminClient.from("cart_items").select("quantity,product_variants(products(name,is_active))").eq("cart_id", cart.id);
+    const names = ((items ?? []) as Record<string, unknown>[])
+      .map((i) => ((i.product_variants as Record<string, unknown> | null)?.products as Record<string, unknown> | null))
+      .filter((p) => p && p.is_active !== false).map((p) => String(p!.name));
+    if (!names.length) continue;
+    const { data: customer } = await adminClient.from("users").select("email,phone,name,reminders_opt_out,is_suspended").eq("id", cart.user_id).maybeSingle();
+    if (!customer || customer.reminders_opt_out || customer.is_suspended) continue;
+    // Already ordered since they last touched the cart? Then it isn't abandoned.
+    const { count } = await adminClient.from("orders").select("id", { count: "exact", head: true })
+      .eq("user_id", cart.user_id).gt("created_at", String(cart.updated_at));
+    if ((count ?? 0) > 0) continue;
+    const what = names.length === 1 ? names[0] : `${names[0]} and ${names.length - 1} more item${names.length > 2 ? "s" : ""}`;
+    const text = `You left ${what} in your cart. Your items are still waiting — complete your order: ${SITE}/cart`;
+    await adminClient.from("notifications").insert({ user_id: cart.user_id, message: `You left ${what} in your cart. Complete your order whenever you're ready.` });
+    await messageCustomer("cart_reminder", { email: customer.email, phone: customer.phone }, "You left something in your cart", text);
+    await adminClient.from("carts").update({ reminded_at: new Date().toISOString() }).eq("id", cart.id);
+    sent++;
+  }
+  return sent;
+}
+
+async function sendReviewRequests(days: number) {
+  const now = Date.now();
+  const { data: orders } = await adminClient.from("orders").select("id,user_id,delivered_at")
+    .is("review_requested_at", null)
+    .lt("delivered_at", new Date(now - days * 86400_000).toISOString())
+    .gt("delivered_at", new Date(now - 45 * 86400_000).toISOString())
+    .limit(50);
+  let sent = 0;
+  for (const order of (orders ?? []) as Record<string, unknown>[]) {
+    await adminClient.from("orders").update({ review_requested_at: new Date().toISOString() }).eq("id", order.id);
+    if (!order.user_id) continue;
+    const { data: customer } = await adminClient.from("users").select("email,phone,reminders_opt_out,is_suspended").eq("id", order.user_id).maybeSingle();
+    if (!customer || customer.reminders_opt_out || customer.is_suspended) continue;
+    const { data: items } = await adminClient.from("order_items").select("product_variants(products(id,name))").eq("order_id", order.id);
+    const products = ((items ?? []) as Record<string, unknown>[])
+      .map((i) => ((i.product_variants as Record<string, unknown> | null)?.products as Record<string, unknown> | null))
+      .filter(Boolean) as Record<string, unknown>[];
+    const { data: reviewed } = await adminClient.from("reviews").select("product_id").eq("user_id", order.user_id);
+    const done = new Set(((reviewed ?? []) as Record<string, unknown>[]).map((r) => Number(r.product_id)));
+    const todo = products.filter((p) => !done.has(Number(p.id)));
+    if (!todo.length) continue;
+    const first = todo[0];
+    await adminClient.from("notifications").insert({ user_id: order.user_id, message: `How is your ${first.name}? Rate it on your order #${order.id} page — it helps other shoppers in Rwanda choose.` });
+    await messageCustomer("review_request", { email: customer.email, phone: customer.phone }, `How is your ${first.name}?`,
+      `Thanks for shopping with Blue-Tech! How is your ${first.name}? A quick rating (photos welcome) helps other shoppers: ${SITE}/orders/${order.id}`);
+    sent++;
+  }
+  return sent;
+}
+
+async function runHourlyJob() {
+  const settings = { ...DEFAULT_AUTOMATION, ...(await jsonSetting("automation", DEFAULT_AUTOMATION)) };
+  const result: Record<string, number | string> = {};
+  const task = async (name: string, fn: () => Promise<number>) => {
+    try { result[name] = await fn(); } catch (e) {
+      result[name] = `failed: ${errorMessage(e, "unknown")}`;
+      await recordSiteError({ source: "server", message: `Hourly job · ${name}: ${errorMessage(e, "unknown")}`, stack: (e as Error)?.stack });
+    }
+  };
+  await task("cancelledUnpaid", () => cancelUnpaidOrders(settings.autoCancelUnpaidHours));
+  if (settings.cartReminders) await task("cartReminders", () => sendCartReminders(settings.cartReminderHours));
+  if (settings.reviewRequests) await task("reviewRequests", () => sendReviewRequests(settings.reviewRequestDays));
+  console.log("[cron] hourly:", JSON.stringify(result));
+  return result;
+}
+
 async function notifyUser(userId: string, message: string, orderId?: number | string) {
   await adminClient.from("notifications").insert({ user_id: userId, message });
   // Same update by email / SMS / WhatsApp, for whichever providers are configured.
@@ -3074,6 +3192,17 @@ async function handle(request: Request) {
     }
   }
 
+  // The hourly job, called by pg_cron with a shared secret (never by browsers).
+  if (method === "POST" && path === "/cron/hourly") {
+    const secret = Deno.env.get("CRON_SECRET") ?? "";
+    const given = request.headers.get("x-cron-secret") ?? "";
+    const a = new TextEncoder().encode(secret), b = new TextEncoder().encode(given);
+    let diff = a.length ^ b.length;
+    for (let i = 0; i < Math.min(a.length, b.length); i++) diff |= a[i] ^ b[i];
+    if (!secret || diff !== 0) return failure("Not allowed", 403, request);
+    return success("Hourly job done", await runHourlyJob(), request);
+  }
+
   // Crash reports from customers' browsers (8a). Public, rate-limited, never blocks the page.
   if (method === "POST" && path === "/client-errors") {
     await enforceRateLimit(rateLimiters?.chat, `ip:${clientIp(request)}`, request);
@@ -3347,6 +3476,12 @@ async function handle(request: Request) {
     return success("Category updated successfully", categoryResult(data));
   }
 
+  // Any change to the cart counts as activity, so reminders only go out for carts left alone.
+  if (path.startsWith("/cart") && method !== "GET") {
+    const { data: own } = await adminClient.from("carts").select("id").eq("user_id", user.id).maybeSingle();
+    if (own) await adminClient.from("carts").update({ updated_at: new Date().toISOString() }).eq("id", own.id);
+  }
+
   if (path === "/cart") {
     const cartId = await getOrCreateCartId(user.id);
     if (method === "GET") {
@@ -3535,7 +3670,29 @@ async function handle(request: Request) {
   if (method === "GET" && path === "/users/profile") {
     const { data, error } = await adminClient.from("users").select("*").eq("id", user.id).maybeSingle();
     if (error) return failure(error.message, 500);
-    return success("Profile fetched successfully", userResult(data) ?? { id: user.id, email: user.email });
+    const profile = userResult(data) ?? { id: user.id, email: user.email };
+    return success("Profile fetched successfully", { ...profile, remindersOptOut: data?.reminders_opt_out === true });
+  }
+
+  // The customer's own details (Account page) and their reminder preference.
+  if (method === "PUT" && path === "/users/profile") {
+    const body = await readJson(request);
+    const updates: Record<string, unknown> = {};
+    if (body.name !== undefined) {
+      const name = String(body.name).trim().slice(0, 80);
+      if (!name) return failure("Please enter your name", 400, request);
+      updates.name = name;
+    }
+    if (body.phone !== undefined) {
+      const phone = String(body.phone).trim();
+      if (phone && !/^\+?[0-9 ()-]{9,20}$/.test(phone)) return failure("Enter a valid phone number", 400, request);
+      updates.phone = phone || null;
+    }
+    if (body.remindersOptOut !== undefined) updates.reminders_opt_out = body.remindersOptOut === true;
+    if (!Object.keys(updates).length) return failure("Nothing to update", 400, request);
+    const { data, error } = await adminClient.from("users").update(updates).eq("id", user.id).select().maybeSingle();
+    if (error) return failure(error.message, 400, request);
+    return success("Profile updated", { ...userResult(data), remindersOptOut: data?.reminders_opt_out === true }, request);
   }
 
   if (path === "/users/addresses" || /^\/users\/addresses\/[^/]+/.test(path)) {
@@ -3608,6 +3765,19 @@ async function handle(request: Request) {
     if (error) return failure(error.message, 500, request);
     const orders = await Promise.all((data ?? []).map(orderResult));
     return success("Orders fetched successfully", orders, request);
+  }
+
+  // The customer confirms a shipped order arrived ("Confirm delivery" on the order page).
+  if (method === "PUT" && /^\/orders\/\d+\/deliver$/.test(path)) {
+    const orderId = path.split("/")[2];
+    const { data: order } = await adminClient.from("orders").select("id,status,user_id").eq("id", orderId).eq("user_id", user.id).maybeSingle();
+    if (!order) return failure("Order not found", 404, request);
+    if (String(order.status).toLowerCase() !== "shipped") return failure("Only an order that's on its way can be confirmed as delivered", 409, request);
+    const { error } = await adminClient.from("orders").update({ status: "delivered", delivered_at: new Date().toISOString() }).eq("id", orderId);
+    if (error) return failure(error.message, 400, request);
+    await adminClient.from("shipments").update({ status: "DELIVERED" }).eq("order_id", orderId);
+    await notifyAdmins(`Order #${orderId} delivered`, "The customer confirmed they received it.", { category: "order", href: "/admin/orders" });
+    return success("Thanks for confirming", null, request);
   }
 
   if (method === "GET" && /^\/orders\/[^/]+$/.test(path)) {
@@ -3748,9 +3918,13 @@ async function handle(request: Request) {
       const status = String(body.status ?? "").toLowerCase();
       const validStatuses = ["pending", "paid", "processing", "shipped", "delivered", "cancelled"];
       if (!validStatuses.includes(status)) return failure("Invalid status", 400, request);
-      const { data, error } = await adminClient.from("orders").update({ status }).eq("id", orderId).select().maybeSingle();
+      const now = new Date().toISOString();
+      const stamps = status === "delivered" ? { delivered_at: now } : status === "cancelled" ? { cancelled_at: now } : {};
+      const { data, error } = await adminClient.from("orders").update({ status, ...stamps }).eq("id", orderId).select().maybeSingle();
       if (error) return failure(error.message, 400, request);
       if (!data) return failure("Order not found", 404, request);
+      // A cancelled order gives its reserved stock back (once).
+      if (status === "cancelled") await releaseOrderStock(orderId);
       if (data.user_id) {
         await notifyUser(data.user_id as string, status === "delivered"
           ? `Your order #${orderId} has been marked as delivered! Click here to review your items.`

@@ -597,4 +597,9 @@ export default {
   'Complete your payment': 'Rangiza kwishyura',
   'This order is reserved for you but not paid yet. Pay with mobile money or card to confirm it.': 'Iri tegeko rirakubikiwe ariko ntiriraishyurwa. Ishyura na mobile money cyangwa ikarita kugira ngo ryemezwe.',
   'Payment received — thank you!': 'Twakiriye ubwishyu — murakoze!',
+  // ── Reminders ──
+  'Reminders turned on': 'Kwibutswa byafunguwe',
+  'Reminders turned off': 'Kwibutswa byafunzwe',
+  'Could not save your preference': 'Ntibyashobotse kubika ibyo wahisemo',
+  'Remind me about items left in my cart, and ask for my review after delivery': 'Unyibutse ibyo nasize mu gitebo, kandi unsabe igitekerezo nyuma yo kugezwaho',
 }
