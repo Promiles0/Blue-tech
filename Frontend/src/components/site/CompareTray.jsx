@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useT } from '../../lib/i18n'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { X, GitCompare } from 'lucide-react'
 import { useCompare, removeCompare, clearCompare, COMPARE_MAX } from '../../lib/compare'
 

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useLayoutEffect } from 'react'
-import { motion, cubicBezier, useScroll, useTransform, useReducedMotion, useInView } from 'framer-motion'
+import { m as motion, cubicBezier, useScroll, useTransform, useReducedMotion, useInView } from 'framer-motion'
 import { Play, VideoOff, ArrowRight, Sparkles } from 'lucide-react'
 import { openQuote } from '../../lib/quote'
 import { openLiveChat } from '../../lib/liveChat'

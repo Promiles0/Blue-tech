@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { motion, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
+import { m as motion, useMotionValue, useSpring, useReducedMotion } from 'framer-motion'
 import { useTheme } from '../../context/ThemeContext'
 
 const SIZE = 640

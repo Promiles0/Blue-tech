@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useT } from '../../lib/i18n'
 import { useQuery } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Laptop, Monitor, ArrowRight } from 'lucide-react'
 import apiService from '../../api/service'
 import { getProductImage, handleProductImageError } from '../../lib/productImage'

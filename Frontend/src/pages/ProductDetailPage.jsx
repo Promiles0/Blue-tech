@@ -21,7 +21,7 @@ import DeliveryEstimate from '../components/site/DeliveryEstimate'
 import BackInStockForm from '../components/site/BackInStockForm'
 import InstalmentsButton from '../components/site/InstalmentsButton'
 import { Breadcrumb, ProductActions, BuyInfo } from '../components/site/ProductExtras'
-import { usePageMeta } from '../hooks/usePageMeta'
+import { usePageMeta, productJsonLd, breadcrumbJsonLd } from '../hooks/usePageMeta'
 
 export default function ProductDetail() {
   const { t } = useT()
@@ -94,6 +94,16 @@ export default function ProductDetail() {
     title: product ? `${product.name} — ${formatPrice(product.price)} | Blue-Tech` : undefined,
     description: product ? (product.shortDescription || product.description || '').slice(0, 160) : undefined,
     ogImage: product ? (productImageList(product)[0] ?? undefined) : undefined,
+    path: `/products/${id}`,
+    ogType: 'product',
+    jsonLd: product ? [
+      productJsonLd(product, { reviews }),
+      breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        ...(product.categoryName ? [{ name: product.categoryName, path: `/category/${product.categoryName.toLowerCase().replace(/\s+/g, '-')}` }] : []),
+        { name: product.name, path: `/products/${id}` },
+      ]),
+    ] : undefined,
   })
 
   if (loading) return (

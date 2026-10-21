@@ -5,7 +5,7 @@
  */
 import { useRef, useEffect, useState } from 'react'
 import {
-  motion,
+  m as motion,
   useReducedMotion,
   useInView,
   useSpring,

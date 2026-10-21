@@ -11,6 +11,7 @@ import DepartmentShelves from '../components/site/DepartmentShelves'
 import { Reveal } from '../lib/motion'
 import apiService from '../api/service'
 import { openLiveChat } from '../lib/liveChat'
+import { usePageMeta, storeJsonLd, SITE_URL } from '../hooks/usePageMeta'
 
 const emptyFilters = { selected: {}, minPrice: '', maxPrice: '' }
 
@@ -31,6 +32,23 @@ const PAGE_SIZE = 12
 
 export default function Home() {
   const { t } = useT()
+  const [business, setBusiness] = useState(null)
+  useEffect(() => {
+    apiService.settings.get().then(({ data }) => setBusiness(data?.businessInfo ?? null)).catch(() => {})
+  }, [])
+  usePageMeta({
+    title: 'Blue-Tech — Laptops, Computers & Interactive Screens in Rwanda',
+    description: 'Laptops, desktops, printers, monitors and interactive screens in Kigali, delivered across Rwanda. Warranty on every product; pay with MTN MoMo, Airtel Money or card.',
+    ogImage: `${SITE_URL}/icon-512.png`,
+    path: '/',
+    jsonLd: [
+      storeJsonLd(business ?? {}),
+      {
+        '@context': 'https://schema.org', '@type': 'WebSite', name: 'Blue-Tech', url: SITE_URL,
+        potentialAction: { '@type': 'SearchAction', target: `${SITE_URL}/search?q={search_term_string}`, 'query-input': 'required name=search_term_string' },
+      },
+    ],
+  })
   const [pool,    setPool]    = useState([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState(emptyFilters)

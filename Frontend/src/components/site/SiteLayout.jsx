@@ -1,5 +1,6 @@
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
+import { m as motion, useReducedMotion } from 'framer-motion'
 import { Toaster } from 'sonner'
 import { useTheme } from '../../context/ThemeContext'
 import ScrollProgress   from './ScrollProgress'
@@ -8,17 +9,48 @@ import MarqueeStrip     from './MarqueeStrip'
 import Header           from '../Header'
 import Footer           from '../Footer'
 import NewsletterBand   from './NewsletterBand'
-import CartDrawer       from './CartDrawer'
-import CommandPalette   from './CommandPalette'
 import MobileNav        from './MobileNav'
-import ProductQuickView from './ProductQuickView'
-import ChatWidget       from './ChatWidget'
+import { useUI } from '../../context/UIContext'
+import { onLiveChatRequested } from '../../lib/liveChat'
+
+// Overlays download the first time they're needed, not with every page.
+const CartDrawer       = lazy(() => import('./CartDrawer'))
+const CommandPalette   = lazy(() => import('./CommandPalette'))
+const ProductQuickView = lazy(() => import('./ProductQuickView'))
+const ChatWidget       = lazy(() => import('./ChatWidget'))
+
+// Becomes true the first time `on` is true and stays true (so closing animations still play).
+function useOnceTrue(on) {
+  const [seen, setSeen] = useState(on)
+  if (on && !seen) setSeen(true)
+  return seen || on
+}
 import CompareTray      from './CompareTray'
 
 export default function SiteLayout({ children }) {
   const location = useLocation()
   const reduce   = useReducedMotion()
   const { theme } = useTheme()
+  const { cartOpen, paletteOpen, setPaletteOpen, quickViewProduct } = useUI()
+  const showCart = useOnceTrue(cartOpen)
+  const showPalette = useOnceTrue(paletteOpen)
+  const showQuickView = useOnceTrue(Boolean(quickViewProduct))
+
+  // Blue's launcher appears once the page has settled, or at once if something asks for it.
+  const [chatReady, setChatReady] = useState(false)
+  useEffect(() => {
+    const ready = () => setChatReady(true)
+    const idle = window.requestIdleCallback ? window.requestIdleCallback(ready, { timeout: 2500 }) : setTimeout(ready, 1500)
+    const off = onLiveChatRequested(ready)
+    return () => { off(); window.cancelIdleCallback ? window.cancelIdleCallback(idle) : clearTimeout(idle) }
+  }, [])
+
+  // Ctrl/⌘+K opens search even before the palette's code has loaded.
+  useEffect(() => {
+    const onKey = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setPaletteOpen(o => !o) } }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [setPaletteOpen])
 
   return (
     <>
@@ -51,11 +83,13 @@ export default function SiteLayout({ children }) {
       </div>
 
       {/* Portals / overlays */}
-      <CartDrawer />
-      <CommandPalette />
+      <Suspense fallback={null}>
+        {showCart && <CartDrawer />}
+        {showPalette && <CommandPalette />}
+        {showQuickView && <ProductQuickView />}
+        {chatReady && <ChatWidget />}
+      </Suspense>
       <MobileNav />
-      <ProductQuickView />
-      <ChatWidget />
       <CompareTray />
 
       <Toaster

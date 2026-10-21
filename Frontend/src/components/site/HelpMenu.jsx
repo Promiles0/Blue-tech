@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useT } from '../../lib/i18n'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { LifeBuoy, Mail } from 'lucide-react'
 import { HELP_LINKS, SUPPORT_EMAIL } from '../../lib/helpLinks'
 import { useDropdownMenu, DROPDOWN_MOTION_PROPS } from '../../lib/useDropdownMenu'

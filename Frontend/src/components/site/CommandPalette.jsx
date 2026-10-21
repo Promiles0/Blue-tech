@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { Search, ArrowRight, TrendingUp } from 'lucide-react'
 import { useUI } from '../../context/UIContext'
 import { useQuery } from '@tanstack/react-query'
@@ -30,7 +30,7 @@ export default function CommandPalette() {
   // Global keyboard shortcut
   useEffect(() => {
     const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setPaletteOpen(o => !o) }
+      // Ctrl/⌘+K is handled in SiteLayout, which works before this palette has loaded.
       if (e.key === 'Escape') setPaletteOpen(false)
     }
     window.addEventListener('keydown', onKey)
@@ -115,7 +115,8 @@ export default function CommandPalette() {
             transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
             style={{
               position: 'fixed',
-              top: 80, left: '50%', transform: 'translateX(-50%)',
+              // `x` rather than a CSS transform: framer-motion owns transform while it animates y/scale.
+              top: 80, left: '50%', x: '-50%',
               width: 'min(580px, calc(100vw - 32px))',
               background: 'var(--bg)',
               border: '1px solid var(--border)',

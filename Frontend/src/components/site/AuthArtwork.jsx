@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import Logo from './Logo'
 
 const ORB_VARIANTS = [
@@ -30,7 +30,8 @@ export default function AuthArtwork() {
             left: orb.x, top: orb.y,
             background: orb.color,
             borderRadius: '50%',
-            transform: 'translate(-50%, -50%)',
+            // Centred with margins: framer-motion's x/y animation would replace a CSS transform.
+            marginLeft: -orb.size / 2, marginTop: -orb.size / 2,
             filter: 'blur(2px)',
           }}
           animate={{ x: [0, 30, -20, 0], y: [0, -25, 15, 0] }}

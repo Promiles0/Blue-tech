@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { CalendarClock, X, Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'

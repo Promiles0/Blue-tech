@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { Bell, X, Inbox, ArrowRight } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { useNotifications } from '../../context/NotificationContext'
 
 const SEV_COLOR = {

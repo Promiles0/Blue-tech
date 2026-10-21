@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useT } from '../../lib/i18n'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { X, FileDown, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'

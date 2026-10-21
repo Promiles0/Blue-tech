@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ command }) => ({
+  // Build stamp sent with error reports, so Admin → Site errors shows which release crashed.
+  define: { __APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16)) },
   build: {
     outDir: 'dist'
   },

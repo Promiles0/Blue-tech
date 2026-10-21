@@ -2940,6 +2940,19 @@ async function handle(request: Request) {
     }
   }
 
+  // Crash reports from customers' browsers (8a). Public, rate-limited, never blocks the page.
+  if (method === "POST" && path === "/client-errors") {
+    await enforceRateLimit(rateLimiters?.chat, `ip:${clientIp(request)}`, request);
+    const body = await readJson(request);
+    const message = String(body.message ?? "").trim();
+    if (!message) return failure("Message required", 400, request);
+    await recordSiteError({
+      source: "client", message, stack: String(body.stack ?? ""), url: String(body.url ?? ""),
+      userAgent: request.headers.get("User-Agent") ?? "", release: String(body.release ?? ""),
+    });
+    return success("Reported", null, request);
+  }
+
   // 👍/👎 on one of Blue's answers. Only the chat session that got the answer can rate it.
   if (method === "POST" && path === "/chat/feedback") {
     await enforceRateLimit(rateLimiters?.chat, `ip:${clientIp(request)}`, request);
@@ -3888,6 +3901,24 @@ async function handle(request: Request) {
     }, request);
   }
 
+  if (method === "GET" && path === "/admin/errors") {
+    await requireAdmin(request, user);
+    const { data, error } = await adminClient.from("client_errors").select("*").order("status", { ascending: true }).order("last_seen", { ascending: false }).limit(200);
+    if (error) return failure(error.message, 500, request);
+    return success("Site errors", (data ?? []).map((r) => ({
+      id: r.id, source: r.source, message: r.message, stack: r.stack, url: r.url, userAgent: r.user_agent, release: r.release,
+      count: r.count, status: r.status, firstSeen: r.first_seen, lastSeen: r.last_seen,
+    })), request);
+  }
+
+  if (method === "POST" && /^\/admin\/errors\/\d+\/(fixed|open)$/.test(path)) {
+    await requireAdmin(request, user);
+    const [, , , id, status] = path.split("/");
+    const { error } = await adminClient.from("client_errors").update({ status }).eq("id", Number(id));
+    if (error) return failure(error.message, 500, request);
+    return success(status === "fixed" ? "Marked fixed" : "Reopened", null, request);
+  }
+
   if (method === "GET" && path === "/admin/chat/providers") {
     await requireAdmin(request, user);
     const [statuses, { data: recent }] = await Promise.all([
@@ -4284,6 +4315,49 @@ async function recordAudit(request: Request, body: Record<string, unknown>, ip: 
 
 const AUDITED_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+// ── Site errors (8a) ──
+// One row per distinct bug: the fingerprint ignores numbers and the hashes in bundle file
+// names, so the same crash after a redeploy still counts as the same error.
+async function errorFingerprint(source: string, message: string, stack: string) {
+  const frame = (stack.split("\n").find((l) => /\.(js|jsx|ts)/.test(l)) ?? "")
+    .replace(/-[A-Za-z0-9_]{8}\.js/g, ".js").replace(/:\d+(:\d+)?/g, "").replace(/https?:\/\/[^/]+/g, "").trim();
+  const text = `${source}|${message.replace(/\d+/g, "#").slice(0, 300)}|${frame.slice(0, 200)}`;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest)).slice(0, 16).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function recordSiteError(e: { source: "client" | "server"; message: string; stack?: string; url?: string; userAgent?: string; release?: string }) {
+  try {
+    const message = String(e.message || "Unknown error").slice(0, 500);
+    const stack = String(e.stack ?? "").slice(0, 4000);
+    const fingerprint = await errorFingerprint(e.source, message, stack);
+    const now = new Date().toISOString();
+    const { data: existing } = await adminClient.from("client_errors").select("id,count,status").eq("fingerprint", fingerprint).maybeSingle();
+    if (existing) {
+      await adminClient.from("client_errors").update({
+        count: toNumber(existing.count) + 1, last_seen: now, status: "open",
+        url: e.url?.slice(0, 500) ?? null, user_agent: e.userAgent?.slice(0, 300) ?? null, release: e.release?.slice(0, 40) ?? null,
+      }).eq("id", existing.id);
+      // A bug you marked fixed that comes back is news; a known open one is not.
+      if (existing.status !== "fixed") return;
+    } else {
+      await adminClient.from("client_errors").insert({
+        fingerprint, source: e.source, message, stack: stack || null, url: e.url?.slice(0, 500) ?? null,
+        user_agent: e.userAgent?.slice(0, 300) ?? null, release: e.release?.slice(0, 40) ?? null,
+      });
+    }
+    // At most 5 error alerts an hour, however bad things get.
+    const { count } = await adminClient.from("admin_notifications").select("id", { count: "exact", head: true })
+      .like("title", "Site error%").gte("created_at", new Date(Date.now() - 3600_000).toISOString());
+    if ((count ?? 0) >= 5) return;
+    await notifyAdmins(`Site error${existing ? " (came back)" : ""} — ${e.source === "server" ? "server" : "customer's browser"}`,
+      `${message.slice(0, 160)}${e.url ? ` · on ${e.url.replace(/^https?:\/\/[^/]+/, "").slice(0, 80)}` : ""}`,
+      { severity: "warning", category: "system", href: "/admin/errors" });
+  } catch (err) {
+    console.error("recordSiteError failed:", err);
+  }
+}
+
 Deno.serve(async (request) => {
   // Read a copy of the JSON body up front so the audit can describe the change afterwards.
   let auditBody: Record<string, unknown> | null = null;
@@ -4298,6 +4372,10 @@ Deno.serve(async (request) => {
   catch (error) {
     if (error instanceof Response) return withCors(error, request);
     console.error(error);
+    await recordSiteError({
+      source: "server", message: `${request.method} ${new URL(request.url).pathname.replace(/^\/(functions\/v1\/)?api/, "")}: ${errorMessage(error, "Unexpected server error")}`,
+      stack: (error as Error)?.stack, url: new URL(request.url).pathname,
+    });
     return failure("Unexpected server error", 500, request);
   }
 });

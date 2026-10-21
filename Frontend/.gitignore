@@ -25,3 +25,5 @@ dist-ssr
 .env
 Frontend/.env
 Backend/.env
+# Generated at build time by scripts/generate-sitemap.mjs
+public/sitemap.xml

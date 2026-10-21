@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useT } from '../lib/i18n'
 import { Link } from 'react-router-dom'
 import { Package, Search, ChevronRight, ShoppingBag, Clock, Loader2, SendHorizonal, BadgeCheck, Undo2, X } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import apiService from '../api/service'
 import { getProductImage, handleProductImageError } from '../lib/productImage'
 

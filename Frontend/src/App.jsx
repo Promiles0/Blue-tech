@@ -1,3 +1,4 @@
+import { LazyMotion } from 'framer-motion'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Link, Navigate } from 'react-router-dom'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { LayoutDashboard } from 'lucide-react'
@@ -42,6 +43,7 @@ const AdminReviews = lazy(() => import('./pages/admin/AdminReviews'))
 const AdminQuoteRequests = lazy(() => import('./pages/admin/AdminQuoteRequests'))
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'))
 const AdminAudit = lazy(() => import('./pages/admin/AdminAudit'))
+const AdminErrors = lazy(() => import('./pages/admin/AdminErrors'))
 const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
 const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'))
 const AdminHeroSlides = lazy(() => import('./pages/admin/AdminHeroSlides'))
@@ -59,8 +61,8 @@ function PageFallback() {
   )
 }
 import HomePage            from './pages/HomePage'
-import ProductsPage        from './pages/ProductsPage'
-import ProductDetailPage   from './pages/ProductDetailPage'
+const ProductsPage = lazy(() => import('./pages/ProductsPage'))
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'))
 import NotFoundPage           from './pages/NotFoundPage'
 
 const queryClient = new QueryClient({
@@ -108,8 +110,11 @@ function SplashGate({ children }) {
   )
 }
 
+const loadMotionFeatures = () => import('./lib/motionFeatures').then(r => r.default)
+
 export default function App() {
   return (
+    <LazyMotion features={loadMotionFeatures}>
     <ThemeProvider>
       <LanguageProvider>
       <CurrencyProvider>
@@ -140,6 +145,7 @@ export default function App() {
       </CurrencyProvider>
     </LanguageProvider>
     </ThemeProvider>
+    </LazyMotion>
   )
 }
 
@@ -184,6 +190,7 @@ function AdminSection() {
         <Route path="hero-slides"  element={<AdminOnly><AdminHeroSlides /></AdminOnly>} />
         <Route path="analytics"    element={<AdminOnly><AdminAnalytics /></AdminOnly>} />
         <Route path="audit"          element={<AdminOnly><AdminAudit /></AdminOnly>} />
+        <Route path="errors"         element={<AdminOnly><AdminErrors /></AdminOnly>} />
         <Route path="notifications"  element={<AdminNotifications />} />
         <Route path="settings"       element={<AdminOnly><AdminSettings /></AdminOnly>} />
         <Route path="blue"           element={<AdminOnly><AdminBlue /></AdminOnly>} />

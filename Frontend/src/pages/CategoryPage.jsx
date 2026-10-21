@@ -4,12 +4,19 @@ import { ArrowLeft } from 'lucide-react'
 import { Reveal } from '../lib/motion'
 import ProductCard from '../components/ProductCard'
 import api from '../api/axios'
+import { usePageMeta, breadcrumbJsonLd } from '../hooks/usePageMeta'
 
 export default function CategoryPage() {
   const { slug }                    = useParams()
   const [category, setCategory]     = useState(null)
   const [products, setProducts]     = useState([])
   const [loading, setLoading]       = useState(true)
+  usePageMeta({
+    title: category ? `${category.name} in Rwanda — prices and delivery | Blue-Tech` : undefined,
+    description: category ? `Buy ${category.name.toLowerCase()} at Blue-Tech Kigali. Prices in RWF, warranty on every product, delivery across Rwanda.` : undefined,
+    path: `/category/${slug}`,
+    jsonLd: category ? breadcrumbJsonLd([{ name: 'Home', path: '/' }, { name: category.name, path: `/category/${slug}` }]) : undefined,
+  })
   const [totalPages, setTotalPages] = useState(1)
   const [page, setPage]             = useState(0)
 

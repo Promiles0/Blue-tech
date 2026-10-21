@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useT } from '../../lib/i18n'
 import { Link, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, m as motion, useReducedMotion } from 'framer-motion'
 import { X, ArrowUp, RotateCcw, MessageCircle, Mail, FileText, ThumbsUp, ThumbsDown, RefreshCw, ImageOff, ShoppingCart, Check, Package, LogIn } from 'lucide-react'
 import apiService from '../../api/service'
 import { useCurrency } from '../../context/CurrencyContext'

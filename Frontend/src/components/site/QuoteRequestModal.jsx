@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import apiService from '../../api/service'
 import { SUPPORT_EMAIL } from '../../lib/helpLinks'

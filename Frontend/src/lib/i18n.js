@@ -1,7 +1,5 @@
 import { createContext, useContext } from 'react'
 import en from '../locales/en'
-import rw from '../locales/rw'
-import fr from '../locales/fr'
 
 // Storefront translations: English (source), Kinyarwanda, French. A missing key falls back
 // to English, then to the key itself, so a page never shows a blank. The admin dashboard
@@ -11,7 +9,19 @@ export const LANGUAGES = [
   { code: 'rw', label: 'Ikinyarwanda', short: 'RW' },
   { code: 'fr', label: 'Français', short: 'FR' },
 ]
-export const DICTS = { en, rw, fr }
+// English ships with the app; Kinyarwanda and French download only for people who use them.
+const LOADERS = {
+  rw: () => import('../locales/rw'),
+  fr: () => import('../locales/fr'),
+}
+export const SUPPORTED = ['en', 'rw', 'fr']
+export const DICTS = { en }
+
+// Resolves once the dictionary is ready (instantly for English or one already loaded).
+export function loadDict(code) {
+  if (DICTS[code] || !LOADERS[code]) return Promise.resolve()
+  return LOADERS[code]().then((mod) => { DICTS[code] = mod.default }).catch(() => { /* stay in English */ })
+}
 export const LANG_KEY = 'bt-lang'
 // Locale for Intl dates/numbers; browsers without rw-RW data fall back gracefully.
 export const INTL_LOCALE = { en: 'en-GB', rw: 'rw-RW', fr: 'fr-FR' }
@@ -25,10 +35,10 @@ export function translate(lang, key, vars) {
 export function initialLang() {
   try {
     const saved = localStorage.getItem(LANG_KEY)
-    if (DICTS[saved]) return saved
+    if (SUPPORTED.includes(saved)) return saved
   } catch { /* storage blocked */ }
   const nav = (typeof navigator !== 'undefined' && navigator.language || '').slice(0, 2)
-  return DICTS[nav] ? nav : 'en'
+  return SUPPORTED.includes(nav) ? nav : 'en'
 }
 
 export const I18nContext = createContext(null)

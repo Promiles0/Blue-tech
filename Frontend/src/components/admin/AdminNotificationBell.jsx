@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react' // useRef used for prevCountRef + popoverRef
 import { Bell, X, Inbox } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { useNotifications } from '../../context/NotificationContext'
 import api from '../../api/axios'
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { m as motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { GraduationCap, Building2 } from 'lucide-react'
 
 // Real photography, dropped into src/assets/interactive-screens/education.* and

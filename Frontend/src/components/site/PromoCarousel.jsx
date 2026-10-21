@@ -1,6 +1,6 @@
 import { useLayoutEffect, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
+import { m as motion, useReducedMotion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { PROMO_SLIDES } from '../../lib/promoSlides'
 import apiService from '../../api/service'

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { useT } from '../../lib/i18n'
 import { Link, useNavigate } from 'react-router-dom'
 import { X, Search, User, LogOut, Heart, GitCompare, HelpCircle, Sparkles, Moon, Sun, Download } from 'lucide-react'

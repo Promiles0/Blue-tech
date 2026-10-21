@@ -4,10 +4,11 @@ import { useSearchParams } from 'react-router-dom'
 import NoResultsHelp from '../components/site/NoResultsHelp'
 import { useQuery } from '@tanstack/react-query'
 import { Search, SlidersHorizontal, ChevronDown, X } from 'lucide-react'
-import { motion, LayoutGroup } from 'framer-motion'
+import { m as motion, LayoutGroup } from 'framer-motion'
 import ProductCard from '../components/ProductCard'
 import { Reveal } from '../lib/motion'
 import apiService from '../api/service'
+import { usePageMeta } from '../hooks/usePageMeta'
 
 const PRODUCTS_PER_PAGE = 8
 const SORT_OPTIONS = [
@@ -19,6 +20,11 @@ const SORT_OPTIONS = [
 
 export default function Products() {
   const { t } = useT()
+  usePageMeta({
+    title: 'Shop laptops, printers, monitors and more in Rwanda | Blue-Tech',
+    description: 'Browse every product at Blue-Tech Kigali: laptops, desktops, printers, monitors, networking and accessories, with prices in RWF and delivery across Rwanda.',
+    path: '/products',
+  })
   const [searchParams, setSearchParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [loading, setLoading]   = useState(true)

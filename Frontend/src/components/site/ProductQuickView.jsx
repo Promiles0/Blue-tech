@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useT } from '../../lib/i18n'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { X, ShoppingBag, Heart, Truck, Plus, Minus, ArrowRight, Check, MessageCircle } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { cartSnapshot } from '../../lib/cartSnapshot'
@@ -68,6 +68,14 @@ export default function ProductQuickView() {
   }
 
   const close = () => setQuickViewProduct(null)
+
+  // Escape closes it, like the other overlays.
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e) => { if (e.key === 'Escape') setQuickViewProduct(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, setQuickViewProduct])
 
   const images = productImageList(product ?? quickViewProduct).map(imageUrl => ({ imageUrl }))
 

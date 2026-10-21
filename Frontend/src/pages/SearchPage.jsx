@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
+import { usePageMeta } from '../hooks/usePageMeta'
 import { useT } from '../lib/i18n'
 import { useSearchParams, Link } from 'react-router-dom'
 import { Search, Clock, X, ArrowRight } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { Reveal } from '../lib/motion'
 import ProductCard from '../components/ProductCard'
 import NoResultsHelp from '../components/site/NoResultsHelp'
@@ -30,6 +31,7 @@ export default function SearchPage() {
   const [total, setTotal]               = useState(0)
   const [recent, setRecent]             = useState(getRecent)
   const query = searchParams.get('q') ?? ''
+  usePageMeta({ title: query ? `Search: ${query} | Blue-Tech` : 'Search | Blue-Tech', robots: 'noindex, follow', path: '/search' })
 
   const doSearch = useCallback((q) => {
     if (!q.trim()) { setProducts([]); setTotal(0); return }

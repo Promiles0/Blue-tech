@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "check:api": "node scripts/check-api-calls.mjs",
-    "prebuild": "node scripts/check-api-calls.mjs"
+    "prebuild": "node scripts/check-api-calls.mjs && node scripts/generate-sitemap.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.8.0",

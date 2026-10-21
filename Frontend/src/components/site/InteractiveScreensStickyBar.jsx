@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import { openQuote } from '../../lib/quote'
 import { openLiveChat } from '../../lib/liveChat'

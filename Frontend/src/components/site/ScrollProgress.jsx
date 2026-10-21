@@ -1,4 +1,4 @@
-import { motion, useScroll, useSpring, useReducedMotion } from 'framer-motion'
+import { m as motion, useScroll, useSpring, useReducedMotion } from 'framer-motion'
 
 export default function ScrollProgress() {
   const reduce = useReducedMotion()

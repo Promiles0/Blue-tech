@@ -1,0 +1,15 @@
+# Blue-Tech — let search engines index the shop, but not private or transactional pages.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /checkout
+Disallow: /cart
+Disallow: /account
+Disallow: /orders
+Disallow: /wishlist
+Disallow: /notifications
+Disallow: /login
+Disallow: /register
+Disallow: /search
+
+Sitemap: https://blue-tech.onrender.com/sitemap.xml
