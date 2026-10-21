@@ -655,9 +655,10 @@ async function getAdminDashboardStats() {
     return at && at >= minus60d && at < minus30d;
   });
   const revenuePrev30d = prev30dRows.reduce((sum, order) => sum + toNumber(order.total_amount), 0);
-  const [newQuotes, newReviews7d] = await Promise.all([
+  const [newQuotes, newReviews7d, newServiceRequests] = await Promise.all([
     tableCount("quote_requests", (query) => query.eq("status", "new")),
     tableCount("reviews", (query) => query.gte("created_at", minus7d.toISOString())),
+    tableCount("service_requests", (query) => query.eq("status", "new")),
   ]);
 
   return {
@@ -676,6 +677,7 @@ async function getAdminDashboardStats() {
     toShip: (ordersByStatus.PAID ?? 0) + (ordersByStatus.PROCESSING ?? 0),
     newQuotes,
     newReviews7d,
+    newServiceRequests,
     revenuePrev30d,
     ordersPrev30d: prev30dRows.length,
     newCustomers24h,
@@ -1030,6 +1032,56 @@ async function restoreVariantStock(variantId: number, quantity: number) {
   const { data: variant } = await adminClient.from("product_variants").select("stock_quantity").eq("id", variantId).maybeSingle();
   const current = toNumber(variant?.stock_quantity);
   await adminClient.from("product_variants").update({ stock_quantity: current + quantity }).eq("id", variantId);
+}
+
+// ── Returns and warranty claims (round 3: 5b, 5c) ──
+const RETURN_DAYS = 30;
+const SERVICE_STATUSES = ["new", "approved", "received", "repaired", "replaced", "refunded", "rejected", "closed"];
+
+// "6 months", "1 year", "12 Months" → months; null when the text says nothing usable.
+function warrantyMonths(text: unknown) {
+  const m = String(text ?? "").match(/(\d+)\s*(months?|mo\b|years?|yrs?)/i);
+  if (!m) return null;
+  return /^y/i.test(m[2]) ? Number(m[1]) * 12 : Number(m[1]);
+}
+
+// Short-lived links to private claim photos, for the customer and for staff.
+async function signedPhotoUrls(paths: string[]) {
+  if (!paths?.length) return [];
+  const { data } = await adminClient.storage.from("service-photos").createSignedUrls(paths, 3600);
+  return ((data ?? []) as { signedUrl?: string }[]).map((d) => d.signedUrl).filter(Boolean) as string[];
+}
+
+async function serviceRequestResult(r: Record<string, unknown>, admin = false) {
+  return {
+    id: r.id, orderId: r.order_id, productId: r.product_id, productName: r.product_name, quantity: r.quantity,
+    type: r.type, reason: r.reason, details: r.details, status: r.status, customerMessage: r.customer_message,
+    refundAmount: r.refund_amount, refundMethod: r.refund_method, createdAt: r.created_at, updatedAt: r.updated_at,
+    photos: await signedPhotoUrls((r.photos as string[]) ?? []),
+    history: ((r.history as Record<string, unknown>[]) ?? []).map((h) => admin ? h : { at: h.at, status: h.status, message: h.message }),
+    ...(admin ? {
+      restocked: r.restocked, userId: r.user_id,
+      customer: (r.users as Record<string, unknown> | null) ? { name: (r.users as Record<string, unknown>).name, email: (r.users as Record<string, unknown>).email, phone: (r.users as Record<string, unknown>).phone } : null,
+    } : {}),
+  };
+}
+
+// What the customer is told when staff move a request on (staff can write their own instead).
+function serviceMessage(status: string, r: Record<string, unknown>, address: string, amount?: number, method?: string) {
+  const what = String(r.product_name ?? "your item");
+  const bring = `please bring it to our shop at ${address}, or reply on WhatsApp and we'll arrange collection in Kigali`;
+  switch (status) {
+    case "approved": return r.type === "return"
+      ? `Your return for ${what} (order #${r.order_id}) is approved — ${bring}.`
+      : `Your warranty claim for ${what} (order #${r.order_id}) is approved — ${bring}. Include the charger and accessories if it has them.`;
+    case "received": return `We've received your ${what} and are checking it. We'll update you soon.`;
+    case "repaired": return `Good news: your ${what} has been repaired and is ready.`;
+    case "replaced": return `We're replacing your ${what}. We'll let you know when the replacement is ready.`;
+    case "refunded": return `Your refund${amount ? ` of ${Math.round(amount).toLocaleString("en-US")} RWF` : ""} for ${what} has been sent${method ? ` by ${method}` : ""}.`;
+    case "rejected": return `We couldn't accept your request for ${what}.`;
+    case "closed": return `Your request for ${what} is now closed. Thank you for your patience.`;
+    default: return "";
+  }
 }
 
 // ── Honest signals and "Pairs well with" (round 2: 3e, 2d) ──
@@ -1857,6 +1909,7 @@ async function orderResult(order: Record<string, unknown>) {
     status: statusKey(order.status),
     paymentStatus: derivedPaymentStatus(order.status),
     createdAt: order.created_at,
+    deliveredAt: order.delivered_at ?? null,
     shippingStreet: order.order_address_street,
     shippingCity: order.order_address_city,
     shippingCountry: order.order_address_country,
@@ -3796,6 +3849,76 @@ async function handle(request: Request) {
     return success("Student request received", { ok: true }, request);
   }
 
+  // ── Returns and warranty claims: customer side ──
+  if (method === "POST" && path === "/service-requests/photos") {
+    await enforceRateLimit(rateLimiters?.proforma, `user:${user.id}`, request);
+    const formData = await request.formData();
+    const file = formData.get("file");
+    if (!(file instanceof File)) return failure("A photo is required", 400, request);
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return failure("Use a JPG, PNG or WebP photo", 400, request);
+    if (file.size > 3 * 1024 * 1024) return failure("Photo must be 3 MB or smaller", 400, request);
+    const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error: uploadError } = await adminClient.storage.from("service-photos").upload(filePath, file, { contentType: file.type, upsert: false });
+    if (uploadError) return failure(uploadError.message, 500, request);
+    const [url] = await signedPhotoUrls([filePath]);
+    return success("Photo uploaded", { url, path: filePath }, request);
+  }
+
+  if (method === "GET" && path === "/service-requests") {
+    let query = adminClient.from("service_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(100);
+    const orderId = url.searchParams.get("orderId");
+    if (orderId) query = query.eq("order_id", orderId);
+    const { data, error } = await query;
+    if (error) return failure(error.message, 500, request);
+    return success("Requests", await Promise.all(((data ?? []) as Record<string, unknown>[]).map((r) => serviceRequestResult(r))), request);
+  }
+
+  if (method === "POST" && path === "/service-requests") {
+    await enforceRateLimit(rateLimiters?.proforma, `user:${user.id}`, request);
+    const body = await readJson(request);
+    const type = String(body.type ?? "");
+    if (!["return", "warranty"].includes(type)) return failure("Choose a return or a warranty claim", 400, request);
+    const reason = String(body.reason ?? "").trim().slice(0, 80);
+    if (!reason) return failure("Please choose a reason", 400, request);
+    const details = String(body.details ?? "").trim().slice(0, 2000);
+    const photos = (Array.isArray(body.photos) ? body.photos : []).map(String)
+      .filter((p: string) => p.startsWith(`${user.id}/`) && /^[\w-]+\/[\w-]+\.(jpg|png|webp)$/.test(p)).slice(0, 3);
+
+    const { data: order } = await adminClient.from("orders").select("id,user_id,status,delivered_at,created_at").eq("id", Number(body.orderId)).eq("user_id", user.id).maybeSingle();
+    if (!order) return failure("Order not found", 404, request);
+    if (String(order.status).toLowerCase() !== "delivered") return failure("You can ask once the order has been delivered", 409, request);
+    const { data: items } = await adminClient.from("order_items").select("variant_id,quantity,product_variants(id,product_id,products(id,name,warranty))").eq("order_id", order.id);
+    const item = ((items ?? []) as Record<string, unknown>[]).find((i) => Number(((i.product_variants as Record<string, unknown>)?.product_id)) === Number(body.productId));
+    if (!item) return failure("That item isn't in this order", 400, request);
+    const product = ((item.product_variants as Record<string, unknown>).products ?? {}) as Record<string, unknown>;
+    const deliveredAt = new Date(String(order.delivered_at ?? order.created_at)).getTime();
+    const days = (Date.now() - deliveredAt) / 86400_000;
+
+    if (type === "return") {
+      if (days > RETURN_DAYS) return failure(`Returns are possible within ${RETURN_DAYS} days of delivery. For a fault, choose a warranty claim instead.`, 409, request);
+      if (body.unusedConfirmed !== true) return failure("Please confirm the item is unused and in its original packaging", 400, request);
+    } else {
+      const months = warrantyMonths(product.warranty);
+      if (months !== null && days > months * 30.5) return failure(`This product's ${months}-month warranty has ended. Our team can still help on WhatsApp.`, 409, request);
+    }
+    const { data: open } = await adminClient.from("service_requests").select("id").eq("order_id", order.id).eq("product_id", product.id)
+      .eq("type", type).not("status", "in", "(rejected,closed,refunded,repaired,replaced)").limit(1);
+    if (open?.length) return failure("You already have an open request for this item — we'll update you on it", 409, request);
+
+    const quantity = Math.min(Math.max(1, Math.round(Number(body.quantity ?? 1))), toNumber(item.quantity) || 1);
+    const now = new Date().toISOString();
+    const { data: created, error } = await adminClient.from("service_requests").insert({
+      user_id: user.id, order_id: order.id, product_id: product.id, variant_id: item.variant_id, product_name: product.name, quantity,
+      type, reason, details: details || null, photos, history: [{ at: now, status: "new", by: "customer", message: reason }],
+    }).select().single();
+    if (error) return failure(error.message, 400, request);
+    await notifyAdmins(`${type === "return" ? "Return request" : "Warranty claim"} — ${product.name}`, `Order #${order.id} · ${reason}${details ? ` · ${details.slice(0, 120)}` : ""}`,
+      { severity: "warning", category: "order", href: "/admin/service-requests" });
+    await adminClient.from("notifications").insert({ user_id: user.id, message: `We've received your ${type === "return" ? "return request" : "warranty claim"} for ${product.name}. We'll reply within one working day.` });
+    return success("Request sent", await serviceRequestResult(created), request);
+  }
+
   if (method === "POST" && path === "/reviews/photos") {
     await enforceRateLimit(rateLimiters?.proforma, `user:${user.id}`, request);
     const formData = await request.formData();
@@ -4430,6 +4553,55 @@ async function handle(request: Request) {
       }
       return success("Shipment updated", adminShipmentResult(data), request);
     }
+  }
+
+  // ── Returns and warranty claims: staff side ──
+  if (method === "GET" && path === "/admin/service-requests") {
+    await requireStaff(request, user);
+    let query = adminClient.from("service_requests").select("*, users(name,email,phone)").order("created_at", { ascending: false }).limit(300);
+    const status = url.searchParams.get("status");
+    if (status === "open") query = query.not("status", "in", "(rejected,closed,refunded,repaired,replaced)");
+    else if (status && SERVICE_STATUSES.includes(status)) query = query.eq("status", status);
+    const { data, error } = await query;
+    if (error) return failure(error.message, 500, request);
+    return success("Requests", await Promise.all(((data ?? []) as Record<string, unknown>[]).map((r) => serviceRequestResult(r, true))), request);
+  }
+
+  if (method === "PATCH" && /^\/admin\/service-requests\/\d+$/.test(path)) {
+    await requireStaff(request, user);
+    const id = Number(path.split("/").pop());
+    const body = await readJson(request);
+    const { data: r } = await adminClient.from("service_requests").select("*").eq("id", id).maybeSingle();
+    if (!r) return failure("Request not found", 404, request);
+    const status = String(body.status ?? r.status);
+    if (!SERVICE_STATUSES.includes(status)) return failure("Invalid status", 400, request);
+    if (status === "rejected" && !String(body.message ?? "").trim()) return failure("Tell the customer why it was rejected", 400, request);
+    const refundAmount = body.refundAmount != null && body.refundAmount !== "" ? Math.max(0, Number(body.refundAmount)) : null;
+    const refundMethod = body.refundMethod ? String(body.refundMethod).slice(0, 60) : null;
+    const business = await jsonSetting("business_info", DEFAULT_BUSINESS);
+    const custom = String(body.message ?? "").trim().slice(0, 1000);
+    const changed = status !== r.status;
+    const message = changed
+      ? [serviceMessage(status, r, String(business.address || DEFAULT_BUSINESS.address), refundAmount ?? undefined, refundMethod ?? undefined), custom].filter(Boolean).join(" ")
+      : custom;
+    const now = new Date().toISOString();
+    const by = (await adminClient.from("users").select("name,email").eq("id", user.id).maybeSingle()).data;
+    const history = [...((r.history as unknown[]) ?? []), ...(changed || custom ? [{ at: now, status, by: by?.name ?? by?.email ?? "staff", message }] : [])];
+
+    // Back on the shelf: a returned item that's fine to resell goes back into stock (once).
+    let restocked = r.restocked === true;
+    if (body.restock === true && !restocked && r.variant_id && ["received", "refunded", "replaced", "closed"].includes(status)) {
+      await restoreVariantStock(Number(r.variant_id), toNumber(r.quantity) || 1);
+      if (r.product_id) { await refreshStockState(r.product_id as number); await sendStockAlerts(r.product_id as number); }
+      restocked = true;
+    }
+    const { data: updated, error } = await adminClient.from("service_requests").update({
+      status, customer_message: message || r.customer_message, history, restocked, updated_at: now,
+      ...(refundAmount !== null ? { refund_amount: refundAmount } : {}), ...(refundMethod ? { refund_method: refundMethod } : {}),
+    }).eq("id", id).select("*, users(name,email,phone)").single();
+    if (error) return failure(error.message, 400, request);
+    if (message) await notifyUser(r.user_id as string, message, r.order_id as number);
+    return success("Request updated", await serviceRequestResult(updated, true), request);
   }
 
   if (path === "/admin/reviews" || /^\/admin\/reviews\/[^/]+$/.test(path)) {

@@ -7,8 +7,10 @@ import { useT } from '../../lib/i18n'
 const MAX = 3
 
 // Up to three photos for a review. Each is uploaded as soon as it's picked; the parent
-// keeps the list of uploaded URLs and sends it with the review.
-export default function ReviewPhotoPicker({ photos, onChange, disabled }) {
+// keeps the list of uploaded URLs and sends it with the review. With `upload` (e.g. private
+// warranty photos) items are { url, path }: a temporary preview link plus the storage path.
+const src = (p) => (typeof p === 'string' ? p : p.url)
+export default function ReviewPhotoPicker({ photos, onChange, disabled, upload }) {
   const { t } = useT()
   const input = useRef(null)
   const [uploading, setUploading] = useState(0)
@@ -24,8 +26,9 @@ export default function ReviewPhotoPicker({ photos, onChange, disabled }) {
       try {
         const form = new FormData()
         form.append('file', file)
-        const { data } = await apiService.reviews.uploadPhoto(form)
-        if (data?.url) urls.push(data.url)
+        const { data } = await (upload ? upload(form) : apiService.reviews.uploadPhoto(form))
+        if (data?.path) urls.push({ url: data.url, path: data.path })
+        else if (data?.url) urls.push(data.url)
       } catch (err) {
         toast.error(err?.response?.data?.message ?? t('Could not upload the photo'))
       }
@@ -36,10 +39,10 @@ export default function ReviewPhotoPicker({ photos, onChange, disabled }) {
 
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      {photos.map(url => (
-        <div key={url} style={{ position: 'relative', width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
-          <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          <button type="button" onClick={() => onChange(photos.filter(p => p !== url))} aria-label={t('Remove photo')}
+      {photos.map(photo => (
+        <div key={src(photo)} style={{ position: 'relative', width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <img src={src(photo)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <button type="button" onClick={() => onChange(photos.filter(p => p !== photo))} aria-label={t('Remove photo')}
             style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', border: 0, background: 'rgba(0,0,0,.65)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
             <X size={12} />
           </button>

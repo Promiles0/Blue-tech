@@ -36,6 +36,13 @@ const apiService = {
   },
 
   // --- REVIEWS ---
+  // Returns and warranty claims (round 3).
+  serviceRequests: {
+    list: (orderId) => api.get(`/service-requests${orderId ? `?orderId=${orderId}` : ''}`),
+    create: (data) => api.post('/service-requests', data),
+    uploadPhoto: (formData) => api.post('/service-requests/photos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  },
+
   reviews: {
     getRecent: (limit = 8) => api.get(`/reviews/recent?limit=${limit}`),
     uploadPhoto: (formData) => api.post('/reviews/photos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
@@ -177,6 +184,10 @@ const apiService = {
     },
     catalog: {
       health: () => api.get('/admin/catalog/health'),
+    },
+    serviceRequests: {
+      getAll: (status) => api.get(`/admin/service-requests${status ? `?status=${status}` : ''}`),
+      update: (id, data) => api.patch(`/admin/service-requests/${id}`, data),
     },
     errors: {
       getAll: () => api.get('/admin/errors'),

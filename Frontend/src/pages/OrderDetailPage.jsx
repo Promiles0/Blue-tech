@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { trackPurchaseOnce } from '../lib/analytics'
 import { useT } from '../lib/i18n'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Package, Truck, CheckCircle2, Clock, XCircle, Wallet, Star } from 'lucide-react'
+import { ArrowLeft, Package, Truck, CheckCircle2, Clock, XCircle, Wallet, Star, RotateCcw } from 'lucide-react'
 import { m as motion, AnimatePresence } from 'framer-motion'
 import apiService from '../api/service'
 import api from '../api/axios'
@@ -12,6 +12,7 @@ import { StarInput } from '../components/site/StarRating'
 import InvoiceButton from '../components/site/InvoiceButton'
 import PayForOrder from '../components/site/PayForOrder'
 import BuyAgainButton from '../components/site/BuyAgainButton'
+import { ServiceRequestList, ServiceRequestModal } from '../components/site/ServiceRequests'
 import ReviewPhotoPicker from '../components/site/ReviewPhotoPicker'
 import { useStoreSettings, deliveryWindow, formatWindow } from '../lib/delivery'
 
@@ -89,6 +90,13 @@ export default function OrderDetailPage() {
   const [comment, setComment] = useState('')
   const [reviewPhotos, setReviewPhotos] = useState([])
   const [submittingReview, setSubmittingReview] = useState(false)
+  // Returns and warranty claims for this order (5b, 5c).
+  const [serviceItem, setServiceItem] = useState(null)
+  const [serviceRequests, setServiceRequests] = useState([])
+  useEffect(() => {
+    if (order?.status !== 'DELIVERED') return
+    apiService.serviceRequests.list(id).then(({ data }) => setServiceRequests(Array.isArray(data) ? data : [])).catch(() => {})
+  }, [id, order?.status])
 
   useEffect(() => {
     apiService.orders.getOrderDetails(id)
@@ -352,6 +360,12 @@ export default function OrderDetailPage() {
                         <Star size={12} fill="currentColor" /> {t('Write a review')}
                       </button>
                     )}
+                    {order.status === 'DELIVERED' && (
+                      <button onClick={() => setServiceItem(item)}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0, marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <RotateCcw size={12} /> {t('Return or warranty')}
+                      </button>
+                    )}
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.quantity} × {formatPrice(item.priceAtPurchase)}</p>
@@ -366,8 +380,14 @@ export default function OrderDetailPage() {
             </div>
           )}
 
+          <ServiceRequestList requests={serviceRequests} />
         </motion.div>
       </div>
+
+      {serviceItem && (
+        <ServiceRequestModal order={order} item={serviceItem} onClose={() => setServiceItem(null)}
+          onCreated={(r) => setServiceRequests((list) => [r, ...list])} />
+      )}
 
       {/* Review Modal */}
       <AnimatePresence>

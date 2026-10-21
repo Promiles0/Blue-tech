@@ -3,7 +3,7 @@ import { Toaster } from 'sonner'
 import {
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Users, MessageSquare, BarChart3, ScrollText,
-  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send, Gift, Bug, HeartPulse,
+  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send, Gift, Bug, HeartPulse, Undo2,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
@@ -19,6 +19,7 @@ const NAV_GROUPS = [
     { to: '/admin/orders',         label: 'Orders',         icon: ShoppingCart, badge: 'toShip' },
     { to: '/admin/quote-requests', label: 'Quote Requests', icon: FileText, badge: 'newQuotes' },
     { to: '/admin/proformas',      label: 'Proformas',      icon: Receipt },
+    { to: '/admin/service-requests', label: 'Returns & warranty', icon: Undo2, badge: 'newServiceRequests' },
   ] },
   { label: 'Catalog', items: [
     { to: '/admin/products',    label: 'Products',     icon: Package },
