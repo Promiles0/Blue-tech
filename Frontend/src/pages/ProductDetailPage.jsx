@@ -17,6 +17,8 @@ import { buildWhatsAppLink } from '../lib/helpLinks'
 import { useCurrency } from '../context/CurrencyContext'
 import ProductSpecs from '../components/site/ProductSpecs'
 import RelatedProducts from '../components/site/RelatedProducts'
+import PairsWellWith from '../components/site/PairsWellWith'
+import { useQuery } from '@tanstack/react-query'
 import DeliveryEstimate from '../components/site/DeliveryEstimate'
 import BackInStockForm from '../components/site/BackInStockForm'
 import InstalmentsButton from '../components/site/InstalmentsButton'
@@ -26,6 +28,12 @@ import { usePageMeta, productJsonLd, breadcrumbJsonLd } from '../hooks/usePageMe
 export default function ProductDetail() {
   const { t } = useT()
   const { id } = useParams()
+  // Honest signals (3e): only real numbers, shown only when they mean something.
+  const { data: signals } = useQuery({
+    queryKey: ['product-signals', id],
+    queryFn: () => apiService.products.signals(id).then((r) => r.data),
+    staleTime: 5 * 60_000,
+  })
   const { addToCart } = useCart()
   const { user } = useAuth()
   const { wishlistIds, toggle: toggleWishlist } = useWishlist()
@@ -240,8 +248,14 @@ export default function ProductDetail() {
             )}
 
             {selectedVariant && (
-              <p style={{ fontSize: 13, color: stockQty > 0 ? 'var(--success)' : 'var(--error)', marginBottom: 16 }}>
-                {stockQty === 0 ? t('Out of stock') : stockQty <= 5 ? t('Only {n} left', { n: stockQty }) : t('{n} in stock', { n: stockQty })}
+              <p style={{ fontSize: 13, color: stockQty > 0 ? 'var(--success)' : 'var(--error)', marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: '6px 14px', alignItems: 'center' }}>
+                <span>{stockQty === 0 ? t('Out of stock') : stockQty <= 5 ? t('Only {n} left', { n: stockQty }) : t('{n} in stock', { n: stockQty })}</span>
+                {stockQty > 0 && signals?.backInStock && (
+                  <span style={{ fontSize: 11.5, fontWeight: 700, padding: '2px 9px', borderRadius: 999, background: 'var(--success-soft, rgba(34,197,94,.12))', color: 'var(--success)' }}>{t('Back in stock')}</span>
+                )}
+                {signals?.sold30d >= 3 && (
+                  <span style={{ color: 'var(--muted)' }}>{t('{n} sold in the last 30 days', { n: signals.sold30d })}</span>
+                )}
               </p>
             )}
 
@@ -309,6 +323,7 @@ export default function ProductDetail() {
             <ProductActions product={product} />
             <DeliveryEstimate />
             <BuyInfo product={product} />
+            <PairsWellWith productIds={[product.productId ?? product.id]} />
 
             {product.inTheBox && (
               <p style={{ marginTop: 14, fontSize: 13, color: 'var(--muted)' }}>

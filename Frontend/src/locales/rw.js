@@ -602,4 +602,14 @@ export default {
   'Reminders turned off': 'Kwibutswa byafunzwe',
   'Could not save your preference': 'Ntibyashobotse kubika ibyo wahisemo',
   'Remind me about items left in my cart, and ask for my review after delivery': 'Unyibutse ibyo nasize mu gitebo, kandi unsabe igitekerezo nyuma yo kugezwaho',
+  // ── Round 2: product pages ──
+  'Pairs well with': 'Bijyana na',
+  'Complete your setup': 'Uzuza ibyo ukeneye',
+  'Genuine products from authorised suppliers': 'Ibicuruzwa by\'umwimerere biva ku batanga bemewe',
+  'Free standard delivery across Rwanda': 'Kugezwaho bisanzwe ku buntu mu Rwanda hose',
+  'Secure payment: MTN MoMo, Airtel Money or card': 'Kwishyura kwizewe: MTN MoMo, Airtel Money cyangwa ikarita',
+  'Questions? WhatsApp us': 'Ufite ikibazo? Twandikire kuri WhatsApp',
+  'Hi Blue-Tech! I have a question about: {name}': 'Muraho Blue-Tech! Mfite ikibazo kuri: {name}',
+  'Back in stock': 'Byongeye kuboneka',
+  '{n} sold in the last 30 days': '{n} byaguzwe mu minsi 30 ishize',
 }

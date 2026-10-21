@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useT } from '../lib/i18n'
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, FileText } from 'lucide-react'
 import ProformaModal from '../components/site/ProformaModal'
+import PairsWellWith from '../components/site/PairsWellWith'
 import { useCart } from '../context/CartContext'
 import { useState } from 'react'
 import { getProductImage, handleProductImageError } from '../lib/productImage'
@@ -94,6 +95,12 @@ export default function Cart() {
             >
               {t('Clear cart')}
             </button>
+
+            {/* "Complete your setup": accessories for what's in the cart (2d) */}
+            <PairsWellWith
+              title={t('Complete your setup')}
+              productIds={items.map(i => i.product?.productId ?? i.productId).filter(Boolean)}
+            />
           </div>
 
           {/* Summary */}

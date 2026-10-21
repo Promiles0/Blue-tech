@@ -1014,6 +1014,90 @@ async function restoreVariantStock(variantId: number, quantity: number) {
   await adminClient.from("product_variants").update({ stock_quantity: current + quantity }).eq("id", variantId);
 }
 
+// ── Honest signals and "Pairs well with" (round 2: 3e, 2d) ──
+const SOLD_ORDER_STATUSES = ["paid", "processing", "shipped", "delivered", "PAID", "PROCESSING", "SHIPPED", "DELIVERED"];
+
+// Units sold in the last 30 days, and whether it came back in stock this past week.
+async function productSignals(productId: number) {
+  const since = new Date(Date.now() - 30 * 86400_000).toISOString();
+  const [{ data: rows }, { data: product }] = await Promise.all([
+    adminClient.from("order_items").select("quantity,orders!inner(status,created_at),product_variants!inner(product_id)")
+      .eq("product_variants.product_id", productId).gte("orders.created_at", since).in("orders.status", SOLD_ORDER_STATUSES),
+    adminClient.from("products").select("restocked_at").eq("id", productId).maybeSingle(),
+  ]);
+  const sold30d = ((rows ?? []) as Record<string, unknown>[]).reduce((s, r) => s + toNumber(r.quantity), 0);
+  const restocked = product?.restocked_at ? new Date(String(product.restocked_at)).getTime() : 0;
+  return { sold30d, backInStock: restocked > 0 && Date.now() - restocked < 7 * 86400_000 };
+}
+
+// What goes with what: the words an accessory's name/category should contain, per kind of main product.
+const PAIR_RULES: { main: RegExp; goes: RegExp[] }[] = [
+  // Whole words only: "TP-LINK" must not count as "ink", nor "groups" as "ups".
+  { main: /\b(laptop|notebook|probook|omnibook|elitebook|thinkpad|ideapad|macbook)\b/i, goes: [/\b(bag|backpack|sleeve)\b/i, /\bmouse\b/i, /\blaptop stand\b/i, /\block\b/i, /\b(adapter|hub|type.?c)\b/i, /\b(headset|earphones?)\b/i, /\b(hdd|ssd|external)\b/i, /\b(antivirus|kaspersky)\b/i] },
+  { main: /\b(desktop|all in one|all-in-one|aio)\b/i, goes: [/\bups\b/i, /\bkeyboard\b/i, /\bmouse\b/i, /\b(headset|speakers?)\b/i, /\b(antivirus|kaspersky)\b/i, /\b(hdd|external)\b/i] },
+  { main: /\b(monitor|display)\b|\b\d\d ?inch/i, goes: [/\b(hdmi|displayport|vga|dp)\b/i, /\b(adapter|hub)\b/i, /\bmonitor (stand|arm)\b|\bvesa\b/i] },
+  { main: /\b(printer|photocop\w*|photopier|laserjet|ecotank)\b/i, goes: [/\b(usb|printer) cable\b|\busb\b/i, /\bups\b/i, /\b(paper|toner|ink|cartridges?)\b/i] },
+  { main: /\b(tablet|tab|ipad)\b/i, goes: [/\b(case|cover)\b/i, /\b(stylus|pen)\b/i, /\b(charger|adapter)\b/i, /\b(headset|earphones?)\b/i] },
+  { main: /\b(switch|router|access point)\b/i, goes: [/\b(utp|sftp|cat ?6|patch)\b/i, /\btester\b/i, /\b(rj45|connectors?)\b/i, /\bups\b/i] },
+];
+
+async function pairsFor(productIds: number[], limit = 4) {
+  if (!productIds.length) return [];
+  const exclude = new Set(productIds.map(String));
+  const scores = new Map<string, number>();
+
+  // 1. Bought together in real orders (needs at least two orders to count).
+  const { data: withThese } = await adminClient.from("order_items")
+    .select("order_id,product_variants!inner(product_id),orders!inner(status)")
+    .in("product_variants.product_id", productIds).in("orders.status", SOLD_ORDER_STATUSES).limit(500);
+  const orderIds = [...new Set(((withThese ?? []) as Record<string, unknown>[]).map((r) => r.order_id))];
+  if (orderIds.length) {
+    const { data: together } = await adminClient.from("order_items").select("order_id,product_variants!inner(product_id)").in("order_id", orderIds);
+    const counts = new Map<string, Set<unknown>>();
+    for (const r of (together ?? []) as Record<string, unknown>[]) {
+      const pid = String((r.product_variants as Record<string, unknown>).product_id);
+      if (exclude.has(pid)) continue;
+      counts.set(pid, (counts.get(pid) ?? new Set()).add(r.order_id));
+    }
+    for (const [pid, orders] of counts) if (orders.size >= 2) scores.set(pid, 100 + orders.size);
+  }
+
+  // 2. Rules: accessories that go with this kind of product (one "slot" per kind of accessory).
+  const slotOf = new Map<string, number>();
+  const catalog = (await chatCatalog()).rows;
+  const mains = catalog.filter((r) => exclude.has(r.id));
+  for (const main of mains) {
+    const rule = PAIR_RULES.find((r) => r.main.test(`${main.name} ${main.category}`));
+    if (!rule) continue;
+    rule.goes.forEach((re, i) => {
+      for (const c of catalog) {
+        // An item counts when it matches an accessory pattern ("laptop stand", "CAT 6 cable");
+        // the patterns never describe main products, so no other laptop or switch slips in.
+        if (exclude.has(c.id) || !re.test(c.name)) continue;
+        const score = 50 - i * 3;
+        if (score > (scores.get(c.id) ?? 0)) { scores.set(c.id, score); slotOf.set(c.id, i); }
+      }
+    });
+  }
+
+  // Bought-together first, then one item per accessory kind (not four headsets), then the rest.
+  const ranked = [...scores.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  const cards = ((await productCards(ranked.slice(0, 40))) as Record<string, unknown>[]).filter((c) => c.inStock);
+  const picked: Record<string, unknown>[] = [];
+  const usedSlots = new Set<number>();
+  for (const c of cards) {
+    const id = String(c.productId);
+    const slot = slotOf.get(id);
+    if ((scores.get(id) ?? 0) >= 100 || slot === undefined || !usedSlots.has(slot)) {
+      picked.push(c);
+      if (slot !== undefined) usedSlots.add(slot);
+    }
+    if (picked.length >= limit) return picked;
+  }
+  // Fewer, different items beat a row of near-identical ones.
+  return picked;
+}
+
 // ── Product feeds for Google Merchant Center and Meta Commerce Manager (6a) ──
 const GOOGLE_CATEGORY: [RegExp, string][] = [
   [/laptop/i, "Electronics > Computers > Laptops"],
@@ -1246,10 +1330,14 @@ async function releaseOrderStock(orderId: number | string) {
   const { data: claimed } = await adminClient.from("orders").update({ stock_released: true })
     .eq("id", orderId).eq("stock_released", false).select("id").maybeSingle();
   if (!claimed) return false;
-  const { data: items } = await adminClient.from("order_items").select("variant_id,quantity").eq("order_id", orderId);
+  const { data: items } = await adminClient.from("order_items").select("variant_id,quantity,product_variants(product_id)").eq("order_id", orderId);
+  const products = new Set<number>();
   for (const item of (items ?? []) as Record<string, unknown>[]) {
     if (item.variant_id) await restoreVariantStock(Number(item.variant_id), toNumber(item.quantity));
+    const pid = (item.product_variants as Record<string, unknown> | null)?.product_id;
+    if (pid) products.add(Number(pid));
   }
+  for (const pid of products) { await refreshStockState(pid); await sendStockAlerts(pid); }
   return true;
 }
 
@@ -1478,6 +1566,23 @@ async function messageOrderCustomer(orderId: number, text: string) {
   }
 }
 
+// Keeps products.out_of_stock_since / restocked_at in step with stock, for "Back in stock".
+async function refreshStockState(productId: number | string) {
+  try {
+    const [{ data: variants }, { data: product }] = await Promise.all([
+      adminClient.from("product_variants").select("stock_quantity").eq("product_id", productId),
+      adminClient.from("products").select("out_of_stock_since").eq("id", productId).maybeSingle(),
+    ]);
+    if (!product) return;
+    const inStock = ((variants ?? []) as Record<string, unknown>[]).some((v) => toNumber(v.stock_quantity) > 0);
+    const now = new Date().toISOString();
+    if (!inStock && !product.out_of_stock_since) await adminClient.from("products").update({ out_of_stock_since: now }).eq("id", productId);
+    if (inStock && product.out_of_stock_since) await adminClient.from("products").update({ out_of_stock_since: null, restocked_at: now }).eq("id", productId);
+  } catch (e) {
+    console.error("refreshStockState failed:", e);
+  }
+}
+
 // When a product is back in stock, tell everyone waiting for it (once).
 async function sendStockAlerts(productId: number | string) {
   try {
@@ -1663,13 +1768,15 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
       `${buyer?.name ?? buyer?.email ?? "A customer"} · ${reduced.length} item${reduced.length === 1 ? "" : "s"} · ${paymentMethod} · ${shippingMethod}`,
       { severity: "info", category: "order", href: "/admin/orders" });
     // Stock that just dropped low because of this order.
-    const { data: lowNow } = await adminClient.from("product_variants").select("stock_quantity,products(name)")
+    const { data: lowNow } = await adminClient.from("product_variants").select("product_id,stock_quantity,products(name)")
       .in("id", reduced.map((r) => r.variantId)).lt("stock_quantity", 5);
     for (const v of (lowNow ?? []) as Record<string, unknown>[]) {
       const left = toNumber(v.stock_quantity);
       await notifyAdmins(`${left === 0 ? "Sold out" : "Low stock"}: ${(v.products as Record<string, unknown> | null)?.name ?? "product"}`,
         left === 0 ? "No units left — restock or hide it." : `${left} left after order #${order.id}.`,
         { severity: left === 0 ? "error" : "warning", category: "shopping", href: "/admin/products?lowStock=1" });
+      // Sold out now: remember when, for "Back in stock" later.
+      if (left === 0 && v.product_id) await refreshStockState(v.product_id as number);
     }
 
     return { orderId: order.id, totalAmount, status: "PENDING" };
@@ -3044,6 +3151,17 @@ async function handle(request: Request) {
 
   // Values (with counts) the storefront filter rail offers, computed from published
   // products only — so a filter never offers a value that would return nothing.
+  // "Pairs well with" for one product page or a whole cart: /products/pairs?ids=12,30
+  if (method === "GET" && path === "/products/pairs") {
+    const ids = (url.searchParams.get("ids") ?? "").split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 20);
+    return success("Pairs", await pairsFor(ids, Math.min(Number(url.searchParams.get("limit") ?? 4) || 4, 8)), request);
+  }
+
+  // Honest signals for a product page: sold in the last 30 days, back in stock this week.
+  if (method === "GET" && /^\/products\/\d+\/signals$/.test(path)) {
+    return success("Signals", await productSignals(Number(path.split("/")[2])), request);
+  }
+
   if (method === "GET" && path === "/products/facets") {
     let query = adminClient.from("products").select("brand,specs").eq("is_active", true);
     const categoryId = url.searchParams.get("categoryId");
@@ -3622,7 +3740,7 @@ async function handle(request: Request) {
       })));
       if (error) return failure(error.message, 400);
     }
-    if (method !== "POST") await sendStockAlerts(product.id as number);
+    if (method !== "POST") { await refreshStockState(product.id as number); await sendStockAlerts(product.id as number); }
     return success(method === "POST" ? "Product created successfully" : "Product updated successfully", await productResult(product, { admin: true }));
   }
 
@@ -4384,6 +4502,7 @@ async function handle(request: Request) {
     const { data, error } = await adminClient.from("product_variants").update({ stock_quantity: stock }).eq("id", variantId).select("id,product_id,stock_quantity").maybeSingle();
     if (error) return failure(error.message, 400, request);
     if (!data) return failure("Variant not found", 404, request);
+    await refreshStockState(data.product_id as number);
     if (stock > 0) await sendStockAlerts(data.product_id as number);
     return success("Stock updated", { variantId: data.id, stockQuantity: data.stock_quantity }, request);
   }

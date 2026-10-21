@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { useT } from '../../lib/i18n'
 import { toast } from 'sonner'
-import { ChevronRight, Sparkles, Share2, GitCompare, ShieldCheck, CreditCard, RotateCcw } from 'lucide-react'
+import { ChevronRight, Sparkles, Share2, GitCompare, ShieldCheck, CreditCard, RotateCcw, BadgeCheck, Truck, MessageCircle } from 'lucide-react'
+import { WHATSAPP_NUMBER } from '../../lib/helpLinks'
 import { openLiveChat } from '../../lib/liveChat'
 import { toggleCompare, useCompare, COMPARE_MAX } from '../../lib/compare'
 
@@ -86,21 +87,24 @@ export function ProductActions({ product }) {
 // Delivery, warranty, returns and payment in one glance, right under the buy buttons.
 export function BuyInfo({ product }) {
   const { t } = useT()
+  // Trust strip: only facts the shop stands behind (genuine stock confirmed by the owner).
   const rows = [
+    { Icon: BadgeCheck, text: t('Genuine products from authorised suppliers') },
     { Icon: ShieldCheck, text: product.warranty ? t('{w} warranty', { w: product.warranty }) : t('Warranty included') },
     { Icon: RotateCcw, text: t('30-day returns') },
-    { Icon: CreditCard, text: t('Pay with MTN MoMo, Airtel Money or card') },
+    { Icon: Truck, text: t('Free standard delivery across Rwanda') },
+    { Icon: CreditCard, text: t('Secure payment: MTN MoMo, Airtel Money or card') },
+    { Icon: MessageCircle, text: t('Questions? WhatsApp us'), href: `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(t('Hi Blue-Tech! I have a question about: {name}', { name: product.name }))}` },
   ]
   return (
-    <div style={{ marginTop: 20, border: '1px solid var(--border)', borderRadius: 12, padding: '4px 14px' }}>
-      {rows.map(({ Icon, text }, i) => (
-        <div key={text} style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', fontSize: 13, color: 'var(--muted)',
-          borderTop: i ? '1px solid var(--border)' : 'none',
-        }}>
-          <Icon size={15} style={{ color: 'var(--accent-light, var(--accent))', flexShrink: 0 }} /> {text}
-        </div>
-      ))}
+    <div className="trust-strip" style={{ marginTop: 20, border: '1px solid var(--border)', borderRadius: 12, padding: '6px 14px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', columnGap: 16 }}>
+      {rows.map(({ Icon, text, href }) => {
+        const inner = <><Icon size={15} style={{ color: 'var(--accent-light, var(--accent))', flexShrink: 0 }} /> {text}</>
+        const style = { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', fontSize: 13, color: 'var(--muted)', textDecoration: 'none' }
+        return href
+          ? <a key={text} href={href} target="_blank" rel="noreferrer" style={{ ...style, color: 'var(--text)' }}>{inner}</a>
+          : <div key={text} style={style}>{inner}</div>
+      })}
     </div>
   )
 }

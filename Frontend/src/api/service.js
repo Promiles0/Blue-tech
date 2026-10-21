@@ -23,6 +23,9 @@ const apiService = {
     getNewest: (limit = 5) => api.get(`/products?page=0&size=${limit}&sort=updatedAt,desc`),
     search: (params) => api.get(`/products/search?${params}`),
     getOne: (id) => api.get(`/products/${id}`),
+    // Round 2: honest signals (sold in 30 days, back in stock) and "pairs well with".
+    signals: (id) => api.get(`/products/${id}/signals`),
+    pairs: (ids, limit = 4) => api.get(`/products/pairs?ids=${ids}&limit=${limit}`),
     // Filter values (with counts) for the storefront filter rail.
     facets: (categoryId) => api.get(`/products/facets${categoryId ? `?categoryId=${categoryId}` : ''}`),
   },

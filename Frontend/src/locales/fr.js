@@ -601,4 +601,14 @@ export default {
   'Reminders turned off': 'Rappels désactivés',
   'Could not save your preference': 'Impossible d\'enregistrer votre préférence',
   'Remind me about items left in my cart, and ask for my review after delivery': 'Me rappeler les articles laissés dans mon panier et me demander mon avis après la livraison',
+  // ── Round 2: product pages ──
+  'Pairs well with': 'Va bien avec',
+  'Complete your setup': 'Complétez votre équipement',
+  'Genuine products from authorised suppliers': 'Produits authentiques de fournisseurs agréés',
+  'Free standard delivery across Rwanda': 'Livraison standard gratuite partout au Rwanda',
+  'Secure payment: MTN MoMo, Airtel Money or card': 'Paiement sécurisé : MTN MoMo, Airtel Money ou carte',
+  'Questions? WhatsApp us': 'Une question ? Écrivez-nous sur WhatsApp',
+  'Hi Blue-Tech! I have a question about: {name}': 'Bonjour Blue-Tech ! J\'ai une question sur : {name}',
+  'Back in stock': 'De nouveau en stock',
+  '{n} sold in the last 30 days': '{n} vendus ces 30 derniers jours',
 }
