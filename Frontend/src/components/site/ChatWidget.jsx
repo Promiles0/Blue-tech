@@ -2,9 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useT } from '../../lib/i18n'
 import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { X, ArrowUp, RotateCcw, MessageCircle, Mail, FileText, ThumbsUp, ThumbsDown, RefreshCw, ImageOff } from 'lucide-react'
+import { X, ArrowUp, RotateCcw, MessageCircle, Mail, FileText, ThumbsUp, ThumbsDown, RefreshCw, ImageOff, ShoppingCart, Check, Package, LogIn } from 'lucide-react'
 import apiService from '../../api/service'
 import { useCurrency } from '../../context/CurrencyContext'
+import { useCart } from '../../context/CartContext'
+import { useUI } from '../../context/UIContext'
+import { cartSnapshot } from '../../lib/cartSnapshot'
 import { onLiveChatOpen } from '../../lib/liveChat'
 import { SUPPORT_EMAIL, WHATSAPP_NUMBER } from '../../lib/helpLinks'
 
@@ -110,13 +113,31 @@ function TypedText({ text, animate, onDone }) {
 function ProductCard({ product, onNavigate, index, animate }) {
   const { formatPrice } = useCurrency()
   const { t } = useT()
+  const { addToCart, isInCart } = useCart()
+  const { setQuickViewProduct } = useUI()
+  const [adding, setAdding] = useState(false)
+  const variantId = product.variant?.variantId
+  const inCart = variantId != null && isInCart(variantId)
+
+  // One in-stock variant goes straight into the cart; several open Quick View to choose.
+  const add = async () => {
+    if (!variantId) { onNavigate?.(); setQuickViewProduct({ productId: product.productId }); return }
+    setAdding(true)
+    try {
+      await addToCart(variantId, 1, cartSnapshot({ ...product, primaryImageUrl: product.imageUrl }, product.variant))
+    } finally {
+      setAdding(false)
+    }
+  }
+
   return (
     <motion.div
+      className="bluechat-product"
       initial={animate ? { opacity: 0, y: 8 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: animate ? index * 0.09 : 0 }}
     >
-      <Link to={`/products/${product.productId}`} onClick={onNavigate} className="bluechat-product">
+      <Link to={`/products/${product.productId}`} onClick={onNavigate} className="bluechat-product-link">
         <div className="bluechat-product-img">
           {product.imageUrl ? <img src={product.imageUrl} alt="" loading="lazy" /> : <ImageOff size={16} />}
         </div>
@@ -124,7 +145,46 @@ function ProductCard({ product, onNavigate, index, animate }) {
           <div className="bluechat-product-name">{product.name}</div>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--price, var(--accent))' }}>{formatPrice(product.price)}</div>
         </div>
-        <span className="bluechat-product-view">{t('View')}</span>
+      </Link>
+      {product.inStock === false ? (
+        <span className="bluechat-product-out">{t('Out of stock')}</span>
+      ) : product.inStock ? (
+        <button type="button" className={`bluechat-product-add ${inCart ? 'is-added' : ''}`} onClick={add} disabled={adding}
+          aria-label={t('Add {name} to cart', { name: product.name })}>
+          {inCart ? <Check size={13} /> : <ShoppingCart size={13} />} {inCart ? t('Added') : t('Add')}
+        </button>
+      ) : (
+        <Link to={`/products/${product.productId}`} onClick={onNavigate} className="bluechat-product-view">{t('View')}</Link>
+      )}
+    </motion.div>
+  )
+}
+
+const ORDER_STATUS = {
+  PENDING: { label: 'Awaiting payment', tone: '#f59e0b' },
+  PAID: { label: 'Being prepared', tone: '#3b82f6' },
+  PROCESSING: { label: 'Being prepared', tone: '#3b82f6' },
+  SHIPPED: { label: 'On the way', tone: '#8b5cf6' },
+  DELIVERED: { label: 'Delivered', tone: '#22c55e' },
+  CANCELLED: { label: 'Cancelled', tone: '#f87171' },
+  REFUNDED: { label: 'Refunded', tone: '#94a3b8' },
+  FAILED: { label: 'Payment failed', tone: '#f87171' },
+}
+
+function OrderCard({ order, onNavigate, index, animate }) {
+  const { formatPrice } = useCurrency()
+  const { t } = useT()
+  const st = ORDER_STATUS[order.status] ?? { label: order.status, tone: '#94a3b8' }
+  const placed = (() => { try { return new Date(order.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) } catch { return '' } })()
+  return (
+    <motion.div initial={animate ? { opacity: 0, y: 8 } : false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: animate ? index * 0.09 : 0 }}>
+      <Link to={`/orders/${order.orderId}`} onClick={onNavigate} className="bluechat-product bluechat-order">
+        <div className="bluechat-order-icon"><Package size={18} /></div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div className="bluechat-product-name">{t('Order #{id}', { id: order.orderId })} · {placed}</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>{formatPrice(order.total)}</div>
+        </div>
+        <span className="bluechat-order-status" style={{ color: st.tone, borderColor: st.tone }}>{t(st.label)}</span>
       </Link>
     </motion.div>
   )
@@ -150,6 +210,7 @@ function Handoff({ kind, lastQuestion, onNavigate }) {
 
 // Quick replies after Blue's latest answer, picked from what it showed — no AI call needed.
 function followUps(m) {
+  if (m.orders || m.signIn) return []
   const n = m.products?.length ?? 0
   const list = []
   if (n >= 2) list.push('Compare these for me')
@@ -166,6 +227,7 @@ function Avatar() {
 function AssistantMessage({ m, isLast, busy, lastUserText, onDone, onFeedback, onRetry, onAsk, onNavigate }) {
   const { t } = useT()
   const priceText = usePriceText()
+  const location = useLocation()
   const reduce = useReducedMotion()
   // Decided once: the parent clears `fresh` when typing ends, but the cards still animate in.
   const [animate] = useState(() => Boolean(m.fresh) && !reduce)
@@ -182,6 +244,16 @@ function AssistantMessage({ m, isLast, busy, lastUserText, onDone, onFeedback, o
         {typed && m.products?.length > 0 && (
           <div className="bluechat-products">
             {m.products.map((p, i) => <ProductCard key={p.productId} product={p} index={i} animate={animate} onNavigate={onNavigate} />)}
+          </div>
+        )}
+        {typed && m.orders?.length > 0 && (
+          <div className="bluechat-products">
+            {m.orders.map((o, i) => <OrderCard key={o.orderId} order={o} index={i} animate={animate} onNavigate={onNavigate} />)}
+          </div>
+        )}
+        {typed && m.signIn && (
+          <div className="bluechat-actions">
+            <Link to="/login" state={{ from: location.pathname }} onClick={onNavigate} className="bluechat-action primary"><LogIn size={13} /> {t('Sign in to check your order')}</Link>
           </div>
         )}
         {typed && m.retry && (
@@ -305,7 +377,7 @@ export default function ChatWidget() {
         lang,
         REQUEST_TIMEOUT_MS,
       )
-      setMessages((m) => [...m, { role: 'assistant', text: data.reply, products: data.products, handoff: data.handoff, turnId: data.turnId, fresh: true }])
+      setMessages((m) => [...m, { role: 'assistant', text: data.reply, products: data.products, orders: data.orders, signIn: data.signIn, handoff: data.handoff, turnId: data.turnId, fresh: true }])
     } catch (error) {
       const limited = error?.response?.status === 429
       const slow = error?.code === 'ECONNABORTED' || !error?.response
@@ -502,13 +574,23 @@ const CSS = `
   background:linear-gradient(90deg,transparent 0,var(--accent-dim) 50%,transparent 100%) var(--bg-input,rgba(127,127,127,.1));background-size:220% 100%;animation:bluechat-shimmer 1.4s linear infinite}
 @keyframes bluechat-shimmer{0%{background-position:120% 0}100%{background-position:-120% 0}}
 .bluechat-products{display:flex;flex-direction:column;gap:6px;width:100%}
-.bluechat-product{display:flex;align-items:center;gap:11px;padding:8px 10px 8px 8px;border-radius:12px;border:1px solid var(--border);background:var(--bg);text-decoration:none;color:var(--text);transition:border-color .15s,transform .15s}
-.bluechat-product:hover{border-color:var(--accent);transform:translateX(2px)}
+.bluechat-product{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 8px;border-radius:12px;border:1px solid var(--border);background:var(--bg);text-decoration:none;color:var(--text);transition:border-color .15s}
+.bluechat-product:hover{border-color:var(--accent)}
+.bluechat-product-link{display:flex;align-items:center;gap:11px;flex:1;min-width:0;text-decoration:none;color:inherit}
 .bluechat-product-img{width:48px;height:48px;border-radius:9px;background:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--muted)}
 .bluechat-product-img img{width:100%;height:100%;object-fit:contain}
 .bluechat-product-name{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
 .bluechat-product-view{flex-shrink:0;font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:999px;background:var(--accent-dim);color:var(--accent-light,var(--accent))}
 .bluechat-product:hover .bluechat-product-view{background:var(--accent);color:#fff}
+.bluechat-product-view{text-decoration:none}
+.bluechat-product-add{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:11.5px;font-weight:600;padding:6px 10px;border-radius:999px;border:0;background:var(--accent);color:#fff;cursor:pointer;transition:filter .15s}
+.bluechat-product-add:hover{filter:brightness(1.12)}
+.bluechat-product-add.is-added{background:var(--accent-dim);color:var(--accent-light,var(--accent))}
+.bluechat-product-add:disabled{opacity:.6;cursor:default}
+.bluechat-product-out{flex-shrink:0;font-size:11px;color:var(--muted)}
+.bluechat-order{gap:11px}
+.bluechat-order-icon{width:40px;height:40px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--accent-dim);color:var(--accent-light,var(--accent))}
+.bluechat-order-status{flex-shrink:0;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid}
 .bluechat-actions{display:flex;flex-wrap:wrap;gap:6px}
 .bluechat-action{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;font-weight:600;padding:7px 11px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--text);text-decoration:none;cursor:pointer}
 .bluechat-action.primary{background:var(--accent);border-color:var(--accent);color:#fff}

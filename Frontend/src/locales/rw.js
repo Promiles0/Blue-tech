@@ -568,4 +568,11 @@ export default {
   'Hi! Looking for a laptop or printer? Ask me 👋': 'Muraho! Murashaka mudasobwa cyangwa printer? Mumbaze 👋',
   'Dismiss': 'Funga',
   'View': 'Reba',
+  'Add': 'Ongeramo',
+  'Add {name} to cart': 'Shyira {name} mu gitebo',
+  'Order #{id}': 'Itegeko #{id}',
+  'Being prepared': 'Riri gutegurwa',
+  'Refunded': 'Byasubijwe',
+  'Payment failed': 'Kwishyura byanze',
+  'Sign in to check your order': 'Injira urebe aho itegeko ryawe rigeze',
 }

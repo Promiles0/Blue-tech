@@ -567,4 +567,11 @@ export default {
   'Hi! Looking for a laptop or printer? Ask me 👋': 'Bonjour ! Vous cherchez un ordinateur ou une imprimante ? Demandez-moi 👋',
   'Dismiss': 'Fermer',
   'View': 'Voir',
+  'Add': 'Ajouter',
+  'Add {name} to cart': 'Ajouter {name} au panier',
+  'Order #{id}': 'Commande n°{id}',
+  'Being prepared': 'En préparation',
+  'Refunded': 'Remboursée',
+  'Payment failed': 'Paiement échoué',
+  'Sign in to check your order': 'Connectez-vous pour suivre votre commande',
 }
