@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { track } from '../lib/analytics'
 import { useT } from '../lib/i18n'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ShoppingBag, Heart, Check, BadgeCheck, Plus, Minus, MessageCircle } from 'lucide-react'
@@ -58,6 +59,7 @@ export default function ProductDetail() {
       .then(({ data }) => {
         if (cancelled) return
         setProduct(data)
+        track('view_item', { value: data?.price, items: [{ id: data?.productId ?? data?.id, name: data?.name, price: data?.price }] })
         setSelectedVariant(data.variants?.[0] ?? null)
         trackRecentlyViewed(data)
       })

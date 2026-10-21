@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Save, RefreshCw, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'
-import { DeliverySettings, BusinessSettings, AutomationSettings, ProductFeeds } from './StoreSettingsForms'
+import { DeliverySettings, BusinessSettings, AutomationSettings, ProductFeeds, AboutSettings, AnalyticsSettings } from './StoreSettingsForms'
 
 export default function AdminSettings() {
   const [rate, setRate] = useState('')
@@ -148,6 +148,8 @@ export default function AdminSettings() {
       <BusinessSettings />
       <AutomationSettings />
       <ProductFeeds />
+      <AboutSettings />
+      <AnalyticsSettings />
     </div>
   )
 }

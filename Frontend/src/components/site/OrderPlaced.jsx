@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { trackPurchaseOnce } from '../../lib/analytics'
 import { Link } from 'react-router-dom'
 import { CheckCircle, MessageCircle, Package, ShoppingBag, Truck, Home, Wallet } from 'lucide-react'
 import apiService from '../../api/service'
@@ -14,8 +15,8 @@ export default function OrderPlaced({ orderId, deliveryText, cashOnPickup }) {
 
   useEffect(() => {
     if (!orderId) return
-    apiService.orders.getOrderDetails(orderId).then(({ data }) => setOrder(data)).catch(() => {})
-  }, [orderId])
+    apiService.orders.getOrderDetails(orderId).then(({ data }) => { setOrder(data); if (!cashOnPickup) trackPurchaseOnce(data) }).catch(() => {})
+  }, [orderId, cashOnPickup])
 
   const steps = [
     { icon: Wallet, label: cashOnPickup ? t('Order placed') : t('Paid'), done: true },

@@ -32,6 +32,7 @@ const ComparePage = lazy(() => import('./pages/ComparePage'))
 const CategoryPage = lazy(() => import('./pages/CategoryPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const HelpPage = lazy(() => import('./pages/HelpPage'))
+const AboutPage = lazy(() => import('./pages/AboutPage'))
 const PromotionPage = lazy(() => import('./pages/PromotionPage'))
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
@@ -219,6 +220,7 @@ function CustomerSite() {
         <Route path="/interactive-screens" element={<InteractiveScreensPage />} />
         <Route path="/search"            element={<SearchPage />} />
         <Route path="/compare"           element={<ComparePage />} />
+        <Route path="/about"             element={<AboutPage />} />
         <Route path="/category/:slug"    element={<CategoryPage />} />
 
         <Route path="/cart"     element={<CartPage />} />

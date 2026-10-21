@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { track } from "../lib/analytics";
 import { useT } from '../lib/i18n'
 import { useStoreSettings, deliveryWindow, formatWindow } from "../lib/delivery";
 import { usePrograms, useRewards } from "../lib/programs";
@@ -47,6 +48,15 @@ function CheckoutForm() {
   const [momoOutcome, setMomoOutcome] = useState("waiting"); // "waiting" | "timeout"
 
   const [newAddress, setNewAddress] = useState(EMPTY_RW_ADDRESS);
+  const [checkoutTracked, setCheckoutTracked] = useState(false);
+  useEffect(() => {
+    if (checkoutTracked || !cart?.items?.length) return;
+    setCheckoutTracked(true);
+    track("begin_checkout", {
+      value: cart.items.reduce((s, i) => s + parseFloat(i.unitPrice ?? i.price ?? 0) * (i.quantity ?? 1), 0),
+      items: cart.items.map((i) => ({ id: i.product?.productId ?? i.variantId, name: i.productName, price: i.unitPrice, quantity: i.quantity })),
+    });
+  }, [cart, checkoutTracked]);
 
   useEffect(() => {
     if (!user) {

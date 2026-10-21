@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import { track } from '../lib/analytics'
 import { toast } from 'sonner'
 import apiService from '../api/service'
 import { useAuth } from './AuthContext'
@@ -82,12 +83,14 @@ export function CartProvider({ children }) {
         : [...current, { cartItemId: `guest-${variantId}`, variantId, quantity, ...(snapshot ?? {}) }]
       setGuest(next)
       toast.success('Added to cart')
+      track('add_to_cart', { value: (snapshot?.unitPrice ?? 0) * quantity, items: [{ id: snapshot?.product?.productId ?? variantId, name: snapshot?.productName, price: snapshot?.unitPrice, quantity }] })
       return
     }
     try {
       await apiService.cart.addItem({ variantId, quantity })
       await fetchCart()
       toast.success('Added to cart')
+      track('add_to_cart', { value: (snapshot?.unitPrice ?? 0) * quantity, items: [{ id: snapshot?.product?.productId ?? variantId, name: snapshot?.productName, price: snapshot?.unitPrice, quantity }] })
     } catch (err) {
       const status = err.response?.status
       const message = err.response?.data?.message?.toLowerCase() || ''

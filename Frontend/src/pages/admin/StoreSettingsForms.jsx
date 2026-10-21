@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Truck, FileText, Timer, Rss, Copy } from 'lucide-react'
+import { Save, Truck, FileText, Timer, Rss, Copy, Store, BarChart3 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import apiService from '../../api/service'
@@ -81,6 +81,45 @@ export function DeliverySettings() {
       {v.pickupEnabled && (
         <div style={{ marginTop: 14 }}><label style={lbl}>Pickup address</label><input style={input} value={v.pickupAddress ?? ''} onChange={f.set('pickupAddress')} /></div>
       )}
+      <SaveBtn saving={f.saving} dirty={f.dirty} onClick={f.save} />
+    </div>
+  )
+}
+
+// The public About page (3c): story, opening hours, shop photo.
+export function AboutSettings() {
+  const f = useSettingForm('aboutPage', apiService.admin.settings.saveAbout)
+  if (!f.value) return <div style={card}>Loading About page…</div>
+  const v = f.value
+  return (
+    <div style={card}>
+      <h2 style={h2}><Store size={17} /> About page</h2>
+      <p style={hint}>Shown at <a href="/about" target="_blank" rel="noreferrer">/about</a> with your address, phone, email and TIN from Invoice details above. Leave the story empty to use a short default.</p>
+      <label style={lbl}>Your story</label>
+      <textarea rows={6} maxLength={3000} style={{ ...input, resize: 'vertical', lineHeight: 1.55 }} value={v.story ?? ''} onChange={f.set('story')}
+        placeholder="Since 2020 we've helped students, schools and businesses in Kigali choose the right computers…" />
+      <div style={{ ...grid, marginTop: 14 }}>
+        <div><label style={lbl}>Opening hours</label><input style={input} value={v.hours ?? ''} onChange={f.set('hours')} placeholder="Mon–Sat 8:00–19:00 · Closed on Sunday" /></div>
+        <div><label style={lbl}>Shop photo (https link)</label><input style={input} value={v.photoUrl ?? ''} onChange={f.set('photoUrl')} placeholder="https://…" /></div>
+      </div>
+      <SaveBtn saving={f.saving} dirty={f.dirty} onClick={f.save} />
+    </div>
+  )
+}
+
+// Google Analytics 4 / Meta Pixel IDs (6e). Empty = off; visitors are asked for consent first.
+export function AnalyticsSettings() {
+  const f = useSettingForm('analytics', apiService.admin.settings.saveAnalytics)
+  if (!f.value) return <div style={card}>Loading analytics…</div>
+  const v = f.value
+  return (
+    <div style={card}>
+      <h2 style={h2}><BarChart3 size={17} /> Analytics</h2>
+      <p style={hint}>See which pages, products and ads bring buyers. Leave empty to keep analytics off. Visitors see a consent banner and nothing loads unless they accept.</p>
+      <div style={grid}>
+        <div><label style={lbl}>Google Analytics 4 measurement ID</label><input style={input} value={v.ga4Id ?? ''} onChange={f.set('ga4Id')} placeholder="G-XXXXXXXXXX" /></div>
+        <div><label style={lbl}>Meta Pixel ID</label><input style={input} value={v.metaPixelId ?? ''} onChange={f.set('metaPixelId')} placeholder="123456789012345" /></div>
+      </div>
       <SaveBtn saving={f.saving} dirty={f.dirty} onClick={f.save} />
     </div>
   )

@@ -312,6 +312,24 @@ function cleanDeliveryConfig(body: Record<string, unknown>) {
   };
 }
 
+// ── About page (3c) and analytics IDs (6e) — public settings edited in Admin → Settings ──
+const DEFAULT_ABOUT = { story: "", hours: "Mon–Sat 8:00–19:00 · Closed on Sunday", photoUrl: "" };
+function cleanAbout(body: Record<string, unknown>) {
+  const photo = String(body.photoUrl ?? "").trim();
+  return {
+    story: String(body.story ?? "").slice(0, 3000),
+    hours: String(body.hours ?? DEFAULT_ABOUT.hours).slice(0, 160),
+    photoUrl: /^https:\/\/[^\s"']+$/.test(photo) ? photo.slice(0, 500) : "",
+  };
+}
+// Empty = off. Only well-formed IDs are kept, so a typo can't inject anything into the page.
+const DEFAULT_ANALYTICS = { ga4Id: "", metaPixelId: "" };
+function cleanAnalytics(body: Record<string, unknown>) {
+  const ga4 = String(body.ga4Id ?? "").trim().toUpperCase();
+  const pixel = String(body.metaPixelId ?? "").trim();
+  return { ga4Id: /^G-[A-Z0-9]{4,16}$/.test(ga4) ? ga4 : "", metaPixelId: /^\d{8,20}$/.test(pixel) ? pixel : "" };
+}
+
 // ── Automation (round 1): unpaid-order auto-cancel, cart reminders, review requests ──
 // Auto-cancel is a business rule, so it's off until the owner turns it on.
 const DEFAULT_AUTOMATION = {
@@ -3219,6 +3237,8 @@ async function handle(request: Request) {
       deliveryConfig: (() => { try { return { ...DEFAULT_DELIVERY, ...JSON.parse(String(settings.delivery_config ?? "{}")) }; } catch { return DEFAULT_DELIVERY; } })(),
       businessInfo: (() => { try { return { ...DEFAULT_BUSINESS, ...JSON.parse(String(settings.business_info ?? "{}")) }; } catch { return DEFAULT_BUSINESS; } })(),
       programs: (() => { try { return cleanPrograms(JSON.parse(String(settings.programs ?? "{}"))); } catch { return cleanPrograms({}); } })(),
+      aboutPage: (() => { try { return { ...DEFAULT_ABOUT, ...JSON.parse(String(settings.about_page ?? "{}")) }; } catch { return DEFAULT_ABOUT; } })(),
+      analytics: (() => { try { return cleanAnalytics(JSON.parse(String(settings.analytics ?? "{}"))); } catch { return DEFAULT_ANALYTICS; } })(),
     });
   }
 
@@ -4717,6 +4737,19 @@ async function handle(request: Request) {
     return success("Updated", data, request);
   }
 
+  if (method === "PUT" && (path === "/admin/settings/about" || path === "/admin/settings/analytics")) {
+    await requireAdmin(request, user);
+    const body = await readJson(request);
+    const isAbout = path.endsWith("/about");
+    const value = isAbout ? cleanAbout(body) : cleanAnalytics(body);
+    if (!isAbout && ((body.ga4Id && !value.ga4Id) || (body.metaPixelId && !value.metaPixelId))) {
+      return failure("Check the IDs: Google Analytics looks like G-XXXXXXXXXX and a Meta Pixel ID is 8–20 digits", 400, request);
+    }
+    const { error } = await saveJsonSetting(isAbout ? "about_page" : "analytics", value);
+    if (error) return failure(error.message, 400, request);
+    return success("Settings saved", value, request);
+  }
+
   if (method === "PUT" && path === "/admin/settings/automation") {
     await requireAdmin(request, user);
     const value = cleanAutomation(await readJson(request));
@@ -4757,11 +4790,11 @@ async function handle(request: Request) {
     await requireAdmin(request, user);
 
     if (method === "GET" && path === "/admin/settings") {
-      const [deliveryConfig, businessInfo, automation] = await Promise.all([
+      const [deliveryConfig, businessInfo, automation, aboutPage, analytics] = await Promise.all([
         jsonSetting("delivery_config", DEFAULT_DELIVERY), jsonSetting("business_info", DEFAULT_BUSINESS),
-        jsonSetting("automation", DEFAULT_AUTOMATION),
+        jsonSetting("automation", DEFAULT_AUTOMATION), jsonSetting("about_page", DEFAULT_ABOUT), jsonSetting("analytics", DEFAULT_ANALYTICS),
       ]);
-      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate(), deliveryConfig, businessInfo, automation: { ...DEFAULT_AUTOMATION, ...automation }, programs: await programsSetting() }, request);
+      return success("Settings fetched", { usdToRwfRate: await usdToRwfRate(), deliveryConfig, businessInfo, automation: { ...DEFAULT_AUTOMATION, ...automation }, aboutPage, analytics, programs: await programsSetting() }, request);
     }
 
     if (method === "PUT" && path === "/admin/settings/exchange-rate") {

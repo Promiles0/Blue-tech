@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { trackPurchaseOnce } from '../lib/analytics'
 import { useT } from '../lib/i18n'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Package, Truck, CheckCircle2, Clock, XCircle, Wallet, Star } from 'lucide-react'
@@ -161,6 +162,7 @@ export default function OrderDetailPage() {
                 toast.success(t('Payment received — thank you!'))
                 const { data } = await apiService.orders.getOrderDetails(id)
                 setOrder(data)
+                trackPurchaseOnce(data)
               }}
             />
           </div>

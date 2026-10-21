@@ -12,6 +12,7 @@ import NewsletterBand   from './NewsletterBand'
 import MobileNav        from './MobileNav'
 import { useUI } from '../../context/UIContext'
 import { onLiveChatRequested } from '../../lib/liveChat'
+import AnalyticsManager from './AnalyticsManager'
 
 // Overlays download the first time they're needed, not with every page.
 const CartDrawer       = lazy(() => import('./CartDrawer'))
@@ -90,6 +91,7 @@ export default function SiteLayout({ children }) {
         {chatReady && <ChatWidget />}
       </Suspense>
       <MobileNav />
+      <AnalyticsManager />
       <CompareTray />
 
       <Toaster

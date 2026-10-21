@@ -2,6 +2,7 @@
 // used by the Footer's HELP column and the header Help dropdown so
 // they can't drift out of sync.
 export const HELP_LINKS = [
+  ['About us', '/about'],
   ['FAQ',      '/help?v=faq'],
   ['Shipping', '/help?v=shipping'],
   ['Returns',  '/help?v=returns'],

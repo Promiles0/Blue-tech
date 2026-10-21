@@ -17,6 +17,7 @@ const urls = [
   { loc: '/', priority: '1.0', changefreq: 'daily' },
   { loc: '/products', priority: '0.9', changefreq: 'daily' },
   { loc: '/interactive-screens', priority: '0.8', changefreq: 'weekly' },
+  { loc: '/about', priority: '0.5', changefreq: 'monthly' },
   { loc: '/help', priority: '0.4', changefreq: 'monthly' },
 ]
 

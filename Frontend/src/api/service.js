@@ -197,6 +197,8 @@ const apiService = {
       saveDelivery: (config) => api.put('/admin/settings/delivery', config),
       saveBusiness: (info) => api.put('/admin/settings/business', info),
       saveAutomation: (config) => api.put('/admin/settings/automation', config),
+      saveAbout: (about) => api.put('/admin/settings/about', about),
+      saveAnalytics: (ids) => api.put('/admin/settings/analytics', ids),
       getBlue: () => api.get('/admin/settings/blue'),
       saveBlue: (instructions) => api.put('/admin/settings/blue', { instructions }),
     },
