@@ -25,7 +25,8 @@ const PEEK = 32   // px of the next slide visible at the right edge
 const GAP  = 10   // px gap between slides
 // Short, wide banner so the department tiles below still show on the first screen.
 const slideHeightFor = (w) => Math.round(Math.min(Math.max(w * 0.24, 168), 236))
-const AUTO_ADVANCE_MS = 3000
+// Slow enough to read a slide; paused on hover, focus, drag and reduced motion.
+const AUTO_ADVANCE_MS = 5500
 
 export default function PromoCarousel() {
   const slides = useHomeSlides()
@@ -35,6 +36,7 @@ export default function PromoCarousel() {
   const [width, setWidth]     = useState(0)
   const [index, setIndex]     = useState(0)
   const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
   const [dragging, setDragging] = useState(false)
 
   // Layout effect (fires before paint) so the track is never briefly
@@ -57,10 +59,10 @@ export default function PromoCarousel() {
 
   // Auto-advance — paused on hover, mid-drag, or reduced motion
   useEffect(() => {
-    if (reduce || hovered || dragging || slideWidth === 0) return
+    if (reduce || hovered || focused || dragging || slideWidth === 0) return
     const id = setInterval(() => setIndex(i => (i + 1) % slides.length), AUTO_ADVANCE_MS)
     return () => clearInterval(id)
-  }, [reduce, hovered, dragging, slideWidth])
+  }, [reduce, hovered, focused, dragging, slideWidth])
 
   const goTo = (i) => setIndex(Math.min(Math.max(i, 0), maxIndex))
 
@@ -83,6 +85,9 @@ export default function PromoCarousel() {
           ref={wrapperRef}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          aria-roledescription="carousel"
           style={{ position: 'relative', overflow: 'hidden', borderRadius: 16 }}
         >
           {slideWidth === 0 ? (
@@ -129,18 +134,19 @@ export default function PromoCarousel() {
                   )}
                   <div style={{
                     position: 'absolute', inset: 0,
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)',
+                    // Strong enough that white text stays readable over any photo (UX audit B10).
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.45) 42%, transparent 72%)',
                     pointerEvents: 'none',
                   }} />
-                  <div style={{ position: 'absolute', left: 22, right: 22, bottom: 18 }}>
+                  <div style={{ position: 'absolute', left: 'clamp(14px, 3vw, 22px)', right: 'clamp(14px, 3vw, 22px)', bottom: 'clamp(12px, 2.4vw, 18px)', textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>
                     <p style={{
                       fontFamily: '"Space Grotesk",sans-serif',
-                      fontSize: 19, fontWeight: 800, letterSpacing: '-0.01em',
-                      color: '#fff', marginBottom: 4, lineHeight: 1.2,
+                      fontSize: 'clamp(16px, 2.4vw, 20px)', fontWeight: 800, letterSpacing: '-0.01em',
+                      color: '#fff', marginBottom: 3, lineHeight: 1.2, maxWidth: 560,
                     }}>
                       {slide.title}
                     </p>
-                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)' }}>
+                    <p style={{ fontSize: 'clamp(12px, 1.6vw, 13.5px)', color: 'rgba(255,255,255,0.88)', maxWidth: 560 }}>
                       {slide.subtitle}
                     </p>
                   </div>
@@ -151,20 +157,21 @@ export default function PromoCarousel() {
         </div>
 
         {/* Dot indicators */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 0, marginTop: 0 }}>
           {slides.map((slide, i) => (
             <button
               key={slide.slug}
               onClick={() => goTo(i)}
               aria-label={`Go to promotion ${i + 1} of ${slides.length}`}
               aria-current={i === index}
-              style={{
-                width: i === index ? 20 : 6, height: 6, borderRadius: 3,
-                background: i === index ? 'var(--accent)' : 'var(--border-strong)',
-                border: 'none', cursor: 'pointer', padding: 0,
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '9px 3px', display: 'flex' }}
+            >
+              <span style={{
+                display: 'block', width: i === index ? 20 : 6, height: 6, borderRadius: 3,
+                background: i === index ? 'var(--accent-light)' : 'var(--border-strong)',
                 transition: 'width 0.3s ease, background 0.2s ease',
-              }}
-            />
+              }} />
+            </button>
           ))}
         </div>
       </div>

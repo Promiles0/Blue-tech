@@ -27,6 +27,20 @@ function useOnceTrue(on) {
   return seen || on
 }
 import CompareTray      from './CompareTray'
+import MobileTabBar     from './MobileTabBar'
+
+// Toasts sit at the bottom on phones, clear of the header and cart (UX audit C5).
+function usePhone() {
+  const query = '(max-width: 768px)'
+  const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const on = () => setPhone(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return phone
+}
 
 export default function SiteLayout({ children }) {
   const location = useLocation()
@@ -36,6 +50,7 @@ export default function SiteLayout({ children }) {
   const showCart = useOnceTrue(cartOpen)
   const showPalette = useOnceTrue(paletteOpen)
   const showQuickView = useOnceTrue(Boolean(quickViewProduct))
+  const phone = usePhone()
 
   // Blue's launcher appears once the page has settled, or at once if something asks for it.
   const [chatReady, setChatReady] = useState(false)
@@ -91,12 +106,13 @@ export default function SiteLayout({ children }) {
         {chatReady && <ChatWidget />}
       </Suspense>
       <MobileNav />
+      <MobileTabBar />
       <AnalyticsManager />
       <CompareTray />
 
       <Toaster
         theme={theme}
-        position="top-right"
+        position={phone ? 'bottom-center' : 'top-right'}
         toastOptions={{
           style: {
             background: 'var(--surface)',

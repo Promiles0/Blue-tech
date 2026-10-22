@@ -35,16 +35,16 @@ export default function StickyCartBar({ product, selectedVariant, onAdd, adding,
           }}
         >
           <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-            <div style={{ minWidth: 0 }}>
+            <div className="sticky-cart-name" style={{ minWidth: 0 }}>
               <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {product?.name}
               </p>
-              {selectedVariant?.sizeOrColor && (
+              {selectedVariant?.sizeOrColor && selectedVariant.sizeOrColor !== 'Default' && (
                 <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{selectedVariant.sizeOrColor}</p>
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+            <div className="sticky-cart-actions" style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, marginLeft: 'auto' }}>
               <span style={{ fontSize: 'clamp(16px, 4vw, 20px)', fontWeight: 900, color: 'var(--price)', whiteSpace: 'nowrap' }}>{formatPrice(price)}</span>
               <button
                 onClick={onAdd}

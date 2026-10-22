@@ -20,6 +20,7 @@ import { GuestCheckoutGate } from "../components/site/GuestCheckout";
 import { loadCheckoutMemory, saveCheckoutMemory } from "../lib/checkoutMemory";
 import { clearReferral, storedReferral } from "../lib/referral";
 import { useQuery } from "@tanstack/react-query";
+import { getProductThumb, handleProductImageError } from "../lib/productImage";
 import { CARD_ELEMENT_OPTIONS, MOMO_POLL_INTERVAL_MS, MOMO_POLL_TIMEOUT_MS, getStripe, momoProviderFor, normalizeRwandaPhone } from "../lib/payments";
 
 const EXPRESS_SHIPPING_FEE_RWF = 7500;
@@ -469,9 +470,13 @@ function CheckoutForm() {
 
               <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
                 {cart?.items?.map((item) => (
-                  <div key={item.cartItemId ?? item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
-                    <span style={{ color: "var(--text-secondary)" }}>{item.productName} <small>x{item.quantity}</small></span>
-                    <span style={{ color: "var(--text-primary)" }}>{formatPrice(getItemTotal(item))}</span>
+                  <div key={item.cartItemId ?? item.id} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 14 }}>
+                    <span style={{ position: "relative", flexShrink: 0, width: 52, height: 52, borderRadius: 10, background: "#fff", border: "1px solid var(--card-border)" }}>
+                      <img src={getProductThumb(item.product ?? item)} alt="" onError={handleProductImageError} style={{ width: "100%", height: "100%", objectFit: "contain", padding: 4, borderRadius: 10 }} />
+                      <span className="checkout-qty" aria-label={t("Quantity {n}", { n: item.quantity })}>{item.quantity}</span>
+                    </span>
+                    <span style={{ flex: 1, minWidth: 0, color: "var(--text-secondary)", lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{item.productName}</span>
+                    <span style={{ color: "var(--text-primary)", fontWeight: 600, whiteSpace: "nowrap" }}>{formatPrice(getItemTotal(item))}</span>
                   </div>
                 ))}
               </div>
@@ -561,6 +566,18 @@ function CheckoutForm() {
               </button>
             </div>
           </aside>
+
+          {/* Phones: the total and the pay button stay in reach while filling the form (UX audit B7) */}
+          <div className="checkout-paybar">
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 11.5, color: "var(--text-secondary)" }}>{t("Total")}</p>
+              <p style={{ fontSize: 18, fontWeight: 800, color: "var(--price-color)", whiteSpace: "nowrap" }}>{formatPrice(total)}</p>
+            </div>
+            <button onClick={handlePlaceOrder} disabled={loading || !cart?.items?.length || (paymentMethod === "CARD" && !stripe)}
+              className="noir-btn-cta" style={{ flex: 1, maxWidth: 240, minHeight: 48, fontSize: 15 }}>
+              {loading ? t("Processing…") : t("Confirm & pay")}
+            </button>
+          </div>
         </div>
       </div>
     </div>

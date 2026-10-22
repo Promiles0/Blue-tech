@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useT } from '../lib/i18n'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Truck, Shield, RotateCcw, SlidersHorizontal, Loader2, MessageCircle } from 'lucide-react'
+import { ArrowRight, MessageCircle } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import Testimonials from '../components/site/Testimonials'
 import RecentlyViewed from '../components/site/RecentlyViewed'
-import FilterRail from '../components/site/FilterRail'
 import PromoCarousel from '../components/site/PromoCarousel'
 import DepartmentShelves from '../components/site/DepartmentShelves'
 import { Reveal } from '../lib/motion'
@@ -13,9 +12,7 @@ import apiService from '../api/service'
 import { openLiveChat } from '../lib/liveChat'
 import { usePageMeta, storeJsonLd, SITE_URL } from '../hooks/usePageMeta'
 
-const emptyFilters = { selected: {}, minPrice: '', maxPrice: '' }
-
-// One-tap price bands (RWF) above the grid; they just fill the filter rail's min/max.
+// One-tap price bands (RWF); each opens the Store with that price filter.
 const BUDGETS = [
   { label: 'Under 500k',  min: '',        max: '500000' },
   { label: '500k – 1M',   min: '500000',  max: '1000000' },
@@ -28,7 +25,7 @@ const BLUE_EXAMPLES = [
   'I need a printer for a small office',
   'What can I get for under 1,000,000 RWF?',
 ]
-const PAGE_SIZE = 12
+const NEW_ARRIVALS = 8
 
 export default function Home() {
   const { t } = useT()
@@ -49,219 +46,82 @@ export default function Home() {
       },
     ],
   })
-  const [pool,    setPool]    = useState([])
+  const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
-  const [filters, setFilters] = useState(emptyFilters)
-  const [facets,  setFacets]  = useState({})
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
-  // Load-more pagination — page/hasMore track the server-side cursor,
-  // loadingMore only covers the "fetch next batch" request (not the initial load)
-  const [page, setPage] = useState(0)
-  const [hasMore, setHasMore] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-
-  // Debounce the price inputs so we don't refetch on every keystroke
-  const [debouncedMin, setDebouncedMin] = useState('')
-  const [debouncedMax, setDebouncedMax] = useState('')
-  useEffect(() => {
-    const id = setTimeout(() => {
-      setDebouncedMin(filters.minPrice)
-      setDebouncedMax(filters.maxPrice)
-    }, 400)
-    return () => clearTimeout(id)
-  }, [filters.minPrice, filters.maxPrice])
-
-  useEffect(() => {
-    apiService.products.facets()
-      .then(({ data }) => setFacets(data && typeof data === 'object' ? data : {}))
-      .catch(() => setFacets({}))
-  }, [])
-
-  // Facet selections as API params: brand=HP|Lenovo&ram=8GB ("|" since values can hold commas).
-  const facetQuery = Object.entries(filters.selected)
-    .filter(([, values]) => values.length)
-    .map(([key, values]) => [key, values.join('|')])
-  const facetKey = JSON.stringify(facetQuery)
-
-  const fetchProductsPage = (pageNum) => {
-    const hasFilter = debouncedMin !== '' || debouncedMax !== '' || facetQuery.length > 0
-    if (hasFilter) {
-      const params = new URLSearchParams()
-      if (debouncedMin !== '') params.set('minPrice', debouncedMin)
-      if (debouncedMax !== '') params.set('maxPrice', debouncedMax)
-      for (const [key, value] of facetQuery) params.set(key, value)
-      params.set('sort', 'updatedAt,desc')
-      params.set('page', String(pageNum))
-      params.set('size', String(PAGE_SIZE))
-      return apiService.products.search(params)
-    }
-    return apiService.products.getAllPaginated(`page=${pageNum}&size=${PAGE_SIZE}`)
-  }
-
-  // Filters changed — reset to page 0 and replace the pool
+  // Home is a short, curated page; the Store (/products) has every filter (UX audit A5/B4).
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setLoadError(false)
-    setPage(0)
-
-    fetchProductsPage(0)
-      .then(({ data }) => {
-        if (cancelled) return
-        const content = data?.content ?? (Array.isArray(data) ? data : [])
-        setPool(content)
-        setHasMore(data?.totalPages != null ? data.totalPages > 1 : content.length === PAGE_SIZE)
-      })
-      .catch(() => { if (!cancelled) { setPool([]); setHasMore(false); setLoadError(true) } })
+    apiService.products.getAllPaginated(`page=0&size=${NEW_ARRIVALS}`)
+      .then(({ data }) => { if (!cancelled) setProducts(data?.content ?? (Array.isArray(data) ? data : [])) })
+      .catch(() => { if (!cancelled) { setProducts([]); setLoadError(true) } })
       .finally(() => { if (!cancelled) setLoading(false) })
-
     return () => { cancelled = true }
-  }, [debouncedMin, debouncedMax, facetKey, reloadKey]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const loadMore = () => {
-    if (loadingMore || !hasMore) return
-    setLoadingMore(true)
-    const nextPage = page + 1
-
-    fetchProductsPage(nextPage)
-      .then(({ data }) => {
-        const content = data?.content ?? (Array.isArray(data) ? data : [])
-        setPool(prev => [...prev, ...content])
-        setPage(nextPage)
-        setHasMore(data?.totalPages != null ? nextPage + 1 < data.totalPages : content.length === PAGE_SIZE)
-      })
-      .catch(() => setHasMore(false))
-      .finally(() => setLoadingMore(false))
-  }
-
-  const displayProducts = pool
-
-  const activeCount = Object.values(filters.selected).reduce((n, values) => n + values.length, 0)
-    + (filters.minPrice ? 1 : 0) + (filters.maxPrice ? 1 : 0)
-
-  const toggleFacet = (key, value) => setFilters(f => {
-    const current = f.selected[key] ?? []
-    const next = current.includes(value) ? current.filter(x => x !== value) : [...current, value]
-    return { ...f, selected: { ...f.selected, [key]: next } }
-  })
-  const setMinPrice = (v) => setFilters(f => ({ ...f, minPrice: v }))
-  const setMaxPrice = (v) => setFilters(f => ({ ...f, maxPrice: v }))
-  const clearAll     = () => setFilters(emptyFilters)
-
+  }, [reloadKey])
 
   return (
     <div>
+      {/* ── What the shop is, in one line (UX audit B9) ── */}
+      <section className="container-noir home-intro">
+        <div>
+          <h1>{t('Genuine laptops & tech, delivered across Rwanda')}</h1>
+          <p>{t('Warranty on every product. Pay with MTN MoMo, Airtel Money or card.')}</p>
+        </div>
+        <div className="home-intro-ctas">
+          <Link to="/products" className="noir-btn-cta">{t('Shop all products')} <ArrowRight size={15} /></Link>
+          <button type="button" onClick={() => openLiveChat()} className="noir-btn-outline"><MessageCircle size={15} /> {t('Ask Blue')}</button>
+        </div>
+      </section>
 
       <PromoCarousel />
 
       {/* ── Department tiles + one shelf per big department ─── */}
       <DepartmentShelves />
 
-      {/* ── Filter rail + full product grid ──────────────────── */}
-      <div id="all-products" className="container-noir shop-layout" style={{ paddingTop: 24, paddingBottom: 64 }}>
-        <FilterRail
-          filters={filters}
-          setters={{ toggleFacet, setMinPrice, setMaxPrice }}
-          facets={facets}
-          activeCount={activeCount}
-          onClearAll={clearAll}
-          mobileOpen={mobileFiltersOpen}
-          onMobileClose={() => setMobileFiltersOpen(false)}
-        />
-
-        <div>
-          <Reveal>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
-              <div>
-                <h1 style={{
-                  fontFamily: '"Space Grotesk",sans-serif',
-                  fontSize: 'clamp(26px, 3vw, 34px)', fontWeight: 900,
-                  letterSpacing: '-0.02em', lineHeight: 1.1,
-                  color: 'var(--text)', marginBottom: 6,
-                }}>
-                  {t('All products')}
-                </h1>
-                <p style={{ fontSize: 14, color: 'var(--muted)' }}>{t('Newest first. Filter by brand, price and specs.')}</p>
-                <div className="budget-chips" role="group" aria-label={t('Shop by budget')}>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted-dark)', marginRight: 2 }}>{t('Budget:')}</span>
-                  {BUDGETS.map(b => {
-                    const on = filters.minPrice === b.min && filters.maxPrice === b.max
-                    return (
-                      <button key={b.label} aria-pressed={on} className={`budget-chip ${on ? 'on' : ''}`}
-                        onClick={() => setFilters(f => on ? { ...f, minPrice: '', maxPrice: '' } : { ...f, minPrice: b.min, maxPrice: b.max })}>
-                        {t(b.label)}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-              <button
-                className="filter-mobile-btn noir-btn-outline"
-                onClick={() => setMobileFiltersOpen(true)}
-                style={{ fontSize: 13 }}
-              >
-                <SlidersHorizontal size={14} /> {t('Filters')}{activeCount > 0 ? ` (${activeCount})` : ''}
-              </button>
-            </div>
-          </Reveal>
-
-          {loading ? (
-            <div className="grid-4">
-              {[...Array(PAGE_SIZE)].map((_, i) => (
-                <div key={i} className="skeleton" style={{ height: 340, borderRadius: 12 }} />
-              ))}
-            </div>
-          ) : loadError ? (
-            <div role="alert" style={{ textAlign: 'center', padding: '56px 16px', border: '1px solid var(--border)', borderRadius: 12 }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>{t("Couldn't load products")}</p>
-              <p style={{ fontSize: 13.5, color: 'var(--muted)', marginBottom: 18 }}>{t('Check your connection and try again.')}</p>
-              <button onClick={() => setReloadKey(k => k + 1)} className="noir-btn-primary" style={{ fontSize: 13 }}>{t('Try again')}</button>
-            </div>
-          ) : displayProducts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '64px 0', border: '1px solid var(--border)', borderRadius: 12 }}>
-              <p style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 16 }}>{t('No products match your filters.')}</p>
-              <button onClick={clearAll} className="noir-btn-outline" style={{ fontSize: 13 }}>{t('Clear filters')}</button>
-            </div>
-          ) : (
-            <div className="grid-4">
-              {displayProducts.map((p, i) => (
-                <Reveal key={p.productId ?? p.id} delay={Math.min((i % PAGE_SIZE) * 0.05, 0.3)}>
-                  <ProductCard product={p} />
-                </Reveal>
-              ))}
-            </div>
-          )}
-
-          {!loading && displayProducts.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 40 }}>
-              {hasMore ? (
-                <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className="noir-btn-outline"
-                  style={{ fontSize: 13, minWidth: 168, justifyContent: 'center', opacity: loadingMore ? 0.7 : 1, cursor: loadingMore ? 'default' : 'pointer' }}
-                >
-                  {loadingMore ? <><Loader2 size={14} className="animate-spin" /> {t('Loading…')}</> : t('Load more products')}
-                </button>
-              ) : (
-                <p style={{ fontSize: 13, color: 'var(--muted-dark)' }}>{t("You've seen it all.")}</p>
-              )}
-
-              <Link
-                to="/products"
-                style={{ fontSize: 13, color: 'var(--muted-dark)', display: 'flex', alignItems: 'center', gap: 4, transition: 'color 0.2s' }}
-                onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
-              >
-                {t('View full catalog')} <ArrowRight size={13} />
-              </Link>
-            </div>
-          )}
+      {/* ── New arrivals + shop by budget ── */}
+      <section id="all-products" className="container-noir" style={{ paddingTop: 24, paddingBottom: 56 }}>
+        <div className="section-head">
+          <div>
+            <h2>{t('New arrivals')}</h2>
+            <p>{t('The latest additions to the catalogue.')}</p>
+          </div>
+          <Link to="/products" className="section-link">{t('See all products')} <ArrowRight size={14} /></Link>
         </div>
-      </div>
+        <div className="budget-chips" role="group" aria-label={t('Shop by budget')} style={{ marginTop: 0, marginBottom: 16 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--text-secondary)', marginRight: 2 }}>{t('Shop by budget:')}</span>
+          {BUDGETS.map(b => (
+            <Link key={b.label} className="budget-chip" to={`/products?${new URLSearchParams(Object.entries({ minPrice: b.min, maxPrice: b.max }).filter(([, v]) => v))}`}>
+              {t(b.label)}
+            </Link>
+          ))}
+        </div>
+
+        {loading ? (
+          <div className="grid-4">
+            {[...Array(NEW_ARRIVALS)].map((_, i) => <div key={i} className="skeleton card-skeleton" />)}
+          </div>
+        ) : loadError ? (
+          <div role="alert" style={{ textAlign: 'center', padding: '56px 16px', border: '1px solid var(--border)', borderRadius: 12 }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>{t("Couldn't load products")}</p>
+            <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', marginBottom: 18 }}>{t('Check your connection and try again.')}</p>
+            <button onClick={() => setReloadKey(k => k + 1)} className="noir-btn-primary" style={{ fontSize: 13 }}>{t('Try again')}</button>
+          </div>
+        ) : (
+          <div className="grid-4">
+            {products.map(p => <ProductCard key={p.productId ?? p.id} product={p} />)}
+          </div>
+        )}
+
+        {!loading && !loadError && products.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 32 }}>
+            <Link to="/products" className="noir-btn-outline" style={{ minWidth: 200 }}>{t('Browse the full catalogue')} <ArrowRight size={14} /></Link>
+          </div>
+        )}
+      </section>
 
       {/* ── Interactive screens — route schools and offices to the quote flow ── */}
       <Reveal>
@@ -332,27 +192,6 @@ export default function Home() {
                 </p>
               </div>
             </div>
-          </div>
-        </section>
-      </Reveal>
-
-      {/* ── Trust signals — quiet Muji/Away-style strip ─────── */}
-      <Reveal>
-        <section style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '36px 0' }}>
-          <div className="container-noir grid-3" style={{ gap: 40 }}>
-            {[
-              { icon: <Truck size={17} />, title: 'Free standard delivery', desc: 'Express next-day delivery also available.' },
-              { icon: <Shield size={17} />, title: 'Warranty included', desc: 'Every product page shows its warranty.' },
-              { icon: <RotateCcw size={17} />, title: '30-day returns', desc: "If it isn't right, send it back." },
-            ].map(({ icon, title, desc }) => (
-              <div key={title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                <div style={{ color: 'var(--muted-dark)', flexShrink: 0, marginTop: 1 }}>{icon}</div>
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text)', marginBottom: 4 }}>{t(title)}</p>
-                  <p style={{ fontSize: 13, color: 'var(--muted-dark)', lineHeight: 1.5 }}>{t(desc)}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </section>
       </Reveal>

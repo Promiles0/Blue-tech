@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { m as motion, AnimatePresence } from 'framer-motion'
 import { useT } from '../../lib/i18n'
-import { Link, useNavigate } from 'react-router-dom'
-import { X, Search, User, LogOut, Heart, GitCompare, HelpCircle, Sparkles, Moon, Sun, Download } from 'lucide-react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { X, User, LogOut, Heart, GitCompare, HelpCircle, Sparkles, Moon, Sun, Download } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 import { openLiveChat } from '../../lib/liveChat'
 import { promptInstall, useCanInstall, isIosSafari } from '../../lib/pwa'
@@ -11,6 +11,7 @@ import LanguageSwitcher from './LanguageSwitcher'
 import { useUI } from '../../context/UIContext'
 import { useAuth } from '../../context/AuthContext'
 import Logo from './Logo'
+import HeaderSearch from './HeaderSearch'
 
 const NAV_ITEMS = [
   { label: 'Shop',                to: '/products' },
@@ -24,7 +25,7 @@ const NAV_ITEMS = [
 
 export default function MobileNav() {
   const { t } = useT()
-  const { mobileNavOpen, setMobileNavOpen, setPaletteOpen } = useUI()
+  const { mobileNavOpen, setMobileNavOpen } = useUI()
   const { user, logout, isAdmin, canUseAdmin } = useAuth()
   const navigate         = useNavigate()
   const { theme, toggleTheme } = useTheme()
@@ -32,6 +33,9 @@ export default function MobileNav() {
   const [showIosHint, setShowIosHint] = useState(false)
 
   const close = () => setMobileNavOpen(false)
+  // A search from inside the menu changes the page; close the menu when that happens.
+  const { pathname, search } = useLocation()
+  useEffect(() => { setMobileNavOpen(false) }, [pathname, search, setMobileNavOpen])
 
   return (
     <AnimatePresence>
@@ -62,36 +66,34 @@ export default function MobileNav() {
               width: 'min(320px, 85vw)',
               background: 'var(--bg)', borderRight: '1px solid var(--border)',
               display: 'flex', flexDirection: 'column',
-              padding: 24, zIndex: 201,
+              padding: 20, zIndex: 201, overflowY: 'auto', overscrollBehavior: 'contain',
             }}
           >
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <Logo height={17} />
               </div>
-              <button onClick={close} style={{ background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', padding: 8, cursor: 'pointer' }}>
+              <button onClick={close} aria-label={t('Close menu')} className="hdr-icon">
                 <X size={20} />
               </button>
             </div>
 
+            {/* Search first: it's what most people open the menu for (UX audit B11) */}
+            <div style={{ marginBottom: 12 }}><HeaderSearch /></div>
+
             {/* Nav items — stagger */}
             <nav style={{ flex: 1 }}>
-              {NAV_ITEMS.map((item, i) => (
-                <motion.div
-                  key={item.label}
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.04 + i * 0.05, duration: 0.28 }}
-                >
+              {NAV_ITEMS.map((item) => (
+                <div key={item.label}>
                   <Link
                     to={item.to}
                     onClick={close}
                     style={{
                       display: 'block',
                       fontFamily: '"Space Grotesk",sans-serif',
-                      fontSize: 26, fontWeight: 800,
-                      color: 'var(--text)', padding: '10px 0',
+                      fontSize: 20, fontWeight: 700,
+                      color: 'var(--text)', padding: '9px 0',
                       letterSpacing: '-0.02em',
                       transition: 'color 0.2s',
                     }}
@@ -100,7 +102,7 @@ export default function MobileNav() {
                   >
                     {t(item.label)}
                   </Link>
-                </motion.div>
+                </div>
               ))}
             </nav>
 
@@ -128,18 +130,6 @@ export default function MobileNav() {
 
             {/* Bottom actions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '1px solid var(--border)', paddingTop: 24 }}>
-              <button
-                onClick={() => { setPaletteOpen(true); close() }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  background: 'var(--surface)', border: '1px solid var(--border)',
-                  borderRadius: 10, padding: '12px 16px',
-                  color: 'var(--muted)', fontSize: 14, cursor: 'pointer',
-                }}
-              >
-                <Search size={15} /> {t('Search products')}
-              </button>
-
               {user ? (
                 <>
                   {canUseAdmin && (
@@ -168,7 +158,7 @@ export default function MobileNav() {
                 </>
               ) : (
                 <Link to="/login" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--muted)', fontSize: 14 }}>
-                  <User size={15} /> Sign in
+                  <User size={15} /> {t('Sign in')}
                 </Link>
               )}
             </div>

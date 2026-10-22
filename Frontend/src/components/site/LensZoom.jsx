@@ -26,7 +26,7 @@ export default function LensZoom({ src, alt }) {
         src={src}
         alt={alt}
         onError={handleProductImageError}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4%', display: 'block' }}
       />
 
       {lens && (
