@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Save, Repeat, CalendarClock, Gift, GraduationCap } from 'lucide-react'
+import { Save, Repeat, CalendarClock, Gift, GraduationCap, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import apiService from '../../api/service'
 import { money, dateShort } from '../../lib/format'
@@ -28,6 +28,7 @@ export default function AdminPrograms() {
   const [saved, setSaved] = useState(null)
   const [saving, setSaving] = useState(false)
   const { data: requests } = useQuery({ queryKey: ['admin-program-requests'], queryFn: () => apiService.admin.programs.requests().then(r => r.data) })
+  const { data: referrals } = useQuery({ queryKey: ['admin-referrals'], queryFn: () => apiService.admin.referrals().then(r => r.data) })
 
   useEffect(() => {
     apiService.admin.settings.get().then(({ data }) => { setP(data?.programs); setSaved(data?.programs) }).catch(() => toast.error('Failed to load settings'))
@@ -114,6 +115,31 @@ export default function AdminPrograms() {
           <div><label style={lbl}>Discount (%)</label><input type="number" min={0} max={50} style={input} value={p.student.percent} onChange={e => set('student', 'percent', Number(e.target.value))} /></div>
         </div>
       </div>
+
+      {/* Refer a friend */}
+      {p.referral && (
+        <div className="surface" style={card}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}><UserPlus size={16} /> Refer a friend</h2>
+          <Toggle on={p.referral.enabled} onChange={v => set('referral', 'enabled', v)} label="Show “Invite friends” on the Account page" />
+          <p style={{ fontSize: 12.5, color: 'var(--admin-muted)', margin: '10px 0', lineHeight: 1.6 }}>
+            Each customer gets a link. A friend who opens it gets money off their first order (not together with a coupon). When that order is paid,
+            the customer who invited them gets a one-time coupon only they can use. Customers can&apos;t use their own link.
+          </p>
+          <div style={grid}>
+            <div><label style={lbl}>Friend&apos;s discount (RWF)</label><input type="number" min={0} style={input} value={p.referral.friendDiscount} onChange={e => set('referral', 'friendDiscount', Number(e.target.value))} /></div>
+            <div><label style={lbl}>Friend&apos;s order at least (RWF)</label><input type="number" min={0} style={input} value={p.referral.minOrder} onChange={e => set('referral', 'minOrder', Number(e.target.value))} /></div>
+            <div><label style={lbl}>Reward for the inviter (RWF)</label><input type="number" min={0} style={input} value={p.referral.reward} onChange={e => set('referral', 'reward', Number(e.target.value))} /></div>
+            <div><label style={lbl}>Reward valid for (days)</label><input type="number" min={7} max={365} style={input} value={p.referral.rewardDays} onChange={e => set('referral', 'rewardDays', Number(e.target.value))} /></div>
+            <div><label style={lbl}>Max. invites per customer / 30 days</label><input type="number" min={1} style={input} value={p.referral.monthlyCap} onChange={e => set('referral', 'monthlyCap', Number(e.target.value))} /></div>
+          </div>
+          {referrals && referrals.total > 0 && (
+            <p style={{ fontSize: 12.5, color: 'var(--admin-muted)', marginTop: 12 }}>
+              {referrals.total} friend order(s) so far ({referrals.last30} in the last 30 days) · {referrals.rewarded} rewarded, {referrals.pending} waiting for payment · {money(referrals.friendDiscounts)} given to friends
+              {referrals.top?.length > 0 && <> · Top: {referrals.top.map(t => `${t.name} (${t.invites})`).join(', ')}</>}
+            </p>
+          )}
+        </div>
+      )}
 
       <h2 style={{ fontSize: 18, fontWeight: 700, margin: '28px 0 12px' }}>Requests</h2>
       <RequestList title="Trade-in requests" rows={requests?.tradeIns} statuses={['new', 'contacted', 'accepted', 'declined']} onStatus={(id, s) => setStatus('trade-ins', id, s)}

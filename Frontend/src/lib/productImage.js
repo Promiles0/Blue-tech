@@ -28,6 +28,16 @@ export function getProductImage(product, index = 0) {
   return cleanUrl(imageUrl(selected)) || PRODUCT_IMAGE_FALLBACK
 }
 
+// The small (600px WebP) copy for cards, lists, cart and search; the full photo when a
+// product has no small copy yet. Product pages use productImageList() for full quality.
+export function getProductThumb(product) {
+  if (!product) return PRODUCT_IMAGE_FALLBACK
+  const images = Array.isArray(product.images) ? product.images : []
+  const primary = images.find(image => image.isPrimary || image.is_primary) ?? images[0]
+  const thumb = cleanUrl(product.thumbUrl ?? product.thumb_url ?? primary?.thumbUrl ?? primary?.thumb_url ?? '')
+  return thumb || getProductImage(product)
+}
+
 export function productImageList(product) {
   if (!product) return [PRODUCT_IMAGE_FALLBACK]
   const images = Array.isArray(product.images)

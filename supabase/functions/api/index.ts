@@ -108,7 +108,7 @@ const success = (message: string, data: unknown, request?: Request) => response(
 const failure = (message: string, status = 400, request?: Request) => response({ success: false, message }, status, request);
 const categoryResult = (category: Record<string, unknown>) => ({ ...category, categoryId: category.id, categoryName: category.name });
 const variantResult = (variant: Record<string, unknown>) => ({ ...variant, variantId: variant.id, skuCode: variant.sku_code, sizeOrColor: variant.size_or_color, priceAdjustment: variant.price_adjustment, stockQuantity: variant.stock_quantity });
-const imageResult = (image: Record<string, unknown>) => ({ ...image, imageId: image.id, imageUrl: image.image_url, isPrimary: image.is_primary });
+const imageResult = (image: Record<string, unknown>) => ({ ...image, imageId: image.id, imageUrl: image.image_url, thumbUrl: image.thumb_url ?? null, isPrimary: image.is_primary });
 // Whitelists public.users columns for client responses — never spread the raw row (it carries
 // password_hash, provider_id and other fields that must never leave the server).
 const userResult = (row: Record<string, unknown> | null | undefined) => row ? ({
@@ -378,6 +378,9 @@ const DEFAULT_PROGRAMS = {
   instalments: { enabled: false, depositPercent: 30, months: [3, 6], feePercent: 0, minPrice: 300000 },
   loyalty: { enabled: false, pointsPer1000: 1, pointValue: 10, maxRedeemPercent: 10 },
   student: { enabled: false, percent: 5 },
+  // Refer a friend (6d): the friend gets friendDiscount off a first order of minOrder or more;
+  // the referrer gets a one-time coupon worth `reward` when that order is paid.
+  referral: { enabled: false, friendDiscount: 5000, minOrder: 100000, reward: 5000, rewardDays: 90, monthlyCap: 10 },
 };
 const TRADE_IN_TYPES = ["laptop", "desktop", "phone", "tablet", "monitor", "printer"];
 
@@ -394,6 +397,7 @@ function cleanPrograms(b: Record<string, unknown>) {
   const i = (b.instalments ?? {}) as Record<string, unknown>;
   const l = (b.loyalty ?? {}) as Record<string, unknown>;
   const st = (b.student ?? {}) as Record<string, unknown>;
+  const rf = (b.referral ?? {}) as Record<string, unknown>;
   const baseValues: Record<string, number> = {};
   for (const type of TRADE_IN_TYPES) {
     const v = Number((t.baseValues as Record<string, unknown> | undefined)?.[type]);
@@ -417,6 +421,14 @@ function cleanPrograms(b: Record<string, unknown>) {
       maxRedeemPercent: num(l.maxRedeemPercent, 10, 0, 100),
     },
     student: { enabled: Boolean(st.enabled), percent: num(st.percent, 5, 0, 50) },
+    referral: {
+      enabled: Boolean(rf.enabled),
+      friendDiscount: num(rf.friendDiscount, 5000, 0, 1e7),
+      minOrder: num(rf.minOrder, 100000, 0, 1e9),
+      reward: num(rf.reward, 5000, 0, 1e7),
+      rewardDays: num(rf.rewardDays, 90, 7, 365),
+      monthlyCap: num(rf.monthlyCap, 10, 1, 1000),
+    },
   };
 }
 
@@ -437,6 +449,81 @@ function instalmentPlan(programs: ReturnType<typeof cleanPrograms>, price: numbe
   const deposit = Math.round(total * p.depositPercent / 100);
   const monthly = Math.ceil((total - deposit) / months);
   return { total: Math.round(total), deposit, monthly };
+}
+
+// ── Refer a friend (6d) ──
+// Each customer gets a code like ASHTON4821, made the first time they open "Invite friends".
+async function referralCodeFor(userId: string) {
+  const { data: u } = await adminClient.from("users").select("name,email,referral_code").eq("id", userId).maybeSingle();
+  if (u?.referral_code) return String(u.referral_code);
+  const base = String(u?.name ?? u?.email ?? "").split(/[\s@.]/)[0].normalize("NFKD").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6) || "BLUE";
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const code = `${base}${Math.floor(1000 + Math.random() * 9000)}`;
+    // Fails on a taken code (unique) or if another request set one first; then look again.
+    const { data } = await adminClient.from("users").update({ referral_code: code }).eq("id", userId).is("referral_code", null).select("referral_code").maybeSingle();
+    if (data?.referral_code) return String(data.referral_code);
+    const { data: again } = await adminClient.from("users").select("referral_code").eq("id", userId).maybeSingle();
+    if (again?.referral_code) return String(again.referral_code);
+  }
+  throw new Error("Could not create your invite code — please try again");
+}
+
+const phoneTail = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-9);
+
+// Can this buyer use this invite code? First orders only, never your own code, and a monthly
+// cap per referrer. `currentOrderId` is the order being placed (it doesn't count as earlier).
+async function referralCheck(buyerId: string, rawCode: string, itemsTotal: number | null, currentOrderId: unknown = null) {
+  const r = (await programsSetting()).referral;
+  const no = (reason: string) => ({ ok: false as const, reason, discount: 0, minOrder: r.minOrder, referrerId: null as string | null });
+  if (!r.enabled || r.friendDiscount <= 0) return no("Invites aren't running right now");
+  const code = rawCode.trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,20}$/.test(code)) return no("That invite code isn't valid");
+  const { data: referrer } = await adminClient.from("users").select("id,phone").eq("referral_code", code).maybeSingle();
+  if (!referrer) return no("That invite code isn't valid");
+  const { data: buyer } = await adminClient.from("users").select("phone").eq("id", buyerId).maybeSingle();
+  if (referrer.id === buyerId || (phoneTail(buyer?.phone).length === 9 && phoneTail(buyer?.phone) === phoneTail(referrer.phone))) return no("You can't use your own invite code");
+
+  let earlier = adminClient.from("orders").select("id", { count: "exact", head: true }).eq("user_id", buyerId).not("status", "in", "(cancelled,CANCELLED)");
+  if (currentOrderId != null) earlier = earlier.neq("id", currentOrderId);
+  const { count: earlierOrders } = await earlier;
+  if ((earlierOrders ?? 0) > 0) return no("Invite discounts are for a first order");
+
+  // An invite already used on an order that's still going (a cancelled one frees it again).
+  const { data: used } = await adminClient.from("referrals").select("id,status,orders(status)").eq("referee_id", buyerId);
+  for (const u of (used ?? []) as Record<string, unknown>[]) {
+    const orderStatus = String((u.orders as Record<string, unknown> | null)?.status ?? "").toLowerCase();
+    if (u.status === "pending" && (orderStatus === "cancelled" || !u.orders)) await adminClient.from("referrals").delete().eq("id", u.id);
+    else return no("You've already used an invite");
+  }
+
+  const since = new Date(Date.now() - 30 * 86400000).toISOString();
+  const { count: recent } = await adminClient.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", referrer.id).gte("created_at", since);
+  if ((recent ?? 0) >= r.monthlyCap) return no("This invite code has reached its limit for this month");
+  if (itemsTotal != null && itemsTotal < r.minOrder) return { ...no(`Spend ${Math.round(r.minOrder).toLocaleString("en-US")} RWF or more to use the invite`), referrerId: null };
+  return { ok: true as const, reason: "", discount: r.friendDiscount, minOrder: r.minOrder, referrerId: String(referrer.id) };
+}
+
+// The friend's order is paid: the referrer gets a personal one-time coupon.
+async function rewardReferral(orderId: number | string) {
+  try {
+    const { data: ref } = await adminClient.from("referrals").update({ status: "rewarded", rewarded_at: new Date().toISOString() })
+      .eq("order_id", orderId).eq("status", "pending").select("*").maybeSingle();
+    if (!ref) return;
+    const r = (await programsSetting()).referral;
+    if (r.reward <= 0) return;
+    const code = `THANKS${crypto.randomUUID().replace(/-/g, "").slice(0, 6).toUpperCase()}`;
+    const endsAt = new Date(Date.now() + r.rewardDays * 86400000).toISOString();
+    const { error } = await adminClient.from("coupons").insert({
+      code, kind: "FIXED", coupon_value: r.reward, max_uses: 1, is_active: true, ends_at: endsAt, user_id: ref.referrer_id,
+    });
+    if (error) throw error;
+    await adminClient.from("referrals").update({ reward_code: code }).eq("id", ref.id);
+    await notifyUser(ref.referrer_id as string,
+      `Your friend's first order is paid — thank you! Here's ${Math.round(r.reward).toLocaleString("en-US")} RWF off your next order: code ${code} (until ${endsAt.slice(0, 10)}, items not already on sale).`);
+  } catch (e) {
+    console.error("Referral reward failed:", e);
+    await recordSiteError({ source: "server", message: `Referral reward for order #${orderId}: ${errorMessage(e, "unknown")}` });
+  }
 }
 
 async function awardOrderPoints(orderId: number | string) {
@@ -659,10 +746,11 @@ async function getAdminDashboardStats() {
     return at && at >= minus60d && at < minus30d;
   });
   const revenuePrev30d = prev30dRows.reduce((sum, order) => sum + toNumber(order.total_amount), 0);
-  const [newQuotes, newReviews7d, newServiceRequests] = await Promise.all([
+  const [newQuotes, newReviews7d, newServiceRequests, newQuestions] = await Promise.all([
     tableCount("quote_requests", (query) => query.eq("status", "new")),
     tableCount("reviews", (query) => query.gte("created_at", minus7d.toISOString())),
     tableCount("service_requests", (query) => query.eq("status", "new")),
+    tableCount("product_questions", (query) => query.eq("status", "pending")),
   ]);
 
   return {
@@ -682,6 +770,7 @@ async function getAdminDashboardStats() {
     newQuotes,
     newReviews7d,
     newServiceRequests,
+    newQuestions,
     revenuePrev30d,
     ordersPrev30d: prev30dRows.length,
     newCustomers24h,
@@ -763,7 +852,7 @@ async function getSalesInsights(days: number) {
   const yearAgo = new Date(Date.now() - 365 * 86400000);
   const [{ data: orders }, { data: chats }] = await Promise.all([
     adminClient.from("orders")
-      .select("id,user_id,total_amount,created_at,payment_method,status,points_discount,student_discount,shipments(shipped_at)")
+      .select("id,user_id,total_amount,created_at,payment_method,status,points_discount,student_discount,campaign_discount,bundle_discount,referral_discount,shipments(shipped_at)")
       .in("status", SOLD_STATUSES).gte("created_at", (since < yearAgo ? since : yearAgo).toISOString()).limit(5000),
     adminClient.from("chat_logs").select("question,topic").eq("no_match", true).gte("created_at", since.toISOString()).order("created_at", { ascending: false }).limit(200),
   ]);
@@ -842,7 +931,7 @@ async function getSalesInsights(days: number) {
       revenue, orders: inRange.length, unitsSold,
       avgOrder: inRange.length ? Math.round(revenue / inRange.length) : 0,
       buyers: buyers.length, repeatBuyers: repeat,
-      discounts: inRange.reduce((sum, o) => sum + toNumber(o.points_discount) + toNumber(o.student_discount), 0),
+      discounts: inRange.reduce((sum, o) => sum + toNumber(o.points_discount) + toNumber(o.student_discount) + toNumber(o.campaign_discount) + toNumber(o.bundle_discount) + toNumber(o.referral_discount), 0),
       avgHoursToShip: shipHours.length ? Math.round(shipHours.reduce((a, b) => a + b, 0) / shipHours.length) : null,
     },
     bestSellers: rank(byProduct, 10),
@@ -888,7 +977,73 @@ async function isAdminRequest(request: Request) {
   }
 }
 
+// ── Sale campaigns (6b) and bundles (6c) ──
+// During a campaign a product's public price IS its sale price (regularPrice keeps the old
+// one), so cards, pages, cart, checkout, Blue, feeds and Google all agree. Admin views and
+// edits always see regular prices.
+let campaignCache: { at: number; rows: Record<string, unknown>[] } | null = null;
+async function activeCampaigns() {
+  if (campaignCache && Date.now() - campaignCache.at < 60_000) return campaignCache.rows;
+  const now = new Date().toISOString();
+  const { data } = await adminClient.from("campaigns").select("*").eq("is_active", true).lte("starts_at", now).gt("ends_at", now);
+  campaignCache = { at: Date.now(), rows: (data ?? []) as Record<string, unknown>[] };
+  return campaignCache.rows;
+}
+
+// The best campaign price for a product (bigger saving wins when campaigns overlap).
+function campaignPrice(price: number, productId: unknown, categoryId: unknown, campaigns: Record<string, unknown>[]) {
+  let best: { salePrice: number; campaign: Record<string, unknown> } | null = null;
+  for (const c of campaigns) {
+    const applies = c.target === "all"
+      || (c.target === "category" && c.category_id != null && Number(c.category_id) === Number(categoryId))
+      || (c.target === "products" && ((c.product_ids as number[]) ?? []).map(Number).includes(Number(productId)));
+    if (!applies || price <= 0) continue;
+    const off = c.kind === "percent" ? Math.round(price * Math.min(toNumber(c.value), 90) / 100) : Math.min(toNumber(c.value), price - 1);
+    const salePrice = Math.max(1, price - off);
+    if (salePrice < price && (!best || salePrice < best.salePrice)) best = { salePrice, campaign: c };
+  }
+  if (!best) return null;
+  const c = best.campaign;
+  return {
+    salePrice: best.salePrice,
+    campaign: { id: c.id, name: c.name, slug: c.slug, startsAt: c.starts_at, endsAt: c.ends_at, label: c.kind === "percent" ? `-${toNumber(c.value)}%` : `-${Math.round(price - best.salePrice).toLocaleString("en-US")} RWF` },
+  };
+}
+
+let bundleCache: { at: number; rows: Record<string, unknown>[] } | null = null;
+async function activeBundles() {
+  if (bundleCache && Date.now() - bundleCache.at < 60_000) return bundleCache.rows;
+  const { data } = await adminClient.from("bundles").select("*").eq("is_active", true);
+  bundleCache = { at: Date.now(), rows: (data ?? []) as Record<string, unknown>[] };
+  return bundleCache.rows;
+}
+
+// Bundle savings for what's in a cart: complete bundles only, biggest saving first, each unit
+// counted in one bundle at most. Same rule as the checkout page's preview (lib/bundles.js).
+function bundleSavings(qtyByProduct: Map<number, number>, bundles: Record<string, unknown>[]) {
+  const left = new Map(qtyByProduct);
+  let total = 0;
+  const applied: { id: unknown; name: unknown; times: number; saving: number }[] = [];
+  for (const b of [...bundles].sort((x, y) => toNumber(y.saving) - toNumber(x.saving))) {
+    const ids = ((b.product_ids as number[]) ?? []).map(Number);
+    const times = Math.min(...ids.map((id) => left.get(id) ?? 0));
+    if (!Number.isFinite(times) || times <= 0) continue;
+    for (const id of ids) left.set(id, (left.get(id) ?? 0) - times);
+    total += toNumber(b.saving) * times;
+    applied.push({ id: b.id, name: b.name, times, saving: toNumber(b.saving) * times });
+  }
+  return { total, applied };
+}
+
+function campaignResult(c: Record<string, unknown>) {
+  return {
+    id: c.id, name: c.name, slug: c.slug, kind: c.kind, value: toNumber(c.value), target: c.target, categoryId: c.category_id,
+    productIds: c.product_ids ?? [], startsAt: c.starts_at, endsAt: c.ends_at, isActive: c.is_active, bannerText: c.banner_text,
+  };
+}
+
 async function productResult(product: Record<string, unknown>, options: { admin?: boolean } = {}) {
+  const campaignsNow = options.admin ? [] : await activeCampaigns();
   const [{ data: variants }, { data: images }] = await Promise.all([
     adminClient.from("product_variants").select("*").eq("product_id", product.id).order("id"),
     adminClient.from("product_images").select("*").eq("product_id", product.id).order("id"),
@@ -920,6 +1075,12 @@ async function productResult(product: Record<string, unknown>, options: { admin?
     images: imageRows.map(imageResult),
     imageUrl: primaryImage?.image_url ?? null,
     primaryImageUrl: primaryImage?.image_url ?? null,
+    thumbUrl: primaryImage?.thumb_url ?? null,
+    // Shoppers see the campaign price; admins always the regular one.
+    ...(options.admin ? {} : (() => {
+      const sale = campaignPrice(toNumber(product.price), product.id, product.category_id, campaignsNow);
+      return sale ? { price: sale.salePrice, regularPrice: toNumber(product.price), campaign: sale.campaign } : {};
+    })()),
   };
 }
 
@@ -935,18 +1096,23 @@ async function getOrCreateCartId(userId: string) {
 async function getCartDetails(cartId: number) {
   const { data, error } = await adminClient
     .from("cart_items")
-    .select("id,variant_id,quantity,product_variants(id,sku_code,size_or_color,price_adjustment,products(id,name,price,product_images(image_url,is_primary)))")
+    .select("id,variant_id,quantity,product_variants(id,sku_code,size_or_color,price_adjustment,products(id,name,price,category_id,product_images(image_url,thumb_url,is_primary)))")
     .eq("cart_id", cartId);
   if (error) throw error;
+  const campaigns = await activeCampaigns();
 
   const items = ((data ?? []) as Record<string, unknown>[]).map((row) => {
     const variant = (row.product_variants ?? {}) as Record<string, unknown>;
     const product = (variant.products ?? {}) as Record<string, unknown>;
     const images = (product.product_images ?? []) as Record<string, unknown>[];
     const primary = images.find((image) => image.is_primary) ?? images[0];
-    const unitPrice = toNumber(product.price) + toNumber(variant.price_adjustment);
+    const sale = campaignPrice(toNumber(product.price), product.id, product.category_id, campaigns);
+    const regularUnitPrice = toNumber(product.price) + toNumber(variant.price_adjustment);
+    const unitPrice = (sale?.salePrice ?? toNumber(product.price)) + toNumber(variant.price_adjustment);
     return {
       cartItemId: row.id,
+      regularUnitPrice,
+      onSale: Boolean(sale),
       variantId: variant.id,
       quantity: toNumber(row.quantity),
       unitPrice,
@@ -958,12 +1124,26 @@ async function getCartDetails(cartId: number) {
         name: product.name,
         imageUrl: primary?.image_url ?? null,
         primaryImageUrl: primary?.image_url ?? null,
+        thumbUrl: primary?.thumb_url ?? null,
       },
     };
   });
 
   const cartTotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  return { items, cartTotal: Number(cartTotal.toFixed(2)) };
+  const qtyByProduct = new Map<number, number>();
+  for (const item of items) {
+    const id = Number(item.product.productId);
+    qtyByProduct.set(id, (qtyByProduct.get(id) ?? 0) + item.quantity);
+  }
+  const bundles = bundleSavings(qtyByProduct, await activeBundles());
+  return {
+    items,
+    cartTotal: Number(cartTotal.toFixed(2)),
+    saleItemsTotal: items.filter((i) => i.onSale).reduce((sum, i) => sum + i.unitPrice * i.quantity, 0),
+    saleSavings: items.reduce((sum, i) => sum + (i.regularUnitPrice - i.unitPrice) * i.quantity, 0),
+    bundleDiscount: Math.min(bundles.total, cartTotal),
+    bundlesApplied: bundles.applied,
+  };
 }
 
 function addressResult(address: Record<string, unknown>) {
@@ -1376,7 +1556,9 @@ async function feedItems() {
     adminClient.from("product_images").select("product_id,image_url,is_primary").in("product_id", ids),
     adminClient.from("product_variants").select("product_id,stock_quantity,sku_code").in("product_id", ids),
   ]);
+  const campaigns = await activeCampaigns();
   return rows.map((p) => {
+    const sale = campaignPrice(toNumber(p.price), p.id, p.category_id, campaigns);
     const imgs = ((images ?? []) as Record<string, unknown>[]).filter((i) => i.product_id === p.id)
       .sort((a, b) => Number(Boolean(b.is_primary)) - Number(Boolean(a.is_primary))).map((i) => String(i.image_url));
     const stock = ((variants ?? []) as Record<string, unknown>[]).filter((v) => v.product_id === p.id).reduce((s, v) => s + toNumber(v.stock_quantity), 0);
@@ -1391,6 +1573,8 @@ async function feedItems() {
       extraImages: imgs.slice(1, 10),
       inStock: stock > 0,
       price: `${Math.round(toNumber(p.price))} RWF`,
+      salePrice: sale ? `${Math.round(sale.salePrice)} RWF` : "",
+      saleDates: sale ? `${new Date(String(sale.campaign.startsAt)).toISOString().slice(0, 16)}Z/${new Date(String(sale.campaign.endsAt)).toISOString().slice(0, 16)}Z` : "",
       brand: String(p.brand ?? "").trim(),
       mpn: String(p.model_number ?? "").trim(),
       condition: cond.includes("refurb") ? "refurbished" : /used|second/.test(cond) ? "used" : "new",
@@ -1410,6 +1594,7 @@ async function googleFeed() {
     `<link>${i.link}</link>`, `<g:image_link>${xmlEscape(i.image)}</g:image_link>`,
     ...i.extraImages.map((u) => `<g:additional_image_link>${xmlEscape(u)}</g:additional_image_link>`),
     `<g:availability>${i.inStock ? "in_stock" : "out_of_stock"}</g:availability>`, `<g:price>${i.price}</g:price>`,
+    i.salePrice ? `<g:sale_price>${i.salePrice}</g:sale_price><g:sale_price_effective_date>${i.saleDates}</g:sale_price_effective_date>` : "",
     `<g:condition>${i.condition}</g:condition>`,
     i.brand ? `<g:brand>${xmlEscape(i.brand)}</g:brand>` : "",
     i.mpn ? `<g:mpn>${xmlEscape(i.mpn)}</g:mpn>` : "",
@@ -1428,9 +1613,9 @@ ${items.map((i) => `<item>${item(i)}</item>`).join("\n")}
 
 async function metaFeed() {
   const items = await feedItems();
-  const head = "id,title,description,availability,condition,price,link,image_link,additional_image_link,brand,google_product_category,product_type";
+  const head = "id,title,description,availability,condition,price,sale_price,link,image_link,additional_image_link,brand,google_product_category,product_type";
   const lines = items.map((i) => [
-    i.id, i.title, i.description, i.inStock ? "in stock" : "out of stock", i.condition, i.price, i.link, i.image,
+    i.id, i.title, i.description, i.inStock ? "in stock" : "out of stock", i.condition, i.price, i.salePrice, i.link, i.image,
     i.extraImages.join(","), i.brand || "Blue-Tech", i.googleCategory, i.category,
   ].map((v) => csvCell(String(v))).join(","));
   return [head, ...lines].join("\n") + "\n";
@@ -1754,6 +1939,16 @@ async function tidyOldData() {
   return (chats ?? 0) + (errors ?? 0);
 }
 
+// Pre-built pages (4d) are made at deploy time, so a nightly rebuild keeps their prices fresh.
+// Needs RENDER_DEPLOY_HOOK (Render → Settings → Deploy Hook); without it nothing happens.
+async function triggerNightlyRebuild() {
+  const hook = Deno.env.get("RENDER_DEPLOY_HOOK");
+  if (!hook || !/^https:\/\/api\.render\.com\/deploy\//.test(hook)) return 0;
+  const res = await fetch(hook, { method: "POST", signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error(`Render deploy hook answered HTTP ${res.status}`);
+  return 1;
+}
+
 async function runHourlyJob() {
   const settings = { ...DEFAULT_AUTOMATION, ...(await jsonSetting("automation", DEFAULT_AUTOMATION)) };
   const result: Record<string, number | string> = {};
@@ -1770,6 +1965,7 @@ async function runHourlyJob() {
   await task("storefront", () => checkStorefront());
   await task("backupAge", () => oncePerDay("backup_check_last", checkBackupAge));
   await task("tidy", () => oncePerDay("tidy_last", tidyOldData));
+  await task("rebuild", () => oncePerDay("rebuild_last", triggerNightlyRebuild));
   console.log("[cron] hourly:", JSON.stringify(result));
   return result;
 }
@@ -1938,7 +2134,7 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
   const cartId = await getOrCreateCartId(user.id);
   const { data: cartItems, error: cartItemsError } = await adminClient
     .from("cart_items")
-    .select("id,variant_id,quantity,product_variants(id,stock_quantity,price_adjustment,size_or_color,products(id,name,price,is_active))")
+    .select("id,variant_id,quantity,product_variants(id,stock_quantity,price_adjustment,size_or_color,products(id,name,price,is_active,category_id))")
     .eq("cart_id", cartId);
   if (cartItemsError) throw cartItemsError;
   if (!cartItems || cartItems.length === 0) throw new Error("Cannot checkout with an empty cart");
@@ -1993,6 +2189,10 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
 
   const reduced: { variantId: number; quantity: number }[] = [];
   let itemsTotal = 0;
+  let saleItemsTotal = 0;      // coupons don't apply to sale items (owner's rule)
+  let campaignDiscount = 0;
+  const qtyByProduct = new Map<number, number>();
+  const campaigns = await activeCampaigns();
 
   let pointsSpent = 0;
   try {
@@ -2007,8 +2207,14 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
       if (!ok) throw new Error(`Out of stock: ${product.name ?? "item"} (${variant.size_or_color ?? ""})`);
       reduced.push({ variantId, quantity });
 
-      const unitPrice = toNumber(product.price) + toNumber(variant.price_adjustment);
+      const sale = campaignPrice(toNumber(product.price), product.id, product.category_id, campaigns);
+      const unitPrice = (sale?.salePrice ?? toNumber(product.price)) + toNumber(variant.price_adjustment);
       itemsTotal += unitPrice * quantity;
+      if (sale) {
+        saleItemsTotal += unitPrice * quantity;
+        campaignDiscount += (toNumber(product.price) - sale.salePrice) * quantity;
+      }
+      qtyByProduct.set(Number(product.id), (qtyByProduct.get(Number(product.id)) ?? 0) + quantity);
 
       const { error: itemError } = await adminClient.from("order_items").insert({
         order_id: order.id,
@@ -2019,7 +2225,9 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
       if (itemError) throw itemError;
     }
 
-    let totalAmount = itemsTotal;
+    // Bundles: complete sets in the cart get their saving.
+    const bundleDiscount = Math.min(bundleSavings(qtyByProduct, await activeBundles()).total, itemsTotal);
+    let totalAmount = itemsTotal - bundleDiscount;
     const couponCode = typeof body.couponCode === "string" ? body.couponCode.trim() : "";
     if (couponCode) {
       // Coupon codes are short strings — guard against brute-forcing valid ones.
@@ -2028,14 +2236,18 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
       if (couponError) throw couponError;
       if (!coupon) throw new Error("Invalid coupon code");
       if (!coupon.is_active) throw new Error("Coupon is no longer active");
+      if (coupon.user_id && coupon.user_id !== user.id) throw new Error("This coupon belongs to another account");
       const now = new Date();
       if (coupon.ends_at && new Date(coupon.ends_at) < now) throw new Error("Coupon has expired");
       if (coupon.starts_at && new Date(coupon.starts_at) > now) throw new Error("Coupon is not yet valid");
       if (coupon.max_uses != null && toNumber(coupon.uses) >= toNumber(coupon.max_uses)) throw new Error("Coupon usage limit reached");
       if (coupon.min_subtotal != null && itemsTotal < toNumber(coupon.min_subtotal)) throw new Error("Order subtotal does not meet the minimum required for this coupon");
 
-      const discount = coupon.kind === "PERCENT" ? itemsTotal * (toNumber(coupon.coupon_value) / 100) : toNumber(coupon.coupon_value);
-      totalAmount = Math.max(0, itemsTotal - discount);
+      // Coupons only discount items that aren't already on sale.
+      const couponBase = Math.max(0, itemsTotal - saleItemsTotal - bundleDiscount);
+      if (couponBase <= 0) throw new Error("This coupon can't be used on items that are already on sale");
+      const discount = coupon.kind === "PERCENT" ? couponBase * (toNumber(coupon.coupon_value) / 100) : Math.min(toNumber(coupon.coupon_value), couponBase);
+      totalAmount = Math.max(0, totalAmount - discount);
 
       // Compare-and-swap on the current `uses` value (same pattern as reduceVariantStock) so two
       // concurrent checkouts can't both read uses=N and both redeem a single-use coupon before
@@ -2049,6 +2261,20 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
         .maybeSingle();
       if (couponUpdateError) throw couponUpdateError;
       if (!couponUpdated) throw new Error("Coupon could not be applied — please try again");
+    }
+
+    // An invite from a friend: money off a first order. Not together with a coupon; a code
+    // that doesn't qualify is simply ignored so the order still goes through.
+    let referralDiscount = 0;
+    let referrerId: string | null = null;
+    const referralCode = typeof body.referralCode === "string" ? body.referralCode.trim() : "";
+    if (referralCode && !couponCode) {
+      const invite = await referralCheck(user.id, referralCode, itemsTotal, order.id);
+      if (invite.ok) {
+        referralDiscount = Math.min(invite.discount, totalAmount);
+        totalAmount -= referralDiscount;
+        referrerId = invite.referrerId;
+      }
     }
 
     // Student discount (verified students) and loyalty points — both off unless enabled in Programs.
@@ -2083,8 +2309,12 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
     const { error: updateError } = await adminClient.from("orders").update({
       total_amount: totalAmount, ordered_at: new Date().toISOString(),
       student_discount: studentDiscount, points_used: pointsSpent, points_discount: pointsDiscount,
+      campaign_discount: campaignDiscount, bundle_discount: bundleDiscount, referral_discount: referralDiscount,
     }).eq("id", order.id);
     if (updateError) throw updateError;
+    if (referrerId) {
+      await adminClient.from("referrals").insert({ referrer_id: referrerId, referee_id: user.id, order_id: order.id, discount: referralDiscount });
+    }
 
     const { error: clearCartError } = await adminClient.from("cart_items").delete().eq("cart_id", cartId);
     if (clearCartError) throw clearCartError;
@@ -2106,7 +2336,7 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
       if (left === 0 && v.product_id) await refreshStockState(v.product_id as number);
     }
 
-    return { orderId: order.id, totalAmount, status: "PENDING" };
+    return { orderId: order.id, totalAmount, status: "PENDING", referralDiscount };
   } catch (error) {
     if (pointsSpent > 0) {
       // Give back points spent on an order that didn't go through.
@@ -2124,7 +2354,7 @@ async function checkoutOrder(user: User, body: Record<string, unknown>, request:
 async function orderItemsForOrder(orderId: number) {
   const { data, error } = await adminClient
     .from("order_items")
-    .select("quantity,unit_price,product_variants(id,size_or_color,products(id,name,product_images(image_url,is_primary)))")
+    .select("quantity,unit_price,product_variants(id,size_or_color,products(id,name,product_images(image_url,thumb_url,is_primary)))")
     .eq("order_id", orderId);
   if (error) throw error;
   return ((data ?? []) as Record<string, unknown>[]).map((row) => {
@@ -2142,7 +2372,7 @@ async function orderItemsForOrder(orderId: number) {
       quantity,
       priceAtPurchase: unitPrice,
       subtotal: Number((unitPrice * quantity).toFixed(2)),
-      product: { productId: product.id, imageUrl: primary?.image_url ?? null, primaryImageUrl: primary?.image_url ?? null },
+      product: { productId: product.id, imageUrl: primary?.image_url ?? null, primaryImageUrl: primary?.image_url ?? null, thumbUrl: primary?.thumb_url ?? null },
     };
   });
 }
@@ -2186,6 +2416,7 @@ async function orderResult(order: Record<string, unknown>) {
 async function markOrderPaid(orderId: number) {
   const { data: order } = await adminClient.from("orders").update({ status: "paid" }).eq("id", orderId).select("user_id,total_amount").maybeSingle();
   await awardOrderPoints(orderId);
+  await rewardReferral(orderId);
   if (order) await notifyAdmins(`Payment received — order #${orderId}`, `${rwfText(order.total_amount)} paid. Ready to prepare.`, { severity: "success", category: "order", href: "/admin/orders" });
   if (order?.user_id) {
     await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`, orderId);
@@ -2894,13 +3125,25 @@ async function chatCatalog() {
   if (chatCatalogCache && Date.now() - chatCatalogCache.at < 5 * 60_000) return chatCatalogCache;
   const { data, error } = await adminClient.from("products").select("*, categories(name)").eq("is_active", true).limit(500);
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Record<string, unknown>[];
+  const campaigns = await activeCampaigns();
+  const rows = ((data ?? []) as Record<string, unknown>[]).map((p) => {
+    const sale = campaignPrice(toNumber(p.price), p.id, p.category_id, campaigns);
+    return sale ? { ...p, price: sale.salePrice, sale_note: ` (on sale in "${sale.campaign.name}" until ${String(sale.campaign.endsAt).slice(0, 10)}, was ${toNumber(p.price)})` } : p;
+  });
+  const { data: answered } = await adminClient.from("product_questions").select("product_id,question,answer").eq("status", "answered").order("answered_at", { ascending: false }).limit(300);
+  const qa = new Map<string, string[]>();
+  for (const q of (answered ?? []) as Record<string, unknown>[]) {
+    const list = qa.get(String(q.product_id)) ?? [];
+    if (list.length < 3) list.push(`Q: ${String(q.question).slice(0, 120)} A: ${String(q.answer).slice(0, 200)}`);
+    qa.set(String(q.product_id), list);
+  }
   const lines = rows.map((p) => {
     const specs = (p.specs && typeof p.specs === "object" ? p.specs : {}) as Record<string, unknown>;
     const specText = Object.entries(specs).filter(([, v]) => v !== null && v !== "").map(([k, v]) => `${k}=${v}`).join("; ");
     const category = (p.categories as Record<string, unknown> | null)?.name ?? "";
     const blurb = String(p.short_description ?? "").slice(0, 160);
-    return `[${p.id}] ${p.name} | brand=${p.brand ?? ""} | category=${category} | price_rwf=${p.price} | condition=${p.condition ?? ""} | ${specText} | ${blurb}`;
+    const answers = qa.get(String(p.id));
+    return `[${p.id}] ${p.name} | brand=${p.brand ?? ""} | category=${category} | price_rwf=${p.price}${p.sale_note ?? ""} | condition=${p.condition ?? ""} | ${specText} | ${blurb}${answers ? ` | answered questions: ${answers.join(" / ")}` : ""}`;
   });
   const compact: CatalogRow[] = rows.map((p, i) => ({
     id: String(p.id), name: String(p.name ?? ""), brand: String(p.brand ?? ""),
@@ -3199,8 +3442,9 @@ function offlineReply(messages: ChatMessage[], lang: string, catalog: { rows: Ca
 
 async function productCards(ids: string[]) {
   if (!ids.length) return [];
+  const campaignsNow = await activeCampaigns();
   const [{ data: rows }, { data: images }, { data: variants }] = await Promise.all([
-    adminClient.from("products").select("id,name,price,brand").in("id", ids),
+    adminClient.from("products").select("id,name,price,brand,category_id").in("id", ids),
     adminClient.from("product_images").select("*").in("product_id", ids),
     adminClient.from("product_variants").select("id,product_id,sku_code,size_or_color,price_adjustment,stock_quantity").in("product_id", ids),
   ]);
@@ -3212,7 +3456,7 @@ async function productCards(ids: string[]) {
     const inStock = ((variants ?? []) as Record<string, unknown>[]).filter((v) => String(v.product_id) === String(r!.id) && toNumber(v.stock_quantity) > 0);
     const only = inStock.length === 1 ? inStock[0] : null;
     return {
-      productId: r!.id, name: r!.name, brand: r!.brand, price: r!.price, imageUrl: img?.image_url ?? img?.url ?? null,
+      productId: r!.id, name: r!.name, brand: r!.brand, price: campaignPrice(toNumber(r!.price), r!.id, r!.category_id, campaignsNow)?.salePrice ?? r!.price, imageUrl: img?.thumb_url ?? img?.image_url ?? img?.url ?? null,
       inStock: inStock.length > 0, variantCount: inStock.length,
       variant: only ? { variantId: only.id, skuCode: only.sku_code, sizeOrColor: only.size_or_color, priceAdjustment: toNumber(only.price_adjustment), stockQuantity: toNumber(only.stock_quantity) } : null,
     };
@@ -3590,6 +3834,52 @@ async function handle(request: Request) {
   if (method === "GET" && path === "/products/pairs") {
     const ids = (url.searchParams.get("ids") ?? "").split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 20);
     return success("Pairs", await pairsFor(ids, Math.min(Number(url.searchParams.get("limit") ?? 4) || 4, 8)), request);
+  }
+
+  // Product questions (3d): the answered ones are public.
+  if (method === "GET" && /^\/products\/\d+\/questions$/.test(path)) {
+    const { data, error } = await adminClient.from("product_questions").select("id,question,answer,answered_at,created_at")
+      .eq("product_id", Number(path.split("/")[2])).eq("status", "answered").order("answered_at", { ascending: false }).limit(50);
+    if (error) return failure(error.message, 500, request);
+    return success("Questions", ((data ?? []) as Record<string, unknown>[]).map((q) => ({ id: q.id, question: q.question, answer: q.answer, askedAt: q.created_at, answeredAt: q.answered_at })), request);
+  }
+
+  // Sale campaigns running now (for the banner) and a campaign's own page.
+  if (method === "GET" && path === "/campaigns/active") {
+    return success("Campaigns", (await activeCampaigns()).map(campaignResult), request);
+  }
+  if (method === "GET" && /^\/campaigns\/[a-z0-9-]+$/.test(path)) {
+    const slug = path.split("/").pop();
+    const campaign = (await activeCampaigns()).find((c) => c.slug === slug);
+    if (!campaign) return failure("This sale has ended or doesn't exist", 404, request);
+    let query = adminClient.from("products").select("*, categories(name)").eq("is_active", true).gt("price", 0).limit(80);
+    if (campaign.target === "category") query = query.eq("category_id", campaign.category_id);
+    if (campaign.target === "products") query = query.in("id", ((campaign.product_ids as number[]) ?? []).map(Number));
+    const { data, error } = await query;
+    if (error) return failure(error.message, 500, request);
+    const products = (await Promise.all(((data ?? []) as Record<string, unknown>[]).map((p) => productResult(p))))
+      .filter((p) => (p as Record<string, unknown>).campaign && ((p as Record<string, unknown>).campaign as Record<string, unknown>).id === campaign.id);
+    return success("Campaign", { campaign: campaignResult(campaign), products }, request);
+  }
+
+  // "Buy together and save" bundles that include this product.
+  if (method === "GET" && /^\/products\/\d+\/bundles$/.test(path)) {
+    const id = Number(path.split("/")[2]);
+    const bundles = (await activeBundles()).filter((b) => ((b.product_ids as number[]) ?? []).map(Number).includes(id));
+    if (!bundles.length) return success("Bundles", [], request);
+    const ids = [...new Set(bundles.flatMap((b) => ((b.product_ids as number[]) ?? []).map(Number)))];
+    const { data } = await adminClient.from("products").select("*, categories(name)").in("id", ids).eq("is_active", true);
+    const byId = new Map<number, Record<string, unknown>>();
+    for (const p of (await Promise.all(((data ?? []) as Record<string, unknown>[]).map((p) => productResult(p))))) {
+      byId.set(Number((p as Record<string, unknown>).productId), p as Record<string, unknown>);
+    }
+    const result = bundles.map((b) => {
+      const products = ((b.product_ids as number[]) ?? []).map((pid) => byId.get(Number(pid)));
+      if (products.some((p) => !p)) return null;   // a hidden product breaks the set
+      const total = products.reduce((sum, p) => sum + toNumber(p!.price), 0);
+      return { id: b.id, name: b.name, saving: toNumber(b.saving), total, bundlePrice: Math.max(0, total - toNumber(b.saving)), products };
+    }).filter(Boolean);
+    return success("Bundles", result, request);
   }
 
   // Honest signals for a product page: sold in the last 30 days, back in stock this week.
@@ -4125,6 +4415,7 @@ async function handle(request: Request) {
     }
 
     let product: Record<string, unknown> | null = null;
+    const knownThumbs = new Map<string, string>(); // image_url → thumbnail, kept across a save
     if (method === "POST") {
       const { data, error } = await adminClient.from("products").insert(productValues).select().single();
       if (error) return failure(error.message, 400);
@@ -4134,6 +4425,8 @@ async function handle(request: Request) {
       const { data, error } = await adminClient.from("products").update(productValues).eq("id", id).select().single();
       if (error) return failure(error.message, 400);
       product = data;
+      const { data: oldImages } = await adminClient.from("product_images").select("image_url,thumb_url").eq("product_id", id);
+      for (const o of (oldImages ?? []) as Record<string, unknown>[]) if (o.thumb_url) knownThumbs.set(String(o.image_url), String(o.thumb_url));
       const { error: removeImagesError } = await adminClient.from("product_images").delete().eq("product_id", id);
       if (removeImagesError) return failure(removeImagesError.message, 400);
     }
@@ -4181,6 +4474,7 @@ async function handle(request: Request) {
       const { error } = await adminClient.from("product_images").insert(images.map((image: Record<string, unknown>) => ({
         product_id: productId,
         image_url: image.imageUrl ?? image.image_url,
+        thumb_url: image.thumbUrl ?? image.thumb_url ?? knownThumbs.get(String(image.imageUrl ?? image.image_url)) ?? null,
         is_primary: Boolean(image.isPrimary ?? image.is_primary),
       })));
       if (error) return failure(error.message, 400);
@@ -4218,6 +4512,24 @@ async function handle(request: Request) {
     if (error) return failure(error.message, 400, request);
     await notifyAdmins("Student discount request", `${school} · ${schoolEmail}`, { category: "account", href: "/admin/programs" });
     return success("Student request received", { ok: true }, request);
+  }
+
+  // Ask about a product (3d). Shown publicly once staff answer it.
+  if (method === "POST" && /^\/products\/\d+\/questions$/.test(path)) {
+    await enforceRateLimit(rateLimiters?.proforma, `user:${user.id}`, request);
+    const productId = Number(path.split("/")[2]);
+    const question = String((await readJson(request)).question ?? "").replace(/\s+/g, " ").trim();
+    if (question.length < 5) return failure("Please write your question (at least a few words)", 400, request);
+    if (question.length > 500) return failure("Please keep it under 500 characters", 400, request);
+    const { data: product } = await adminClient.from("products").select("id,name,is_active").eq("id", productId).maybeSingle();
+    if (!product || product.is_active === false) return failure("Product not found", 404, request);
+    const { count } = await adminClient.from("product_questions").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).eq("status", "pending");
+    if ((count ?? 0) >= 5) return failure("You have several questions waiting for an answer — we'll reply soon", 429, request);
+    const { error } = await adminClient.from("product_questions").insert({ product_id: productId, user_id: user.id, question });
+    if (error) return failure(error.message, 400, request);
+    await notifyAdmins(`Question about ${product.name}`, question.slice(0, 200), { category: "shopping", href: "/admin/questions" });
+    return success("Thanks — we'll answer soon and let you know", null, request);
   }
 
   // ── Returns and warranty claims: customer side ──
@@ -4881,6 +5193,7 @@ async function handle(request: Request) {
       const { data: updated, error: updateError } = await adminClient.from("orders").update({ status: "paid" }).eq("id", orderId).select().maybeSingle();
       if (updateError) return failure(updateError.message, 400, request);
       await awardOrderPoints(orderId);
+      await rewardReferral(orderId);
       if (order.user_id) {
         await notifyUser(order.user_id as string, `Payment for order #${orderId} was successful. Your order is now being processed.`, orderId);
       }
@@ -4986,6 +5299,181 @@ async function handle(request: Request) {
       }
       return success("Shipment updated", adminShipmentResult(data), request);
     }
+  }
+
+  // Every product's name and regular price, for pickers (sales, bundles).
+  if (method === "GET" && path === "/admin/products/picker") {
+    await requireStaff(request, user);
+    const { data, error } = await adminClient.from("products").select("id,name,price,is_active").order("name").limit(3000);
+    if (error) return failure(error.message, 500, request);
+    return success("Products", ((data ?? []) as Record<string, unknown>[]).map((p) => ({ id: Number(p.id), name: p.name, price: toNumber(p.price), isActive: p.is_active })), request);
+  }
+
+  // ── Refer a friend (6d) ──
+  if (method === "GET" && path === "/me/referral") {
+    const r = (await programsSetting()).referral;
+    if (!r.enabled) return success("Invites", { enabled: false }, request);
+    const code = await referralCodeFor(user.id);
+    const { data: rows } = await adminClient.from("referrals").select("status,reward_code,created_at").eq("referrer_id", user.id).order("created_at", { ascending: false }).limit(200);
+    const list = (rows ?? []) as Record<string, unknown>[];
+    const codes = list.map((x) => x.reward_code).filter(Boolean) as string[];
+    const { data: coupons } = codes.length ? await adminClient.from("coupons").select("code,coupon_value,ends_at,uses,max_uses").in("code", codes) : { data: [] };
+    return success("Invites", {
+      enabled: true, code, link: `${SITE}/?ref=${code}`,
+      friendDiscount: r.friendDiscount, minOrder: r.minOrder, reward: r.reward, rewardDays: r.rewardDays,
+      invited: list.length, rewarded: list.filter((x) => x.status === "rewarded").length,
+      rewards: ((coupons ?? []) as Record<string, unknown>[]).map((c) => ({
+        code: c.code, value: toNumber(c.coupon_value), endsAt: c.ends_at,
+        used: c.max_uses != null && toNumber(c.uses) >= toNumber(c.max_uses),
+        expired: Boolean(c.ends_at && new Date(String(c.ends_at)) < new Date()),
+      })),
+    }, request);
+  }
+
+  if (method === "GET" && path === "/me/referral/check") {
+    const total = url.searchParams.get("total");
+    const result = await referralCheck(user.id, url.searchParams.get("code") ?? "", total != null && total !== "" ? Number(total) : null);
+    return success("Invite", { ok: result.ok, reason: result.reason, discount: result.discount, minOrder: result.minOrder }, request);
+  }
+
+  if (method === "GET" && path === "/admin/referrals") {
+    await requireAdmin(request, user);
+    const { data } = await adminClient.from("referrals").select("referrer_id,status,discount,created_at").order("created_at", { ascending: false }).limit(5000);
+    const rows = (data ?? []) as Record<string, unknown>[];
+    const since = Date.now() - 30 * 86400000;
+    const counts = new Map<string, number>();
+    for (const r of rows) counts.set(String(r.referrer_id), (counts.get(String(r.referrer_id)) ?? 0) + 1);
+    const topIds = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const { data: people } = topIds.length ? await adminClient.from("users").select("id,name,email").in("id", topIds.map(([id]) => id)) : { data: [] };
+    const nameOf = new Map(((people ?? []) as Record<string, unknown>[]).map((p) => [String(p.id), String(p.name ?? p.email ?? "Customer")]));
+    return success("Referrals", {
+      total: rows.length,
+      rewarded: rows.filter((r) => r.status === "rewarded").length,
+      pending: rows.filter((r) => r.status === "pending").length,
+      last30: rows.filter((r) => new Date(String(r.created_at)).getTime() >= since).length,
+      friendDiscounts: rows.reduce((sum, r) => sum + toNumber(r.discount), 0),
+      top: topIds.map(([id, n]) => ({ name: nameOf.get(id) ?? "Customer", invites: n })),
+    }, request);
+  }
+
+  // ── Sale campaigns (6b) and bundles (6c): admin only ──
+  if (path === "/admin/campaigns" || /^\/admin\/campaigns\/\d+$/.test(path) || path === "/admin/bundles" || /^\/admin\/bundles\/\d+$/.test(path)) {
+    await requireAdmin(request, user);
+    const isCampaign = path.startsWith("/admin/campaigns");
+    const table = isCampaign ? "campaigns" : "bundles";
+    const id = /\d+$/.test(path) ? Number(path.split("/").pop()) : null;
+    const changed = () => {
+      campaignCache = null; bundleCache = null; chatCatalogCache = null;
+      // Rebuild the pre-built pages so Google sees the new prices (no-op without the hook).
+      if (isCampaign) triggerNightlyRebuild().catch(() => {});
+    };
+
+    if (method === "GET" && !id) {
+      const { data, error } = await adminClient.from(table).select("*").order("created_at", { ascending: false }).limit(200);
+      if (error) return failure(error.message, 500, request);
+      const rows = (data ?? []) as Record<string, unknown>[];
+      if (isCampaign) return success("Campaigns", rows.map(campaignResult), request);
+      const ids = [...new Set(rows.flatMap((b) => ((b.product_ids as number[]) ?? []).map(Number)))];
+      const { data: products } = ids.length ? await adminClient.from("products").select("id,name,price,is_active").in("id", ids) : { data: [] };
+      const byId = new Map(((products ?? []) as Record<string, unknown>[]).map((p) => [Number(p.id), p]));
+      return success("Bundles", rows.map((b) => ({
+        id: b.id, name: b.name, saving: toNumber(b.saving), isActive: b.is_active, productIds: b.product_ids,
+        products: ((b.product_ids as number[]) ?? []).map((pid) => {
+          const p = byId.get(Number(pid));
+          return { productId: pid, name: p?.name ?? `#${pid} (deleted)`, price: toNumber(p?.price), isActive: Boolean(p?.is_active) };
+        }),
+      })), request);
+    }
+
+    if (method === "DELETE" && id) {
+      const { error } = await adminClient.from(table).delete().eq("id", id);
+      if (error) return failure(error.message, 400, request);
+      changed();
+      return success(isCampaign ? "Campaign deleted" : "Bundle deleted", null, request);
+    }
+
+    if ((method === "POST" && !id) || (method === "PUT" && id)) {
+      const body = await readJson(request);
+      const name = String(body.name ?? "").trim().slice(0, 120);
+      if (!name) return failure("Give it a name", 400, request);
+      const productIds = [...new Set((Array.isArray(body.productIds) ? body.productIds : []).map(Number).filter((n: number) => Number.isInteger(n) && n > 0))] as number[];
+      let row: Record<string, unknown>;
+      if (isCampaign) {
+        const kind = body.kind === "fixed" ? "fixed" : "percent";
+        const value = Number(body.value);
+        if (!Number.isFinite(value) || value <= 0 || (kind === "percent" && value > 90)) return failure(kind === "percent" ? "The discount must be between 1 and 90%" : "The discount must be more than 0 RWF", 400, request);
+        const target = ["all", "category", "products"].includes(String(body.target)) ? String(body.target) : "all";
+        if (target === "category" && !Number(body.categoryId)) return failure("Choose a category", 400, request);
+        if (target === "products" && !productIds.length) return failure("Choose at least one product", 400, request);
+        const startsAt = new Date(String(body.startsAt ?? ""));
+        const endsAt = new Date(String(body.endsAt ?? ""));
+        if (isNaN(startsAt.getTime()) || isNaN(endsAt.getTime()) || endsAt <= startsAt) return failure("Set a start and an end after it", 400, request);
+        const slug = (String(body.slug ?? "").trim() || name).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || `sale-${Date.now()}`;
+        row = {
+          name, slug: slug.length < 2 ? `${slug}-sale` : slug, kind, value, target,
+          category_id: target === "category" ? Number(body.categoryId) : null,
+          product_ids: target === "products" ? productIds : [],
+          starts_at: startsAt.toISOString(), ends_at: endsAt.toISOString(),
+          is_active: body.isActive !== false,
+          banner_text: String(body.bannerText ?? "").trim().slice(0, 140) || null,
+        };
+      } else {
+        if (productIds.length < 2 || productIds.length > 5) return failure("A bundle has 2 to 5 products", 400, request);
+        const saving = Number(body.saving);
+        const { data: products } = await adminClient.from("products").select("id,price").in("id", productIds);
+        if ((products ?? []).length !== productIds.length) return failure("One of the products no longer exists", 400, request);
+        const total = ((products ?? []) as Record<string, unknown>[]).reduce((sum, p) => sum + toNumber(p.price), 0);
+        if (!Number.isFinite(saving) || saving <= 0 || saving >= total) return failure(`The saving must be more than 0 and less than the set's price (${Math.round(total).toLocaleString("en-US")} RWF)`, 400, request);
+        row = { name, product_ids: productIds, saving: Math.round(saving), is_active: body.isActive !== false };
+      }
+      const { data, error } = id
+        ? await adminClient.from(table).update(row).eq("id", id).select().maybeSingle()
+        : await adminClient.from(table).insert(row).select().single();
+      if (error) return failure(/duplicate|unique/i.test(error.message) ? "Another sale already uses that link name" : error.message, 400, request);
+      if (!data) return failure("Not found", 404, request);
+      changed();
+      return success(id ? "Saved" : (isCampaign ? "Campaign created" : "Bundle created"), isCampaign ? campaignResult(data) : { id: data.id }, request);
+    }
+  }
+
+  // ── Product questions: staff side (3d) ──
+  if (method === "GET" && path === "/admin/questions") {
+    await requireStaff(request, user);
+    const status = url.searchParams.get("status") || "pending";
+    let query = adminClient.from("product_questions").select("*, products(id,name), users(name,email)").order("created_at", { ascending: false }).limit(300);
+    if (["pending", "answered", "hidden"].includes(status)) query = query.eq("status", status);
+    const { data, error } = await query;
+    if (error) return failure(error.message, 500, request);
+    return success("Questions", ((data ?? []) as Record<string, unknown>[]).map((q) => ({
+      id: q.id, productId: (q.products as Record<string, unknown> | null)?.id, productName: (q.products as Record<string, unknown> | null)?.name,
+      question: q.question, answer: q.answer, status: q.status, answeredBy: q.answered_by, answeredAt: q.answered_at, createdAt: q.created_at,
+      askedBy: (q.users as Record<string, unknown> | null)?.name ?? (q.users as Record<string, unknown> | null)?.email ?? null,
+    })), request);
+  }
+
+  if (method === "PATCH" && /^\/admin\/questions\/\d+$/.test(path)) {
+    await requireStaff(request, user);
+    const id = Number(path.split("/").pop());
+    const body = await readJson(request);
+    const { data: q } = await adminClient.from("product_questions").select("*, products(name)").eq("id", id).maybeSingle();
+    if (!q) return failure("Question not found", 404, request);
+    const updates: Record<string, unknown> = {};
+    if (body.answer !== undefined) {
+      const answer = String(body.answer).trim().slice(0, 2000);
+      if (!answer) return failure("Write an answer", 400, request);
+      const { data: me } = await adminClient.from("users").select("name").eq("id", user.id).maybeSingle();
+      Object.assign(updates, { answer, status: "answered", answered_at: new Date().toISOString(), answered_by: me?.name ?? "Blue-Tech" });
+    }
+    if (body.status === "hidden" || body.status === "pending") updates.status = body.status;
+    const { error } = await adminClient.from("product_questions").update(updates).eq("id", id);
+    if (error) return failure(error.message, 400, request);
+    // Tell the customer the first time it's answered; Blue picks the answer up straight away.
+    if (updates.answer && q.status !== "answered" && q.user_id) {
+      const name = String((q.products as Record<string, unknown> | null)?.name ?? "the product");
+      await notifyUser(q.user_id as string, `Your question about ${name} was answered: ${String(updates.answer).slice(0, 160)}`);
+    }
+    chatCatalogCache = null;
+    return success(updates.answer ? "Answered — it's on the product page now" : "Updated", null, request);
   }
 
   // ── Returns and warranty claims: staff side ──
@@ -5532,6 +6020,7 @@ async function handle(request: Request) {
     if (error) return failure(error.message, 500, request);
     if (!coupon) return failure("Coupon not found", 404, request);
     if (!coupon.is_active) return failure("Coupon is not active", 400, request);
+    if (coupon.user_id && coupon.user_id !== user.id) return failure("This coupon belongs to another account", 400, request);
     if (coupon.max_uses != null && toNumber(coupon.uses) >= toNumber(coupon.max_uses)) return failure("Coupon usage limit reached", 400, request);
     const now = new Date();
     if (coupon.starts_at && new Date(coupon.starts_at) > now) return failure("Coupon is not yet valid", 400, request);
@@ -5674,6 +6163,10 @@ const AUDIT_RULES: { re: RegExp; table: string; describe: (m: RegExpMatchArray, 
   { re: /^\/admin\/quote-requests\/(\d+)$/, table: "quote_requests", describe: (m, _x, b) => b.status ? `Quote #${m[1]} → ${b.status}` : `Edited note on quote #${m[1]}` },
   { re: /^\/admin\/proformas\/(\d+)$/, table: "proformas", describe: (m, _x, b) => `Proforma #${m[1]} → ${b.status}` },
   { re: /^\/admin\/programs\/([a-z-]+)\/(\d+)$/, table: "programs", describe: (m, _x, b) => `${m[1]} request #${m[2]} → ${b.status}` },
+  { re: /^\/admin\/campaigns\/?(\d+)?$/, table: "campaigns", describe: (m, method, b) =>
+    method === "POST" ? `Created sale "${b.name ?? ""}"` : method === "DELETE" ? `Deleted sale #${m[1]}` : `Edited sale #${m[1]}${b.name ? ` "${b.name}"` : ""}` },
+  { re: /^\/admin\/bundles\/?(\d+)?$/, table: "bundles", describe: (m, method, b) =>
+    method === "POST" ? `Created bundle "${b.name ?? ""}"` : method === "DELETE" ? `Deleted bundle #${m[1]}` : `Edited bundle #${m[1]}${b.name ? ` "${b.name}"` : ""}` },
   { re: /^\/notifications\/admin\//, table: "", describe: () => "" }, // reading notifications isn't an audit event
 ];
 

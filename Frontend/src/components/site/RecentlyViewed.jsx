@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Reveal } from '../../lib/motion'
 import { getRecentlyViewed } from '../../lib/recentlyViewed'
-import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { getProductThumb, handleProductImageError } from '../../lib/productImage'
 import { useCurrency } from '../../context/CurrencyContext'
 
 export default function RecentlyViewed() {
@@ -45,7 +45,7 @@ export default function RecentlyViewed() {
                 <div style={{ height: 116, overflow: 'hidden', background: 'var(--card)' }}>
                   {(
                     <img
-                      src={getProductImage(p)}
+                      src={getProductThumb(p)}
                       alt={p.name}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onError={handleProductImageError}

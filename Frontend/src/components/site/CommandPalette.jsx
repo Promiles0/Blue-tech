@@ -5,7 +5,7 @@ import { Search, ArrowRight, TrendingUp } from 'lucide-react'
 import { useUI } from '../../context/UIContext'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
-import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { getProductThumb, handleProductImageError } from '../../lib/productImage'
 import { useCurrency } from '../../context/CurrencyContext'
 
 export default function CommandPalette() {
@@ -197,7 +197,7 @@ export default function CommandPalette() {
                 </div>
                 {results.map((p, i) => {
                   const pid = p.productId ?? p.id
-                  const img = getProductImage(p)
+                  const img = getProductThumb(p)
                   const price = parseFloat(p.startingPrice ?? p.price ?? 0)
                   const isActive = i === activeIdx
                   return (

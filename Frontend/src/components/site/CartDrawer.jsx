@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { X, ShoppingBag, Plus, Minus, Trash2 } from 'lucide-react'
 import { useCart } from '../../context/CartContext'
 import { useUI } from '../../context/UIContext'
-import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { getProductThumb, handleProductImageError } from '../../lib/productImage'
 import { useCurrency } from '../../context/CurrencyContext'
 
 export default function CartDrawer() {
@@ -92,7 +92,7 @@ export default function CartDrawer() {
                     const iid       = item.cartItemId ?? item.id
                     const unitPrice = parseFloat(item.unitPrice ?? 0)
                     const lineTotal = unitPrice * (item.quantity ?? 1)
-                    const img       = getProductImage(item.product ?? item)
+                    const img       = getProductThumb(item.product ?? item)
 
                     return (
                       <motion.div

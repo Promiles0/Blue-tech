@@ -5,7 +5,7 @@ import { Package, Search, ChevronRight, ShoppingBag, Clock, Loader2, SendHorizon
 import { m as motion, AnimatePresence } from 'framer-motion'
 import apiService from '../api/service'
 import BuyAgainButton from '../components/site/BuyAgainButton'
-import { getProductImage, handleProductImageError } from '../lib/productImage'
+import { getProductThumb, handleProductImageError } from '../lib/productImage'
 
 const TABS = [
   { id: 'all',        label: 'All Orders',  icon: ShoppingBag   },
@@ -230,7 +230,7 @@ export default function OrderHistoryPage() {
                             {thumbs.map((item, idx) => (
                               <div key={idx} style={{ width: 52, height: 52, borderRadius: 12, overflow: 'hidden', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', flexShrink: 0 }}>
                                 <img
-                                  src={getProductImage(item.product ?? item)}
+                                  src={getProductThumb(item.product ?? item)}
                                   alt={item.productName}
                                   onError={handleProductImageError}
                                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}

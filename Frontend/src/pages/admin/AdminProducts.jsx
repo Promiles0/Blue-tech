@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Plus, Pencil, Trash2, X, ChevronLeft, ChevronRight, AlertCircle, Check, UploadCloud, Eye, EyeOff, Search } from 'lucide-react'
 import apiService from '../../api/service'
-import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { getProductThumb, handleProductImageError } from '../../lib/productImage'
 import { money } from '../../lib/format'
 import { templateForCategory } from '../../lib/specTemplates'
 
@@ -57,6 +57,7 @@ function formFromDetail(p, categories) {
     })) : [{ ...EMPTY_VARIANT }],
     images: p.images?.length ? p.images.map(i => ({
       imageUrl:  i.imageUrl ?? '',
+      thumbUrl:  i.thumbUrl ?? null,
       isPrimary: i.isPrimary ?? false,
     })) : [{ ...EMPTY_IMAGE }],
   }
@@ -213,6 +214,18 @@ export default function AdminProducts() {
     }))])
   }
 
+  // A 600px WebP copy of a photo, made in the browser, for cards and lists (round 4, 4b).
+  const makeThumb = async (file) => {
+    try {
+      const bitmap = await createImageBitmap(file)
+      const scale = Math.min(1, 600 / Math.max(bitmap.width, bitmap.height))
+      const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(bitmap.width * scale), height: Math.round(bitmap.height * scale) })
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height)
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', 0.76))
+      return blob ? new File([blob], 'thumb.webp', { type: 'image/webp' }) : null
+    } catch { return null }
+  }
+
   const uploadSelectedFiles = async () => {
     const uploadedImages = []
 
@@ -226,8 +239,22 @@ export default function AdminProducts() {
         throw new Error(`Upload failed for ${fu.file.name}. The storage service did not return an image URL.`)
       }
 
+      // The small copy is a nice-to-have: if it fails, the full photo is used everywhere.
+      let thumbUrl = null
+      const thumb = await makeThumb(fu.file)
+      if (thumb) {
+        try {
+          const tf = new FormData()
+          tf.append('file', thumb)
+          const { data: t } = await apiService.admin.products.uploadFile(tf)
+          const url = t?.data ?? t
+          if (typeof url === 'string' && url.trim()) thumbUrl = url.trim()
+        } catch { /* keep going without it */ }
+      }
+
       uploadedImages.push({
         imageUrl: imageUrl.trim(),
+        thumbUrl,
         isPrimary: fu.isPrimary,
       })
     }
@@ -254,6 +281,7 @@ export default function AdminProducts() {
       const images = [
         ...form.images.filter(i => i.imageUrl.trim()).map(i => ({
           imageUrl:  i.imageUrl.trim(),
+          thumbUrl:  i.thumbUrl ?? null,
           isPrimary: i.isPrimary,
         })),
         ...uploadedImages,
@@ -460,7 +488,7 @@ export default function AdminProducts() {
                 <td style={{ padding: '14px 16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <img
-                      src={getProductImage(p)}
+                      src={getProductThumb(p)}
                       alt={p.name}
                       style={{ width: 36, height: 36, borderRadius: 6, objectFit: 'cover', background: 'var(--card)' }}
                       onError={handleProductImageError}

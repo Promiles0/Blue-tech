@@ -1,9 +1,9 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
-import {
+import { Percent,
   LayoutDashboard, Package, FolderTree, ShoppingCart,
   Users, MessageSquare, BarChart3, ScrollText,
-  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send, Gift, Bug, HeartPulse, Undo2, PackagePlus, FileSpreadsheet, ShieldCheck,
+  LogOut, ArrowLeft, Bell, Tag, Image, Sun, Moon, FileText, Settings, Sparkles, Receipt, Send, Gift, Bug, HeartPulse, Undo2, PackagePlus, FileSpreadsheet, ShieldCheck, MessageCircleQuestion,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
@@ -32,9 +32,11 @@ const NAV_GROUPS = [
   { label: 'Customers', items: [
     { to: '/admin/users',    label: 'Users',    icon: Users, adminOnly: true },
     { to: '/admin/reviews',  label: 'Reviews',  icon: MessageSquare, badge: 'newReviews7d' },
+    { to: '/admin/questions', label: 'Product questions', icon: MessageCircleQuestion, badge: 'newQuestions' },
     { to: '/admin/messages', label: 'Messages', icon: Send },
     { to: '/admin/programs', label: 'Programs', icon: Gift, adminOnly: true },
     { to: '/admin/coupons',  label: 'Coupons',  icon: Tag, adminOnly: true },
+    { to: '/admin/sales',    label: 'Sales & bundles', icon: Percent, adminOnly: true },
   ] },
   { label: 'Insights', items: [
     { to: '/admin/analytics', label: 'Sales insights', icon: BarChart3, adminOnly: true },

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useT } from '../../lib/i18n'
 import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
-import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { getProductThumb, handleProductImageError } from '../../lib/productImage'
 
 const COVER_SIZE = 3   // a few newest products, to pick a cover photo for the tile
 
@@ -36,11 +36,11 @@ async function fetchDepartments() {
 function DepartmentTile({ department }) {
   const { t } = useT()
   const { category, products, total } = department
-  const cover = products.find(p => getProductImage(p))
+  const cover = products.find(p => getProductThumb(p))
   return (
     <Link to={categoryLink(category)} className="dept-tile">
       <div className="dept-tile-img">
-        {cover && <img src={getProductImage(cover)} alt="" loading="lazy" onError={handleProductImageError} />}
+        {cover && <img src={getProductThumb(cover)} alt="" loading="lazy" onError={handleProductImageError} />}
       </div>
       <div className="dept-tile-text">
         <span className="dept-tile-name" title={t(categoryName(category))}>{t(tileLabel(category))}</span>

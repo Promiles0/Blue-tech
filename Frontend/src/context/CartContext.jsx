@@ -23,6 +23,8 @@ function writeGuest(items) {
 }
 
 
+const NO_SAVINGS = { bundleDiscount: 0, saleItemsTotal: 0, saleSavings: 0, bundlesApplied: [] }
+
 export function CartProvider({ children }) {
   const [items, setItems] = useState([])
   const { user, logout } = useAuth()
@@ -30,6 +32,8 @@ export function CartProvider({ children }) {
   const count = items.length
   // Use cartTotal from backend when available, fallback to client calculation
   const [serverTotal, setServerTotal] = useState(0)
+  // Bundle savings and the sale part of the cart (coupons skip sale items), from the API.
+  const [savings, setSavings] = useState(NO_SAVINGS)
   const total = serverTotal || items.reduce((sum, i) => sum + parseFloat(i.unitPrice ?? 0) * (i.quantity ?? 1), 0)
   const cart = { items }
 
@@ -44,10 +48,17 @@ export function CartProvider({ children }) {
       if (activeUserRef.current !== expectedUser) return
       setItems(data?.items ?? [])
       setServerTotal(parseFloat(data?.cartTotal ?? 0))
+      setSavings({
+        bundleDiscount: Number(data?.bundleDiscount) || 0,
+        saleItemsTotal: Number(data?.saleItemsTotal) || 0,
+        saleSavings: Number(data?.saleSavings) || 0,
+        bundlesApplied: data?.bundlesApplied ?? [],
+      })
     } catch {
       if (activeUserRef.current === expectedUser) {
         setItems([])
         setServerTotal(0)
+        setSavings(NO_SAVINGS)
       }
     }
   }, [])
@@ -57,6 +68,7 @@ export function CartProvider({ children }) {
     // Always clear immediately so no previous user's items ever bleed through
     setItems([])
     setServerTotal(0)
+    setSavings(NO_SAVINGS)
     if (!user) { setItems(readGuest()); return }
 
     // Just signed in: move anything added as a guest into the account cart, then load it.
@@ -130,10 +142,11 @@ export function CartProvider({ children }) {
     if (!user) writeGuest([])
     setItems([])
     setServerTotal(0)
+    setSavings(NO_SAVINGS)
   }
 
   return (
-    <CartContext.Provider value={{ cart, items, count, total, addToCart, removeFromCart, updateQuantity, clearCart, fetchCart, isInCart }}>
+    <CartContext.Provider value={{ cart, items, count, total, savings, addToCart, removeFromCart, updateQuantity, clearCart, fetchCart, isInCart }}>
       {children}
     </CartContext.Provider>
   )

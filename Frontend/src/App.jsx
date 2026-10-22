@@ -14,6 +14,8 @@ import { NotificationProvider }  from './context/NotificationContext'
 import { useAuth }               from './context/AuthContext'
 import SiteLayout          from './components/site/SiteLayout'
 import SplashScreen        from './components/site/SplashScreen'
+import { CampaignBanner }  from './components/site/SaleBits'
+import { captureReferral } from './lib/referral'
 import ProtectedRoute      from './components/ProtectedRoute'
 
 // Loaded only when first visited, so shoppers don't download the admin dashboard and
@@ -34,6 +36,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const HelpPage = lazy(() => import('./pages/HelpPage'))
 const AboutPage = lazy(() => import('./pages/AboutPage'))
 const PromotionPage = lazy(() => import('./pages/PromotionPage'))
+const SalePage = lazy(() => import('./pages/SalePage'))
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'))
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
 const AdminProducts = lazy(() => import('./pages/admin/AdminProducts'))
@@ -50,6 +53,8 @@ const AdminServiceRequests = lazy(() => import('./pages/admin/AdminServiceReques
 const AdminRestock = lazy(() => import('./pages/admin/AdminRestock'))
 const AdminSpreadsheets = lazy(() => import('./pages/admin/AdminSpreadsheets'))
 const AdminSecurity = lazy(() => import('./pages/admin/AdminSecurity'))
+const AdminQuestions = lazy(() => import('./pages/admin/AdminQuestions'))
+const AdminSales = lazy(() => import('./pages/admin/AdminSales'))
 const AdminNotifications = lazy(() => import('./pages/admin/AdminNotifications'))
 const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'))
 const AdminHeroSlides = lazy(() => import('./pages/admin/AdminHeroSlides'))
@@ -202,6 +207,8 @@ function AdminSection() {
         <Route path="restock"        element={<AdminRestock />} />
         <Route path="spreadsheets"   element={<AdminSpreadsheets />} />
         <Route path="security"       element={<AdminSecurity />} />
+        <Route path="questions"      element={<AdminQuestions />} />
+        <Route path="sales"          element={<AdminOnly><AdminSales /></AdminOnly>} />
         <Route path="notifications"  element={<AdminNotifications />} />
         <Route path="settings"       element={<AdminOnly><AdminSettings /></AdminOnly>} />
         <Route path="blue"           element={<AdminOnly><AdminBlue /></AdminOnly>} />
@@ -215,10 +222,12 @@ function AdminSection() {
 
 function CustomerSite() {
   const { isAdmin, loading } = useAuth()
+  useEffect(() => { captureReferral() }, [])   // ?ref=CODE invite links
   if (loading) return null
   return (
     <SiteLayout>
       {isAdmin && <AdminBar />}
+      <CampaignBanner />
       <Suspense fallback={<PageFallback />}><Routes>
         <Route path="/"             element={<HomePage />} />
         <Route path="/login"        element={<LoginPage />} />
@@ -240,6 +249,7 @@ function CustomerSite() {
         <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
         <Route path="/help"          element={<HelpPage />} />
         <Route path="/promotions/:slug" element={<PromotionPage />} />
+        <Route path="/sale/:slug"       element={<SalePage />} />
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes></Suspense>

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --configLoader native",
     "build": "vite build",
+    "postbuild": "node scripts/prerender.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "check:api": "node scripts/check-api-calls.mjs",

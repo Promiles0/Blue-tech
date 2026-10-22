@@ -6,7 +6,7 @@ import apiService from '../api/service'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { toast } from 'sonner'
-import { getProductImage, handleProductImageError } from '../lib/productImage'
+import { getProductThumb, handleProductImageError } from '../lib/productImage'
 import { useCurrency } from '../context/CurrencyContext'
 
 export default function Wishlist() {
@@ -84,7 +84,7 @@ export default function Wishlist() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {items.map(item => {
               const pid     = Number(item.productId)
-              const img     = getProductImage(item.product ?? item)
+              const img     = getProductThumb(item.product ?? item)
               const price   = parseFloat(item.price ?? 0)
 
               return (

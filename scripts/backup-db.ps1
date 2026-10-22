@@ -30,7 +30,7 @@ function Record-Run([bool]$ok, [long]$bytes, [int]$files, [string]$note) {
   $safeNote = ($note -replace "'", "''")
   if ($safeNote.Length -gt 300) { $safeNote = $safeNote.Substring(0, 300) }
   $okSql = if ($ok) { 'true' } else { 'false' }
-  & supabase db query --linked --workdir $repo "insert into backup_log (ok, db_bytes, files, note) values ($okSql, $bytes, $files, '$safeNote')" *> $null
+  & npx --no-install supabase db query --linked --workdir $repo "insert into backup_log (ok, db_bytes, files, note) values ($okSql, $bytes, $files, '$safeNote')" *> $null
 }
 
 # The connection string: environment variable first, then the private file in the user folder.
@@ -54,7 +54,8 @@ if (-not $pgDump) {
   if ($found) { $pgDump = $found.FullName }
 }
 if (-not $pgDump) { Write-Host 'pg_dump not found. Install PostgreSQL (client tools) from postgresql.org.' -ForegroundColor Red; exit 1 }
-if (-not (Get-Command supabase -ErrorAction SilentlyContinue)) { Write-Host 'The Supabase CLI is not installed.' -ForegroundColor Red; exit 1 }
+# The npm-installed Supabase CLI (newer than a standalone one that may also be on PATH).
+if (-not (Get-Command npx -ErrorAction SilentlyContinue)) { Write-Host 'Node.js (npx) and the Supabase CLI are needed.' -ForegroundColor Red; exit 1 }
 
 $stamp = Get-Date -Format 'yyyy-MM-dd'
 $dir = Join-Path $Destination "blue-tech-$stamp"
@@ -74,7 +75,7 @@ try {
   Push-Location $dir
   try {
     foreach ($b in $buckets) {
-      & supabase storage cp -r "ss:///$b" "storage/$b" --linked --experimental --workdir $repo *> $null
+      & npx --no-install supabase storage cp -r "ss:///$b" "storage/$b" --linked --experimental --workdir $repo *> $null
       if ($LASTEXITCODE -ne 0) { throw "Copying the '$b' files failed (exit code $LASTEXITCODE)." }
     }
   } finally { Pop-Location }

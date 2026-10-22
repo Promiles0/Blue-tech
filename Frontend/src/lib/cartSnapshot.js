@@ -8,6 +8,6 @@ export function cartSnapshot(product, variant) {
     sizeOrColor: variant?.sizeOrColor ?? null,
     skuCode: variant?.skuCode ?? null,
     stockQuantity: variant?.stockQuantity ?? null,
-    product: { productId: product?.productId ?? product?.id, name: product?.name, imageUrl: image, primaryImageUrl: image },
+    product: { productId: product?.productId ?? product?.id, name: product?.name, imageUrl: image, primaryImageUrl: image, thumbUrl: product?.thumbUrl ?? null },
   }
 }

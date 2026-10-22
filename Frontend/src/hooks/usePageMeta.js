@@ -123,6 +123,7 @@ export function productJsonLd(product, { reviews = [], categoryPath } = {}) {
       url,
       priceCurrency: 'RWF',
       price: Number(product.price) || 0,
+      ...(product.campaign?.endsAt ? { priceValidUntil: String(product.campaign.endsAt).slice(0, 10) } : {}),
       availability: stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: `https://schema.org/${CONDITION[String(product.condition ?? 'new').toLowerCase()] ?? 'NewCondition'}`,
       seller: { '@type': 'Organization', name: 'Blue-Tech' },

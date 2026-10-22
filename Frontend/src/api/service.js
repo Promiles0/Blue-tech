@@ -34,8 +34,17 @@ const apiService = {
     // Round 2: honest signals (sold in 30 days, back in stock) and "pairs well with".
     signals: (id) => api.get(`/products/${id}/signals`),
     pairs: (ids, limit = 4) => api.get(`/products/pairs?ids=${ids}&limit=${limit}`),
+    questions: (id) => api.get(`/products/${id}/questions`),
+    bundles: (id) => api.get(`/products/${id}/bundles`),
+    ask: (id, question) => api.post(`/products/${id}/questions`, { question }),
     // Filter values (with counts) for the storefront filter rail.
     facets: (categoryId) => api.get(`/products/facets${categoryId ? `?categoryId=${categoryId}` : ''}`),
+  },
+
+  // --- SALES (campaigns) ---
+  campaigns: {
+    active: () => api.get('/campaigns/active'),
+    get: (slug) => api.get(`/campaigns/${slug}`),
   },
 
   // --- CATEGORIES ---
@@ -109,6 +118,8 @@ const apiService = {
   rewards: {
     get: () => api.get('/me/rewards'),
     studentRequest: (data) => api.post('/me/student-request', data),
+    referral: () => api.get('/me/referral'),
+    referralCheck: (code) => api.get(`/me/referral/check?code=${encodeURIComponent(code)}`),
   },
 
   stockAlerts: {
@@ -165,6 +176,7 @@ const apiService = {
       // includeHidden: admins also see products that aren't published yet.
       getAll: (page = 0, size = 12, extra = '') => api.get(`/products?page=${page}&size=${size}&includeHidden=true${extra}`),
       getOne: (id) => api.get(`/products/${id}?includeHidden=true`),
+      picker: () => api.get('/admin/products/picker'),
       create: (data) => api.post('/products', data),
       update: (id, data) => api.put(`/products/${id}`, data),
       delete: (id) => api.delete(`/products/${id}`),
@@ -201,6 +213,22 @@ const apiService = {
       preview: (csv) => api.post('/admin/import/preview', { csv }),
       apply: (csv) => api.post('/admin/import/apply', { csv }),
     },
+    campaigns: {
+      getAll: () => api.get('/admin/campaigns'),
+      create: (data) => api.post('/admin/campaigns', data),
+      update: (id, data) => api.put(`/admin/campaigns/${id}`, data),
+      delete: (id) => api.delete(`/admin/campaigns/${id}`),
+    },
+    bundles: {
+      getAll: () => api.get('/admin/bundles'),
+      create: (data) => api.post('/admin/bundles', data),
+      update: (id, data) => api.put(`/admin/bundles/${id}`, data),
+      delete: (id) => api.delete(`/admin/bundles/${id}`),
+    },
+    questions: {
+      getAll: (status) => api.get(`/admin/questions?status=${status}`),
+      update: (id, body) => api.patch(`/admin/questions/${id}`, body),
+    },
     serviceRequests: {
       getAll: (status) => api.get(`/admin/service-requests${status ? `?status=${status}` : ''}`),
       update: (id, data) => api.patch(`/admin/service-requests/${id}`, data),
@@ -231,6 +259,7 @@ const apiService = {
       saveBlue: (instructions) => api.put('/admin/settings/blue', { instructions }),
     },
     messages: () => api.get('/admin/messages'),
+    referrals: () => api.get('/admin/referrals'),
     programs: {
       requests: () => api.get('/admin/programs'),
       setStatus: (kind, id, status) => api.patch(`/admin/programs/${kind}/${id}`, { status }),

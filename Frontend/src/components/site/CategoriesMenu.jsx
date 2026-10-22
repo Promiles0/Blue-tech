@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { m as motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Laptop, Monitor, ArrowRight } from 'lucide-react'
 import apiService from '../../api/service'
-import { getProductImage, handleProductImageError } from '../../lib/productImage'
+import { getProductThumb, handleProductImageError } from '../../lib/productImage'
 import { useCurrency } from '../../context/CurrencyContext'
 import { useDropdownMenu, DROPDOWN_MOTION_PROPS } from '../../lib/useDropdownMenu'
 
@@ -112,7 +112,7 @@ export default function CategoriesMenu() {
                   >
                     <div style={{ width: 52, height: 52, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: 'var(--surface)' }}>
                       <img
-                        src={getProductImage(newArrival)}
+                        src={getProductThumb(newArrival)}
                         alt=""
                         onError={handleProductImageError}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}

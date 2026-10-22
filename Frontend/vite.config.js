@@ -1,13 +1,25 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig(({ command }) => ({
+// Google Search Console ownership check: set VITE_GOOGLE_SITE_VERIFICATION on Render to the
+// code from the "HTML tag" method and every page carries the tag (see docs/GOOGLE-SETUP.md).
+function siteVerification(code) {
+  return {
+    name: 'google-site-verification',
+    transformIndexHtml: (html) => (/^[\w-]{10,80}$/.test(code ?? '')
+      ? html.replace('</head>', `    <meta name="google-site-verification" content="${code}" />
+  </head>`)
+      : html),
+  }
+}
+
+export default defineConfig(({ command, mode }) => ({
   // Build stamp sent with error reports, so Admin → Site errors shows which release crashed.
   define: { __APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16)) },
   build: {
     outDir: 'dist'
   },
-  plugins: [react()],
+  plugins: [react(), siteVerification(loadEnv(mode, process.cwd(), '').VITE_GOOGLE_SITE_VERIFICATION)],
   server: command === 'serve' ? {
     port: 5173,
     headers: {

@@ -17,6 +17,8 @@ import { useCurrency } from "../context/CurrencyContext";
 import PayForOrder from "../components/site/PayForOrder";
 import OrderPlaced from "../components/site/OrderPlaced";
 import { loadCheckoutMemory, saveCheckoutMemory } from "../lib/checkoutMemory";
+import { clearReferral, storedReferral } from "../lib/referral";
+import { useQuery } from "@tanstack/react-query";
 import { CARD_ELEMENT_OPTIONS, MOMO_POLL_INTERVAL_MS, MOMO_POLL_TIMEOUT_MS, getStripe, momoProviderFor, normalizeRwandaPhone } from "../lib/payments";
 
 const EXPRESS_SHIPPING_FEE_RWF = 7500;
@@ -27,7 +29,7 @@ function CheckoutForm() {
   const { t, intlLocale } = useT()
   const t_err = (msg) => toast.error(t(msg))
   const { user } = useAuth();
-  const { cart, clearCart } = useCart();
+  const { cart, clearCart, savings } = useCart();
   const navigate = useNavigate();
   const stripe = useStripe();
   const elements = useElements();
@@ -83,10 +85,13 @@ function CheckoutForm() {
 
   const getItemTotal = (item) => parseFloat(item.unitPrice ?? item.price ?? 0) * (item.quantity ?? 1);
   const subtotal = cart?.items?.reduce((sum, item) => sum + getItemTotal(item), 0) || 0;
+  // Same rules as the API: bundle savings first; coupons only count items that aren't on sale.
+  const bundleDiscount = Math.min(savings?.bundleDiscount ?? 0, subtotal);
+  const couponBase = Math.max(0, subtotal - (savings?.saleItemsTotal ?? 0) - bundleDiscount);
   const discount = coupon
-    ? coupon.kind === "PERCENT" ? subtotal * (Number(coupon.value) / 100) : Number(coupon.value)
+    ? coupon.kind === "PERCENT" ? couponBase * (Number(coupon.value) / 100) : Number(coupon.value)
     : 0;
-  const safeDiscount = Math.min(discount, subtotal);
+  const safeDiscount = Math.min(discount, couponBase);
   // RWF, like every price. Keep in sync with EXPRESS_SHIPPING_FEE_RWF in the API.
   const shippingFee = shippingMethod === "EXPRESS" ? EXPRESS_SHIPPING_FEE_RWF : 0;
   // District the estimate is for: the new-address form, else the chosen saved address.
@@ -97,13 +102,22 @@ function CheckoutForm() {
   const programs = usePrograms();
   const { data: rewards } = useRewards(Boolean(programs?.loyalty?.enabled || programs?.student?.enabled));
   const [usePoints, setUsePoints] = useState(false);
+  // A friend's invite link (6d): first order, not together with a coupon. The API re-checks.
+  const referralCode = programs?.referral?.enabled && !coupon ? storedReferral() : null;
+  const { data: invite } = useQuery({
+    queryKey: ["referral-check", referralCode],
+    queryFn: () => apiService.rewards.referralCheck(referralCode).then((r) => r.data),
+    enabled: Boolean(referralCode && user),
+    staleTime: 60_000,
+  });
+  const referralDiscount = invite?.ok && subtotal >= invite.minOrder ? Math.min(invite.discount, Math.max(0, subtotal - bundleDiscount - safeDiscount)) : 0;
   const studentDiscount = programs?.student?.enabled && rewards?.studentActive ? Math.round(subtotal * programs.student.percent / 100) : 0;
   const pointValue = programs?.loyalty?.pointValue ?? 0;
   const pointsAvailable = programs?.loyalty?.enabled && pointValue > 0 ? (rewards?.points ?? 0) : 0;
   const pointsDiscount = usePoints && pointsAvailable > 0
-    ? Math.floor(Math.min(pointsAvailable * pointValue, subtotal * programs.loyalty.maxRedeemPercent / 100, Math.max(0, subtotal - safeDiscount - studentDiscount)) / pointValue) * pointValue
+    ? Math.floor(Math.min(pointsAvailable * pointValue, subtotal * programs.loyalty.maxRedeemPercent / 100, Math.max(0, subtotal - bundleDiscount - safeDiscount - referralDiscount - studentDiscount)) / pointValue) * pointValue
     : 0;
-  const total = Math.max(0, subtotal - safeDiscount - studentDiscount - pointsDiscount + shippingFee);
+  const total = Math.max(0, subtotal - bundleDiscount - safeDiscount - referralDiscount - studentDiscount - pointsDiscount + shippingFee);
 
   const buildPayload = () => {
     if (showNewAddressForm) {
@@ -112,7 +126,7 @@ function CheckoutForm() {
         return null;
       }
       const { landmark, ...rest } = newAddress; // eslint-disable-line no-unused-vars
-      return { ...rest, street: addressStreet(newAddress), shippingMethod, paymentMethod, couponCode: coupon?.code ?? null, usePoints };
+      return { ...rest, street: addressStreet(newAddress), shippingMethod, paymentMethod, couponCode: coupon?.code ?? null, usePoints, referralCode };
     }
     const addr = addresses.find((a) => a.addressId === selectedAddressId);
     if (!addr) { t_err("Select a delivery address"); return null; }
@@ -120,7 +134,7 @@ function CheckoutForm() {
       street: addressStreet({ street: addr.streetAddress, landmark: addr.landmarks }), city: addr.city,
       state: addr.state ?? "", zipCode: addr.zipCode ?? "",
       country: addr.country, phone: addr.phoneNumber,
-      shippingMethod, paymentMethod, couponCode: coupon?.code ?? null, usePoints,
+      shippingMethod, paymentMethod, couponCode: coupon?.code ?? null, usePoints, referralCode,
     };
   };
 
@@ -198,6 +212,8 @@ function CheckoutForm() {
       const orderId = orderData?.orderId;
 
       if (!orderId) throw new Error("Order creation failed — no order ID returned");
+      // An invite is for one first order: forget it once an order is placed.
+      if (referralCode) clearReferral();
       // The server has moved the cart into this order; keep its id so a failed payment can be
       // retried on it instead of placing a duplicate order.
       createdOrderId = orderId;
@@ -470,11 +486,29 @@ function CheckoutForm() {
                   <span style={{ color: "var(--text-secondary)" }}>{t("Subtotal")}</span>
                   <span style={{ color: "var(--text-primary)" }}>{formatPrice(subtotal)}</span>
                 </div>
+                {bundleDiscount > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
+                    <span style={{ color: "var(--text-secondary)" }}>{t("Bundle savings")}</span>
+                    <span style={{ color: "var(--brand)" }}>-{formatPrice(bundleDiscount)}</span>
+                  </div>
+                )}
+                {coupon && couponBase <= 0 && (
+                  <p style={{ fontSize: 12.5, color: "var(--warning, #f59e0b)", margin: "0 0 8px" }}>{t("Coupons don't apply to items that are already on sale.")}</p>
+                )}
                 {safeDiscount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
                     <span style={{ color: "var(--text-secondary)" }}>{t("Discount")}</span>
                     <span style={{ color: "var(--brand)" }}>-{formatPrice(safeDiscount)}</span>
                   </div>
+                )}
+                {referralDiscount > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
+                    <span style={{ color: "var(--text-secondary)" }}>{t("Friend's invite")}</span>
+                    <span style={{ color: "var(--brand)" }}>-{formatPrice(referralDiscount)}</span>
+                  </div>
+                )}
+                {invite?.ok && referralDiscount === 0 && subtotal < invite.minOrder && (
+                  <p style={{ fontSize: 12.5, color: "var(--text-secondary)", margin: "0 0 8px" }}>{t("Your friend's invite gives {amount} off orders of {min} or more.", { amount: formatPrice(invite.discount), min: formatPrice(invite.minOrder) })}</p>
                 )}
                 {studentDiscount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>

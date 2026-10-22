@@ -5,13 +5,14 @@ import ProformaModal from '../components/site/ProformaModal'
 import PairsWellWith from '../components/site/PairsWellWith'
 import { useCart } from '../context/CartContext'
 import { useState } from 'react'
-import { getProductImage, handleProductImageError } from '../lib/productImage'
+import { getProductThumb, handleProductImageError } from '../lib/productImage'
 import { useCurrency } from '../context/CurrencyContext'
 
 export default function Cart() {
   const { t } = useT()
   const { formatPrice } = useCurrency()
-  const { items, count, total, updateQuantity, removeFromCart, clearCart } = useCart()
+  const { items, count, total, savings, updateQuantity, removeFromCart, clearCart } = useCart()
+  const bundleDiscount = Math.min(savings?.bundleDiscount ?? 0, total)
   const navigate = useNavigate()
   const [proformaOpen, setProformaOpen] = useState(false)
 
@@ -35,7 +36,7 @@ export default function Cart() {
           {/* Items */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {items.map(item => {
-              const img   = getProductImage(item.product ?? item)
+              const img   = getProductThumb(item.product ?? item)
               const name  = item.productName ?? t('Product')
               const opts  = item.sizeOrColor
               const price = parseFloat(item.unitPrice ?? 0)
@@ -58,7 +59,12 @@ export default function Cart() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</p>
                     {opts && <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{opts}</p>}
-                    <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--price-color)' }}>{formatPrice(price * item.quantity)}</p>
+                    <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--price-color)' }}>
+                      {formatPrice(price * item.quantity)}
+                      {item.onSale && Number(item.regularUnitPrice) > price && (
+                        <span style={{ marginLeft: 8, fontSize: 12.5, fontWeight: 500, color: 'var(--text-muted)', textDecoration: 'line-through' }}>{formatPrice(Number(item.regularUnitPrice) * item.quantity)}</span>
+                      )}
+                    </p>
                     {item.quantity > 1 && (
                       <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{formatPrice(price)} each</p>
                     )}
@@ -107,9 +113,13 @@ export default function Cart() {
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--card-border)', borderRadius: 16, padding: 28, position: 'sticky', top: 80 }}>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 24 }}>{t('Order summary')}</h2>
             <SummaryRow label={t('Subtotal')}  value={formatPrice(total)} />
+            {bundleDiscount > 0 && <SummaryRow label={t('Bundle savings')} value={`-${formatPrice(bundleDiscount)}`} />}
             <SummaryRow label={t('Delivery')}  value={t('Free')} />
             <div style={{ borderTop: '1px solid var(--border)', margin: '16px 0' }} />
-            <SummaryRow label={t('Total')} value={formatPrice(total)} bold />
+            <SummaryRow label={t('Total')} value={formatPrice(total - bundleDiscount)} bold />
+            {savings?.saleSavings > 0 && (
+              <p style={{ fontSize: 12.5, color: 'var(--success, #22c55e)', marginTop: 8 }}>{t('You save {amount} with the sale', { amount: formatPrice(savings.saleSavings) })}</p>
+            )}
 
             <button
               onClick={() => navigate('/checkout')}

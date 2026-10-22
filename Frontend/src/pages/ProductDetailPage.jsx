@@ -19,6 +19,9 @@ import { useCurrency } from '../context/CurrencyContext'
 import ProductSpecs from '../components/site/ProductSpecs'
 import RelatedProducts from '../components/site/RelatedProducts'
 import PairsWellWith from '../components/site/PairsWellWith'
+import ProductQuestions from '../components/site/ProductQuestions'
+import BundleOffers from '../components/site/BundleOffers'
+import { SaleCountdown } from '../components/site/SaleBits'
 import { useQuery } from '@tanstack/react-query'
 import DeliveryEstimate from '../components/site/DeliveryEstimate'
 import BackInStockForm from '../components/site/BackInStockForm'
@@ -208,9 +211,22 @@ export default function ProductDetail() {
               </div>
             )}
 
-            <p style={{ fontSize: 34, fontWeight: 900, color: 'var(--price)', marginBottom: 24, letterSpacing: '-0.01em' }}>
+            <p style={{ fontSize: 34, fontWeight: 900, color: 'var(--price)', marginBottom: product.campaign ? 6 : 24, letterSpacing: '-0.01em' }}>
               {formatPrice(price)}
+              {product.campaign && Number(product.regularPrice) > Number(product.price) && (
+                <span style={{ marginLeft: 12, fontSize: 18, fontWeight: 500, color: 'var(--muted)', textDecoration: 'line-through' }}>
+                  {formatPrice(Number(product.regularPrice) + (parseFloat(selectedVariant?.priceAdjustment) || 0))}
+                </span>
+              )}
             </p>
+            {product.campaign && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
+                <Link to={`/sale/${product.campaign.slug}`} style={{ padding: '3px 10px', borderRadius: 999, background: 'var(--danger, #ef4444)', color: '#fff', fontSize: 12, fontWeight: 800, textDecoration: 'none' }}>
+                  {product.campaign.label} · {product.campaign.name}
+                </Link>
+                <SaleCountdown endsAt={product.campaign.endsAt} />
+              </div>
+            )}
 
             {(product.shortDescription || product.description) && (
               <p style={{ fontSize: 15, color: 'var(--muted)', lineHeight: 1.75, marginBottom: 28 }}>
@@ -405,6 +421,8 @@ export default function ProductDetail() {
       </div>
 
       <div className="container-noir">
+        <BundleOffers productId={product.productId ?? product.id} />
+        <ProductQuestions productId={product.productId ?? product.id} />
         <RelatedProducts product={product} />
       </div>
 

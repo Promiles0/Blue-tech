@@ -7,7 +7,7 @@ import { Tilt } from '../lib/motion'
 import { useUI } from '../context/UIContext'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
-import { getProductImage, handleProductImageError, productImageList } from '../lib/productImage'
+import { getProductThumb, handleProductImageError, productImageList } from '../lib/productImage'
 import { useCurrency } from '../context/CurrencyContext'
 
 function getStatus(product) {
@@ -35,9 +35,12 @@ export default function ProductCard({ product }) {
   const wishlisted = wishlistIds.has(pid)
   const comparing  = compareList.some(p => p.id === pid)
   const price      = parseFloat(product.startingPrice ?? product.price) || 0
+  // During a sale the API sends the sale price as price and the old one as regularPrice.
+  const regular    = parseFloat(product.regularPrice) || 0
+  const onSale     = Boolean(product.campaign) && regular > price
 
   const productImages = productImageList(product)
-  const primaryImage  = getProductImage(product)
+  const primaryImage  = getProductThumb(product)
   const hoverImage    = productImages[1] ?? null
   const categoryName = product.category?.name ?? product.categoryName ?? ''
   const status       = getStatus(product)
@@ -103,7 +106,15 @@ export default function ProductCard({ product }) {
             pointerEvents: 'none',
           }} />
 
-          {sc && (
+          {onSale ? (
+            <div style={{
+              position: 'absolute', top: 10, left: 10,
+              background: 'var(--danger, #ef4444)', color: '#fff', borderRadius: 100,
+              padding: '3px 10px', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.04em',
+            }}>
+              {product.campaign.label}
+            </div>
+          ) : sc && (
             <div style={{
               position: 'absolute', top: 10, left: 10,
               background: sc.bg, border: `1px solid ${sc.ring}`,
@@ -168,6 +179,11 @@ export default function ProductCard({ product }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
             <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--price)' }}>
               {formatPrice(price)}
+              {onSale && (
+                <span style={{ marginLeft: 7, fontSize: 12, fontWeight: 500, color: 'var(--muted-dark)', textDecoration: 'line-through' }}>
+                  {formatPrice(regular)}
+                </span>
+              )}
             </p>
             <button
               onClick={e => {
