@@ -28,7 +28,7 @@ def supabase(*args):
     npx = shutil.which('npx')
     if not npx:
         sys.exit('Node.js (npx) and the Supabase CLI are needed.')
-    out = subprocess.run([npx, '--no-install', 'supabase', *args, '--workdir', REPO], capture_output=True, text=True, encoding='utf-8')
+    out = subprocess.run([npx, '--no-install', 'supabase', *args, '--workdir', REPO], capture_output=True, text=True, encoding='utf-8', cwd=REPO)
     return out.stdout + out.stderr
 
 
@@ -47,7 +47,8 @@ def main():
         print('Every photo already has a small copy.')
         return
     print(f'{len(rows)} photo(s) need a small copy.')
-    work = tempfile.mkdtemp(prefix='bt-thumbs-')
+    # Inside the repo, so the upload can use a relative path (the CLI reads "C:" as a storage scheme).
+    work = tempfile.mkdtemp(prefix='.bt-thumbs-', dir=REPO)
     folder = os.path.join(work, 'thumbs')
     os.makedirs(folder)
     made = []
@@ -68,11 +69,13 @@ def main():
         sys.exit('Nothing was made.')
     before = sum(os.path.getsize(os.path.join(folder, n)) for _, n in made)
     print(f'Uploading {len(made)} small copies ({before / 1024 / len(made):.0f} KB each on average)…')
-    out = supabase('storage', 'cp', '-r', folder, 'ss:///product-images/thumbs', '--linked', '--experimental')
+    out = supabase('storage', 'cp', '-r', '-j', '8', os.path.relpath(folder, REPO).replace(os.sep, '/'), 'ss:///product-images/thumbs', '--linked', '--experimental')
     if 'error' in out.lower() and 'Uploading' not in out:
         sys.exit(f'Upload failed:\n{out[-400:]}')
-    values = ','.join(f"({i}, '{PROJECT_URL}/storage/v1/object/public/product-images/thumbs/{n}')" for i, n in made)
-    query(f"update product_images p set thumb_url = v.url from (values {values}) as v(id, url) where p.id = v.id")
+    # In batches: Windows limits how long one command line can be.
+    for k in range(0, len(made), 25):
+        values = ','.join(f"({i}, '{PROJECT_URL}/storage/v1/object/public/product-images/thumbs/{n}')" for i, n in made[k:k + 25])
+        query(f"update product_images p set thumb_url = v.url from (values {values}) as v(id, url) where p.id = v.id")
     shutil.rmtree(work, ignore_errors=True)
     print(f'Done: {len(made)} photo(s) now have a small copy.')
 
