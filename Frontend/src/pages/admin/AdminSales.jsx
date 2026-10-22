@@ -93,7 +93,7 @@ function Campaigns() {
   const qc = useQueryClient()
   const [form, setForm] = useState(null)
   const { data: list = [], isLoading } = useQuery({ queryKey: ['admin-campaigns'], queryFn: () => apiService.admin.campaigns.getAll().then((r) => r.data?.data ?? r.data ?? []) })
-  const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => apiService.categories.getAll().then((r) => r.data?.data ?? r.data ?? []) })
+  const { data: categories = [] } = useQuery({ queryKey: ['admin-sales-categories'], queryFn: () => apiService.categories.getAll().then((r) => r.data?.data ?? r.data ?? []) })
   const done = (msg) => { toast.success(msg); qc.invalidateQueries({ queryKey: ['admin-campaigns'] }); qc.invalidateQueries({ queryKey: ['campaigns-active'] }) }
   const save = useMutation({
     mutationFn: (f) => {

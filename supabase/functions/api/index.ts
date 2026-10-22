@@ -3818,7 +3818,7 @@ async function handle(request: Request) {
       const rank = new Map(ranked.map((id, i) => [id, i]));
       const sorted = ((all ?? []) as Record<string, unknown>[]).sort((a, b) => (rank.get(Number(a.id)) ?? 999) - (rank.get(Number(b.id)) ?? 999));
       const pageRows = sorted.slice(page * size, page * size + size);
-      const content = await Promise.all(pageRows.map((row) => productResult(row)));
+      const content = await Promise.all(pageRows.map((row) => productResult(row, { admin: includeHidden })));
       return success("Products fetched successfully", { content, totalElements: sorted.length, number: page, size, totalPages: Math.ceil(sorted.length / size) });
     }
 
