@@ -7,6 +7,7 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { loadEnv } from 'vite'
+import { canonicalPath } from '../src/lib/prebuilt.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DIST = path.join(ROOT, 'dist')
@@ -54,9 +55,9 @@ function write(route, html) {
 
 const crumbs = (items) => ({
   '@context': 'https://schema.org', '@type': 'BreadcrumbList',
-  itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.name, item: SITE + it.path })),
+  itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.name, item: SITE + canonicalPath(it.path) })),
 })
-const nav = (items) => `<nav style="font-size:14px;margin-bottom:12px">${items.map((it) => `<a href="${esc(it.path)}">${esc(it.name)}</a>`).join(' › ')}</nav>`
+const nav = (items) => `<nav style="font-size:14px;margin-bottom:12px">${items.map((it) => `<a href="${esc(canonicalPath(it.path))}">${esc(it.name)}</a>`).join(' › ')}</nav>`
 
 try {
   if (!API) throw new Error('VITE_SUPABASE_FUNCTIONS_URL is not set')
@@ -81,7 +82,7 @@ try {
     const specs = Object.entries(p.specs ?? {}).filter(([, v]) => v !== null && v !== '').slice(0, 12)
     const cat = p.categoryName ? [{ name: p.categoryName, path: `/category/${catSlug.get(p.categoryId) ?? slugOf({ name: p.categoryName })}` }] : []
     const trail = [{ name: 'Home', path: '/' }, ...cat, { name, path: `/products/${id}` }]
-    const url = `${SITE}/products/${id}`
+    const url = `${SITE}${canonicalPath(`/products/${id}`)}`
     write(`/products/${id}`, page(template, {
       title: `${name} — ${rwf(p.price)} | Blue-Tech`,
       description: `${desc.slice(0, 150)} ${rwf(p.price)}, delivered across Rwanda.`.trim(),
@@ -98,7 +99,7 @@ try {
         <p>${esc(desc)}</p>
         ${specs.length ? `<ul>${specs.map(([k, v]) => `<li>${esc(k.replace(/_/g, ' '))}: ${esc(v)}</li>`).join('')}</ul>` : ''}
         <p>Free standard delivery across Rwanda · 30-day returns · Pay with MTN MoMo, Airtel Money or card</p>
-        <p><a href="/products">All products</a> · <a href="/about">About Blue-Tech</a></p>`,
+        <p><a href="/products/">All products</a> · <a href="/about/">About Blue-Tech</a></p>`,
     }))
   }
 
@@ -110,9 +111,9 @@ try {
     write(`/category/${slug}`, page(template, {
       title: `${c.name} in Rwanda — prices and delivery | Blue-Tech`,
       description: `Buy ${String(c.name).toLowerCase()} at Blue-Tech Kigali: ${items.length} products, prices in RWF, warranty on every product, delivery across Rwanda.`,
-      url: `${SITE}/category/${encodeURIComponent(slug)}`, image: items[0]?.primaryImageUrl ?? items[0]?.imageUrl,
+      url: `${SITE}${canonicalPath(`/category/${encodeURIComponent(slug)}`)}`, image: items[0]?.primaryImageUrl ?? items[0]?.imageUrl,
       jsonLd: [crumbs(trail)],
-      body: `${nav(trail)}<h1>${esc(c.name)}</h1><ul>${items.map((p) => `<li><a href="/products/${p.productId ?? p.id}">${esc(titleCase(p.name))}</a> — ${rwf(p.price)}</li>`).join('')}</ul>`,
+      body: `${nav(trail)}<h1>${esc(c.name)}</h1><ul>${items.map((p) => `<li><a href="${canonicalPath(`/products/${p.productId ?? p.id}`)}">${esc(titleCase(p.name))}</a> — ${rwf(p.price)}</li>`).join('')}</ul>`,
     }))
   }
 
@@ -120,15 +121,15 @@ try {
   write('/products', page(template, {
     title: 'Shop laptops, printers, monitors and more in Rwanda | Blue-Tech',
     description: 'Every product at Blue-Tech Kigali: laptops, desktops, printers, monitors, networking and accessories, with prices in RWF and delivery across Rwanda.',
-    url: `${SITE}/products`,
-    body: `<h1>All products</h1><ul>${products.map((p) => `<li><a href="/products/${p.productId ?? p.id}">${esc(titleCase(p.name))}</a> — ${rwf(p.price)}</li>`).join('')}</ul>`,
+    url: `${SITE}${canonicalPath('/products')}`,
+    body: `<h1>All products</h1><ul>${products.map((p) => `<li><a href="${canonicalPath(`/products/${p.productId ?? p.id}`)}">${esc(titleCase(p.name))}</a> — ${rwf(p.price)}</li>`).join('')}</ul>`,
   }))
 
   // About.
   write('/about', page(template, {
     title: 'About Blue-Tech — electronics shop in Kigali, Rwanda',
     description: `Blue-Tech, ${business.address || 'Kigali'}. Laptops, computers, printers and interactive screens with warranty, delivered across Rwanda.`,
-    url: `${SITE}/about`,
+    url: `${SITE}${canonicalPath('/about')}`,
     body: `<h1>About Blue-Tech</h1><p>${esc(settings?.aboutPage?.story || 'Blue-Tech is an electronics shop in Kigali, delivering across Rwanda.')}</p>
       <p>${esc(business.address || '')}${settings?.aboutPage?.hours ? ` · ${esc(settings.aboutPage.hours)}` : ''}</p>
       <p>${esc(business.phone || '')} · ${esc(business.email || '')}</p>`,

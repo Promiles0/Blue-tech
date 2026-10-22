@@ -40,8 +40,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone()
-          caches.open(SHELL).then((c) => c.put('/', copy))
+          // Keep the app shell for offline use, but not a pre-built page (/products/30/ etc.),
+          // whose title and content belong to one product.
+          if (res.ok && !/^\/(products(\/\d+)?|category\/[^/]+|about)\/$/.test(url.pathname)) {
+            const copy = res.clone()
+            caches.open(SHELL).then((c) => c.put('/', copy))
+          }
           return res
         })
         .catch(() => caches.match('/')),

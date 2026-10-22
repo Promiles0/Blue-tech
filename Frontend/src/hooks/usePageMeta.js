@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { canonicalPath } from '../lib/prebuilt'
 
 // The public address of the shop, used for canonical links, sitemaps and structured data.
 export const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://blue-tech.onrender.com').replace(/\/$/, '')
@@ -36,7 +37,7 @@ export function usePageMeta({ title, description, ogImage, path, ogType, robots,
     }
     const meta = (key, attr, value) => value && upsert('meta', `meta[${attr}="${key}"]`, { [attr]: key }, 'content', value)
 
-    const canonical = SITE_URL + (path ?? window.location.pathname)
+    const canonical = SITE_URL + canonicalPath(path ?? window.location.pathname)
     upsert('link', 'link[rel="canonical"]', { rel: 'canonical' }, 'href', canonical)
     meta('og:url', 'property', canonical)
     meta('description', 'name', description)
@@ -94,7 +95,7 @@ export function breadcrumbJsonLd(items) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: items.map((item, i) => ({
-      '@type': 'ListItem', position: i + 1, name: item.name, item: SITE_URL + item.path,
+      '@type': 'ListItem', position: i + 1, name: item.name, item: SITE_URL + canonicalPath(item.path),
     })),
   }
 }
@@ -106,7 +107,7 @@ export function productJsonLd(product, { reviews = [], categoryPath } = {}) {
   const images = [product.primaryImageUrl, ...(product.images ?? []).map((i) => i.imageUrl)].filter(Boolean)
   const stock = (product.variants ?? []).reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)
   const rated = reviews.filter((r) => r.rating)
-  const url = `${SITE_URL}/products/${product.productId ?? product.id}`
+  const url = SITE_URL + canonicalPath(`/products/${product.productId ?? product.id}`)
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
