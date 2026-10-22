@@ -171,7 +171,7 @@ export default function ProductQuickView() {
                   </div>
 
                   <div style={{ padding: '40px 32px 32px' }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 8 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent-light)', marginBottom: 8 }}>
                       {product.categoryName ?? product.category?.name ?? ''}
                     </p>
                     <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 24, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 10, lineHeight: 1.2 }}>
@@ -227,11 +227,11 @@ export default function ProductQuickView() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
                       <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>{t('Qty')}</p>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 14, border: '1px solid var(--border)', borderRadius: 10, padding: '8px 16px' }}>
-                        <button onClick={() => setQty(value => Math.max(1, value - 1))} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
+                        <button aria-label={t('Decrease quantity')} onClick={() => setQty(value => Math.max(1, value - 1))} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
                           <Minus size={14} />
                         </button>
                         <span style={{ fontSize: 15, color: 'var(--text)', minWidth: 20, textAlign: 'center' }}>{qty}</span>
-                        <button
+                        <button aria-label={t('Increase quantity')}
                           onClick={() => setQty(value => stockQty > 0 ? Math.min(stockQty, value + 1) : value + 1)}
                           disabled={stockQty > 0 && qty >= stockQty}
                           style={{ background: 'none', border: 'none', color: stockQty > 0 && qty >= stockQty ? 'var(--muted-dark)' : 'var(--muted)', cursor: stockQty > 0 && qty >= stockQty ? 'not-allowed' : 'pointer', display: 'flex' }}
@@ -268,7 +268,7 @@ export default function ProductQuickView() {
                           {adding ? t('Adding…') : t('Add to cart')}
                         </button>
                       )}
-                      <button
+                      <button aria-label={wishlisted ? t('Remove from wishlist') : t('Add to wishlist')}
                         type="button"
                         onClick={e => { e.preventDefault(); e.stopPropagation(); if (user) toggle(pid, product?.name) }}
                         className="noir-btn-outline"
@@ -309,7 +309,7 @@ export default function ProductQuickView() {
                       <Link
                         to={`/products/${pid}`}
                         onClick={close}
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent)', textDecoration: 'none' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent-light)', textDecoration: 'none' }}
                       >
                         View full details <ArrowRight size={12} />
                       </Link>

@@ -78,7 +78,7 @@ export default function Register() {
           <Logo height={17} />
         </Link>
 
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>{t('Get started')}</p>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent-light)', marginBottom: 8, textTransform: 'uppercase' }}>{t('Get started')}</p>
         <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>{t('Create account')}</h1>
 
         {error && (
@@ -101,7 +101,7 @@ export default function Register() {
               <input type={showPass ? 'text' : 'password'} value={password} required
                 onChange={e => setPassword(e.target.value)}
                 placeholder={t('Min. 8 characters')} className="noir-input auth-input" style={{ paddingRight: 44 }} />
-              <button type="button" onClick={() => setShowPass(p => !p)}
+              <button aria-label={showPass ? t('Hide password') : t('Show password')} type="button" onClick={() => setShowPass(p => !p)}
                 style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', padding: 4 }}>
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -125,7 +125,7 @@ export default function Register() {
 
         <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: 'var(--muted)' }}>
           {t('Already have an account?')}{' '}
-          <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 500 }}>{t('Sign in')}</Link>
+          <Link to="/login" style={{ color: 'var(--accent-light)', fontWeight: 500 }}>{t('Sign in')}</Link>
         </p>
       </div>
 

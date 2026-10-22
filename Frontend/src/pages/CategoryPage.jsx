@@ -5,8 +5,10 @@ import { Reveal } from '../lib/motion'
 import ProductCard from '../components/ProductCard'
 import api from '../api/axios'
 import { usePageMeta, breadcrumbJsonLd } from '../hooks/usePageMeta'
+import { useT } from '../lib/i18n'
 
 export default function CategoryPage() {
+  const { t } = useT()
   const { slug }                    = useParams()
   const [category, setCategory]     = useState(null)
   const [products, setProducts]     = useState([])
@@ -50,32 +52,32 @@ export default function CategoryPage() {
           onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
           onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
         >
-          <ArrowLeft size={14} /> All products
+          <ArrowLeft size={14} /> {t('All products')}
         </Link>
 
         <div style={{ marginBottom: 40 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>Category</p>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent-light)', textTransform: 'uppercase', marginBottom: 8 }}>{t('Category')}</p>
           <h1 style={{ fontSize: 36, fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' }}>
             {category?.name ?? slug}
           </h1>
           {!loading && (
-            <p style={{ fontSize: 13, color: 'var(--muted-dark)', marginTop: 6 }}>{products.length} product{products.length !== 1 ? 's' : ''}</p>
+            <p style={{ fontSize: 13, color: 'var(--muted-dark)', marginTop: 6 }}>{t('{n} products', { n: products.length })}</p>
           )}
         </div>
 
         {loading ? (
           <div className="grid-4">
-            {[...Array(8)].map((_, i) => <div key={i} className="skeleton" style={{ height: 280, borderRadius: 12 }} />)}
+            {[...Array(8)].map((_, i) => <div key={i} className="skeleton card-skeleton" />)}
           </div>
         ) : !category ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <p style={{ color: 'var(--muted)', marginBottom: 16 }}>Category not found.</p>
-            <Link to="/products" style={{ color: 'var(--accent)', fontSize: 14 }}>Browse all products →</Link>
+            <p style={{ color: 'var(--muted)', marginBottom: 16 }}>{t('Category not found.')}</p>
+            <Link to="/products" style={{ color: 'var(--accent-light)', fontSize: 14 }}>{t('Browse all products')} →</Link>
           </div>
         ) : products.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <p style={{ color: 'var(--muted)', marginBottom: 16 }}>No products in this category yet.</p>
-            <Link to="/products" style={{ color: 'var(--accent)', fontSize: 14 }}>Browse all products →</Link>
+            <p style={{ color: 'var(--muted)', marginBottom: 16 }}>{t('No products in this category yet.')}</p>
+            <Link to="/products" style={{ color: 'var(--accent-light)', fontSize: 14 }}>{t('Browse all products')} →</Link>
           </div>
         ) : (
           <div className="grid-4">

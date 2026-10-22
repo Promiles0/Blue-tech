@@ -21,7 +21,7 @@ export function StarInput({ value, onChange }) {
   return (
     <div style={{ display: 'flex', gap: 4 }}>
       {[1, 2, 3, 4, 5].map(i => (
-        <button
+        <button aria-label={`${i} / 5`}
           key={i}
           type="button"
           onClick={() => onChange(i)}

@@ -72,16 +72,16 @@ export default function Cart() {
 
                   {/* Quantity controls */}
                   <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-surface-2)', border: '1px solid var(--border)', borderRadius: 9, overflow: 'hidden', flexShrink: 0 }}>
-                    <QtyBtn onClick={() => updateQuantity(id, item.quantity - 1)}>
+                    <QtyBtn label={t('Decrease quantity')} onClick={() => updateQuantity(id, item.quantity - 1)}>
                       <Minus size={13} />
                     </QtyBtn>
                     <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', width: 32, textAlign: 'center', userSelect: 'none' }}>{item.quantity}</span>
-                    <QtyBtn onClick={() => updateQuantity(id, item.quantity + 1)}>
+                    <QtyBtn label={t('Increase quantity')} onClick={() => updateQuantity(id, item.quantity + 1)}>
                       <Plus size={13} />
                     </QtyBtn>
                   </div>
 
-                  <button
+                  <button aria-label={t('Remove item')}
                     onClick={() => removeFromCart(id)}
                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', padding: 8, cursor: 'pointer', borderRadius: 7, transition: 'color 0.2s, background 0.2s', flexShrink: 0 }}
                     onMouseEnter={e => { e.currentTarget.style.color = 'var(--error)'; e.currentTarget.style.background = 'var(--danger-soft)' }}
@@ -154,11 +154,14 @@ export default function Cart() {
   )
 }
 
-function QtyBtn({ children, onClick }) {
+function QtyBtn({ children, onClick, label }) {
   return (
     <button
+      type="button"
+      className="qty-btn"
+      aria-label={label}
       onClick={onClick}
-      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', padding: '8px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 0.15s' }}
       onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
       onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
     >

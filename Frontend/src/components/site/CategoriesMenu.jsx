@@ -119,7 +119,7 @@ export default function CategoriesMenu() {
                       />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 3 }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: 3 }}>
                         {t('New arrival')}
                       </p>
                       <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -143,7 +143,7 @@ export default function CategoriesMenu() {
                 ref={setItemRef(VIEW_ALL_SLOT)}
                 to="/products"
                 onClick={close}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--accent)', textDecoration: 'none' }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--accent-light)', textDecoration: 'none' }}
               >
                 {t('View all products')} <ArrowRight size={13} />
               </Link>

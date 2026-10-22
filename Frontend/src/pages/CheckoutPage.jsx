@@ -487,7 +487,7 @@ function CheckoutForm() {
                   <CouponInput applied={coupon} onApply={setCoupon} onRemove={() => setCoupon(null)} />
                 </div>
                 {coupon && (
-                  <p className="text-[13px]" style={{ color: "var(--brand)" }}>
+                  <p className="text-[13px]" style={{ color: "var(--accent-light)" }}>
                     {t("Discount applied:")} {coupon.kind === "PERCENT" ? t("{v}% off", { v: coupon.value }) : t("{v} off", { v: formatPrice(coupon.value) })}
                   </p>
                 )}
@@ -501,7 +501,7 @@ function CheckoutForm() {
                 {bundleDiscount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
                     <span style={{ color: "var(--text-secondary)" }}>{t("Bundle savings")}</span>
-                    <span style={{ color: "var(--brand)" }}>-{formatPrice(bundleDiscount)}</span>
+                    <span style={{ color: "var(--accent-light)" }}>-{formatPrice(bundleDiscount)}</span>
                   </div>
                 )}
                 {coupon && couponBase <= 0 && (
@@ -510,13 +510,13 @@ function CheckoutForm() {
                 {safeDiscount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
                     <span style={{ color: "var(--text-secondary)" }}>{t("Discount")}</span>
-                    <span style={{ color: "var(--brand)" }}>-{formatPrice(safeDiscount)}</span>
+                    <span style={{ color: "var(--accent-light)" }}>-{formatPrice(safeDiscount)}</span>
                   </div>
                 )}
                 {referralDiscount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
                     <span style={{ color: "var(--text-secondary)" }}>{t("Friend's invite")}</span>
-                    <span style={{ color: "var(--brand)" }}>-{formatPrice(referralDiscount)}</span>
+                    <span style={{ color: "var(--accent-light)" }}>-{formatPrice(referralDiscount)}</span>
                   </div>
                 )}
                 {invite?.ok && referralDiscount === 0 && subtotal < invite.minOrder && (
@@ -525,14 +525,14 @@ function CheckoutForm() {
                 {studentDiscount > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 8 }}>
                     <span style={{ color: "var(--text-secondary)" }}>{t("Student discount")}</span>
-                    <span style={{ color: "var(--brand)" }}>-{formatPrice(studentDiscount)}</span>
+                    <span style={{ color: "var(--accent-light)" }}>-{formatPrice(studentDiscount)}</span>
                   </div>
                 )}
                 {pointsAvailable > 0 && (
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, marginBottom: 8, cursor: "pointer", color: "var(--text-secondary)" }}>
                     <input type="checkbox" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} />
                     {t("Use my points ({n} available)", { n: pointsAvailable })}
-                    {pointsDiscount > 0 && <span style={{ marginLeft: "auto", color: "var(--brand)" }}>-{formatPrice(pointsDiscount)}</span>}
+                    {pointsDiscount > 0 && <span style={{ marginLeft: "auto", color: "var(--accent-light)" }}>-{formatPrice(pointsDiscount)}</span>}
                   </label>
                 )}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: 12 }}>

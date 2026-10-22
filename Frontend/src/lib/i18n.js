@@ -32,6 +32,11 @@ export function translate(lang, key, vars) {
   return vars ? raw.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? `{${k}}`)) : raw
 }
 
+// Locale for dates in plain helpers outside React (the language the shopper picked).
+export function currentIntlLocale() {
+  try { return INTL_LOCALE[localStorage.getItem(LANG_KEY)] ?? 'en-GB' } catch { return 'en-GB' }
+}
+
 export function initialLang() {
   try {
     const saved = localStorage.getItem(LANG_KEY)

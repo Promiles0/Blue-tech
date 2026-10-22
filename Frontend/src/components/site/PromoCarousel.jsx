@@ -62,7 +62,7 @@ export default function PromoCarousel() {
     if (reduce || hovered || focused || dragging || slideWidth === 0) return
     const id = setInterval(() => setIndex(i => (i + 1) % slides.length), AUTO_ADVANCE_MS)
     return () => clearInterval(id)
-  }, [reduce, hovered, focused, dragging, slideWidth])
+  }, [reduce, hovered, focused, dragging, slideWidth, slides.length])
 
   const goTo = (i) => setIndex(Math.min(Math.max(i, 0), maxIndex))
 

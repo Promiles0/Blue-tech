@@ -34,7 +34,7 @@ export default function AnalyticsManager() {
     }}>
       <p style={{ margin: '0 0 10px' }}>
         {t('We use cookies to see which pages and ads work, so we can improve the shop. Nothing is shared until you accept.')}{' '}
-        <Link to="/help?v=cookies" style={{ color: 'var(--accent)' }}>{t('Learn more')}</Link>
+        <Link to="/help?v=cookies" style={{ color: 'var(--accent-light)' }}>{t('Learn more')}</Link>
       </p>
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="button" onClick={() => choose('granted')} className="noir-btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}>{t('Accept')}</button>

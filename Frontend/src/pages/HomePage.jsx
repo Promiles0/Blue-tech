@@ -161,7 +161,7 @@ export default function Home() {
                 background: 'radial-gradient(60% 100% at 50% 0%, var(--accent-dim), transparent 70%)',
               }} />
               <div style={{ position: 'relative' }}>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: 12 }}>
                   {t('Not sure where to start?')}
                 </p>
                 <h2 style={{

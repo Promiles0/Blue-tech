@@ -34,7 +34,7 @@ export default function Wishlist() {
     try {
       await apiService.wishlist.toggle(productId)
       setItems(prev => prev.filter(i => Number(i.productId) !== productId))
-      toast('Removed from wishlist')
+      toast(t('Removed from wishlist'))
     } finally {
       setToggling(prev => ({ ...prev, [productId]: false }))
     }
@@ -135,9 +135,9 @@ export default function Wishlist() {
                       style={{ fontSize: 13, padding: '10px 18px', borderRadius: 8, minWidth: 120 }}
                     >
                       <ShoppingBag size={14} />
-                      {addingToCart[pid] ? 'Adding…' : 'Add to Cart'}
+                      {addingToCart[pid] ? t('Adding…') : t('Add to cart')}
                     </button>
-                    <button
+                    <button aria-label={t('Remove from wishlist')}
                       onClick={() => removeItem(pid)}
                       disabled={toggling[pid]}
                       style={{

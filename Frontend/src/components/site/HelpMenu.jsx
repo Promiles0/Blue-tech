@@ -14,7 +14,7 @@ export default function HelpMenu() {
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      <button
+      <button aria-label={t('Help')}
         ref={triggerRef}
         onClick={() => setOpen(o => !o)}
         onKeyDown={onTriggerKeyDown}

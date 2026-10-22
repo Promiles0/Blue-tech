@@ -3,7 +3,7 @@ import { useCurrency } from '../context/CurrencyContext'
 import RewardsCard from '../components/site/RewardsCard'
 import InviteFriendsCard from '../components/site/InviteFriendsCard'
 import { SaveGuestAccount } from '../components/site/GuestCheckout'
-import { LANGUAGES, useT } from '../lib/i18n'
+import { LANGUAGES, useT, currentIntlLocale } from '../lib/i18n'
 import { openLiveChat } from '../lib/liveChat'
 import { WHATSAPP_NUMBER } from '../lib/helpLinks'
 import RwandaAddressFields from '../components/site/RwandaAddressFields'
@@ -18,7 +18,7 @@ import { useTheme } from '../context/ThemeContext'
 
 const THEMES = ['Dark', 'Light']
 
-const formatDate = (v) => v ? new Date(v).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'
+const formatDate = (v) => v ? new Date(v).toLocaleDateString(currentIntlLocale(), { year: 'numeric', month: 'long', day: 'numeric' }) : '—'
 
 export default function Account() {
   const { t, lang, setLang } = useT()
@@ -184,7 +184,7 @@ export default function Account() {
                   <X size={14} /> {t('Cancel')}
                 </button>
                 <button onClick={saveDetails} disabled={detailsSaving} className="noir-btn-primary shine" style={{ borderRadius: 10, padding: '8px 18px', fontSize: 13, display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <Save size={14} /> {detailsSaving ? 'Saving…' : 'Save'}
+                  <Save size={14} /> {detailsSaving ? t('Saving…') : t('Save')}
                 </button>
               </div>
             )}
@@ -205,7 +205,7 @@ export default function Account() {
               <div style={{ marginTop: 28, paddingTop: 24, borderTop: '1px solid var(--glass-bg2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
                   <Lock size={14} style={{ color: 'var(--muted)' }} />
-                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Change Password</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('Change password')}</p>
                 </div>
                 <form onSubmit={savePassword} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                   <Field label={t('Current password')}>
@@ -216,7 +216,7 @@ export default function Account() {
                   </Field>
                   <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end' }}>
                     <button type="submit" disabled={passSaving || !passForm.oldPassword || !passForm.newPassword} className="noir-btn-primary shine" style={{ borderRadius: 10, padding: '10px 24px', fontSize: 13 }}>
-                      {passSaving ? 'Updating…' : 'Update Password'}
+                      {passSaving ? t('Updating…') : t('Update password')}
                     </button>
                   </div>
                 </form>
@@ -258,19 +258,19 @@ export default function Account() {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{addr.street}</p>
-                      {addr.isDefault && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)', background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Default</span>}
+                      {addr.isDefault && <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent-light)', background: 'var(--accent-dim)', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('Default')}</span>}
                     </div>
                     <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>{addr.city}{addr.state ? `, ${addr.state}` : ''} · {addr.country}</p>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   {!addr.isDefault && (
-                    <button onClick={() => setDefaultAddress(addr.id)} style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, transition: 'background 0.15s' }}
+                    <button onClick={() => setDefaultAddress(addr.id)} style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-light)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, transition: 'background 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-dim)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'none'}
                     >{t('Set default')}</button>
                   )}
-                  <button onClick={() => deleteAddress(addr.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', transition: 'all 0.15s' }}
+                  <button aria-label={t('Delete address')} onClick={() => deleteAddress(addr.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', transition: 'all 0.15s' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--error-dim)'; e.currentTarget.style.color = 'var(--error)' }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--muted)' }}
                   >
@@ -287,7 +287,7 @@ export default function Account() {
               <RwandaAddressFields value={addrForm} onChange={setAddrForm} />
               <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
                 <button onClick={saveAddress} disabled={addrSaving} className="noir-btn-primary shine" style={{ borderRadius: 10, padding: '10px 22px', fontSize: 13 }}>
-                  {addrSaving ? 'Saving…' : 'Save Address'}
+                  {addrSaving ? t('Saving…') : t('Save address')}
                 </button>
                 <button onClick={() => setShowAddrForm(false)} className="noir-btn-outline" style={{ borderRadius: 10, padding: '10px 18px', fontSize: 13 }}>
                   Cancel
@@ -295,7 +295,7 @@ export default function Account() {
               </div>
             </motion.div>
           ) : (
-            <button onClick={() => setShowAddrForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.8 }}>
+            <button onClick={() => setShowAddrForm(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: 'var(--accent-light)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, opacity: 0.8 }}>
               <Plus size={15} /> {t('Add new address')}
             </button>
           )}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useT } from '../lib/i18n'
+import { useT, currentIntlLocale } from '../lib/i18n'
 import { Link } from 'react-router-dom'
 import { Package, Search, ChevronRight, ShoppingBag, Clock, Loader2, SendHorizonal, BadgeCheck, Undo2, X } from 'lucide-react'
 import { m as motion, AnimatePresence } from 'framer-motion'
@@ -25,7 +25,7 @@ const STATUS_CONFIG = {
 }
 
 const fmt = (v) => `$${Number(v ?? 0).toFixed(2)}`
-const fmtDate = (v) => v ? new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+const fmtDate = (v) => v ? new Date(v).toLocaleDateString(currentIntlLocale(), { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
 export default function OrderHistoryPage() {
   const { t } = useT()
@@ -107,7 +107,7 @@ export default function OrderHistoryPage() {
               style={{ paddingLeft: 44, paddingRight: search ? 40 : 16, borderRadius: 12, fontSize: 14 }}
             />
             {search && (
-              <button onClick={() => setSearch('')} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', padding: 0 }}>
+              <button aria-label={t('Clear search')} onClick={() => setSearch('')} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', padding: 0 }}>
                 <X size={14} />
               </button>
             )}
@@ -164,7 +164,7 @@ export default function OrderHistoryPage() {
         ) : filtered.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             style={{ textAlign: 'center', padding: '80px 40px', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--glass-border)', borderRadius: 24 }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--accent)' }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--accent-light)' }}>
               <Package size={28} />
             </div>
             <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 8 }}>
@@ -220,7 +220,7 @@ export default function OrderHistoryPage() {
                               {t(cfg.label)}
                             </span>
                             <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--price)' }}>{fmt(order.totalAmount ?? order.total)}</p>
-                            <ChevronRight size={16} style={{ color: 'var(--accent)' }} />
+                            <ChevronRight size={16} style={{ color: 'var(--accent-light)' }} />
                           </div>
                         </div>
 
@@ -255,7 +255,7 @@ export default function OrderHistoryPage() {
                           </div>
                         ) : (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+                            <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-light)' }}>
                               <Package size={20} />
                             </div>
                             <p style={{ fontSize: 13, color: 'var(--muted)' }}>{t('No item details available')}</p>

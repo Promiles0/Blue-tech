@@ -142,7 +142,7 @@ export default function QuoteRequestModal({ open, onClose, initialSize, prefill,
                 </div>
               ) : (
                 <form onSubmit={handleSubmit}>
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 6 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: 6 }}>
                     Request a quote
                   </p>
                   <h3 id="quote-modal-title" style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 20 }}>

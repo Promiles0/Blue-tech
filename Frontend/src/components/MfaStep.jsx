@@ -28,7 +28,7 @@ export default function MfaStep({ onDone }) {
   return (
     <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <form onSubmit={submit} style={{ width: '100%', maxWidth: 380, textAlign: 'center' }}>
-        <div style={{ width: 60, height: 60, borderRadius: 16, margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-dim)', color: 'var(--accent)' }}>
+        <div style={{ width: 60, height: 60, borderRadius: 16, margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-dim)', color: 'var(--accent-light)' }}>
           <ShieldCheck size={28} />
         </div>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', margin: '0 0 8px' }}>{t('Two-step login')}</h1>
@@ -50,7 +50,7 @@ export default function MfaStep({ onDone }) {
           {busy ? t('Checking…') : t('Verify')}
         </button>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, fontSize: 13 }}>
-          <button type="button" onClick={() => { setBackup((b) => !b); setCode(''); setError('') }} style={{ background: 'none', border: 0, color: 'var(--accent)', cursor: 'pointer' }}>
+          <button type="button" onClick={() => { setBackup((b) => !b); setCode(''); setError('') }} style={{ background: 'none', border: 0, color: 'var(--accent-light)', cursor: 'pointer' }}>
             {backup ? t('Use the app code') : t('Use a backup code')}
           </button>
           <button type="button" onClick={cancelMfa} style={{ background: 'none', border: 0, color: 'var(--muted)', cursor: 'pointer' }}>{t('Cancel')}</button>

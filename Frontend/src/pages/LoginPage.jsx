@@ -77,7 +77,7 @@ export default function Login() {
           <Logo height={17} />
         </Link>
 
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>{t('Welcome back')}</p>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent-light)', marginBottom: 8, textTransform: 'uppercase' }}>{t('Welcome back')}</p>
         <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>{t('Sign in')}</h1>
 
         {from === '/checkout' && (
@@ -106,7 +106,7 @@ export default function Login() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••" className="noir-input auth-input" style={{ paddingRight: 44 }}
               />
-              <button type="button" onClick={() => setShowPass(p => !p)}
+              <button aria-label={showPass ? t('Hide password') : t('Show password')} type="button" onClick={() => setShowPass(p => !p)}
                 style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', display: 'flex', padding: 4 }}>
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -124,7 +124,7 @@ export default function Login() {
 
         <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: 'var(--muted)' }}>
           {t("Don't have an account?")}{' '}
-          <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 500 }}>{t('Create one')}</Link>
+          <Link to="/register" style={{ color: 'var(--accent-light)', fontWeight: 500 }}>{t('Create one')}</Link>
         </p>
       </div>
 

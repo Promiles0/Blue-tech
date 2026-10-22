@@ -174,7 +174,7 @@ export default function SearchPage() {
                     >
                       <Clock size={11} style={{ color: 'var(--muted-dark)' }} /> {q}
                     </button>
-                    <button
+                    <button aria-label={t('Remove from recent searches')}
                       onClick={() => clearRecent(q)}
                       style={{
                         padding: '7px 10px 7px 4px',
@@ -211,7 +211,7 @@ export default function SearchPage() {
             {loading ? (
               <div className="grid-4">
                 {[...Array(8)].map((_, i) => (
-                  <div key={i} className="skeleton" style={{ height: 300, borderRadius: 12 }} />
+                  <div key={i} className="skeleton card-skeleton" />
                 ))}
               </div>
             ) : products.length === 0 ? (
@@ -227,7 +227,7 @@ export default function SearchPage() {
                   to="/products"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
-                    fontSize: 14, color: 'var(--accent)', textDecoration: 'none',
+                    fontSize: 14, color: 'var(--accent-light)', textDecoration: 'none',
                     border: '1px solid var(--accent-border)',
                     borderRadius: 10, padding: '9px 18px',
                     transition: 'background 0.15s',
@@ -261,7 +261,7 @@ export default function SearchPage() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 20px',
             }}>
-              <Search size={24} style={{ color: 'var(--accent)' }} />
+              <Search size={24} style={{ color: 'var(--accent-light)' }} />
             </div>
             <p style={{ fontSize: 16, color: 'var(--muted-dark)', marginBottom: 6 }}>{t('What are you looking for?')}</p>
             <p style={{ fontSize: 13, color: 'var(--muted)' }}>{t('Start typing to search across all products')}</p>

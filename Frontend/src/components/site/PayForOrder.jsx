@@ -104,7 +104,7 @@ export default function PayForOrder({ orderId, total, defaultMethod, defaultPhon
 
       {phase === 'waiting' && (
         <div style={{ textAlign: 'center', padding: '10px 0' }}>
-          <Loader2 size={26} className="animate-spin" style={{ color: 'var(--accent)', marginBottom: 10 }} />
+          <Loader2 size={26} className="animate-spin" style={{ color: 'var(--accent-light)', marginBottom: 10 }} />
           <p style={{ fontSize: 14.5, fontWeight: 600, margin: '0 0 6px' }}>{t('Approve the payment on your phone')}</p>
           <p style={{ fontSize: 13, color: 'var(--text-secondary, var(--muted))', margin: 0, lineHeight: 1.6 }}>
             {t('We sent a request to {phone}. This page updates on its own.', { phone })}

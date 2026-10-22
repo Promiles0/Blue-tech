@@ -3,6 +3,7 @@ import { track } from '../lib/analytics'
 import { toast } from 'sonner'
 import apiService from '../api/service'
 import { useAuth } from './AuthContext'
+import { useT } from '../lib/i18n'
 
 const CartContext = createContext(null)
 
@@ -28,6 +29,7 @@ const NO_SAVINGS = { bundleDiscount: 0, saleItemsTotal: 0, saleSavings: 0, bundl
 export function CartProvider({ children }) {
   const [items, setItems] = useState([])
   const { user, logout } = useAuth()
+  const { t } = useT()
 
   const count = items.length
   // Use cartTotal from backend when available, fallback to client calculation
@@ -78,8 +80,8 @@ export function CartProvider({ children }) {
     Promise.allSettled(guest.map(g => apiService.cart.addItem({ variantId: g.variantId, quantity: g.quantity })))
       .then(results => {
         const moved = results.filter(r => r.status === 'fulfilled').length
-        if (moved) toast.success(`${moved} item${moved === 1 ? '' : 's'} from before you signed in ${moved === 1 ? 'is' : 'are'} in your cart`)
-        if (moved < guest.length) toast.error('Some items could not be added — they may be out of stock')
+        if (moved) toast.success(moved === 1 ? t('1 item from before you signed in is in your cart') : t('{n} items from before you signed in are in your cart', { n: moved }))
+        if (moved < guest.length) toast.error(t('Some items could not be added — they may be out of stock'))
       })
       .finally(fetchCart)
   }, [user, fetchCart])
@@ -94,14 +96,14 @@ export function CartProvider({ children }) {
         ? current.map(i => i.variantId === variantId ? { ...i, quantity: i.quantity + quantity } : i)
         : [...current, { cartItemId: `guest-${variantId}`, variantId, quantity, ...(snapshot ?? {}) }]
       setGuest(next)
-      toast.success('Added to cart')
+      toast.success(t('Added to cart'))
       track('add_to_cart', { value: (snapshot?.unitPrice ?? 0) * quantity, items: [{ id: snapshot?.product?.productId ?? variantId, name: snapshot?.productName, price: snapshot?.unitPrice, quantity }] })
       return
     }
     try {
       await apiService.cart.addItem({ variantId, quantity })
       await fetchCart()
-      toast.success('Added to cart')
+      toast.success(t('Added to cart'))
       track('add_to_cart', { value: (snapshot?.unitPrice ?? 0) * quantity, items: [{ id: snapshot?.product?.productId ?? variantId, name: snapshot?.productName, price: snapshot?.unitPrice, quantity }] })
     } catch (err) {
       const status = err.response?.status
@@ -111,18 +113,18 @@ export function CartProvider({ children }) {
         window.location.href = '/login'
         return
       }
-      toast.error('Failed to add to cart')
+      toast.error(t('Failed to add to cart'))
     }
   }
 
   const removeFromCart = async (itemId) => {
-    if (!user) { setGuest(readGuest().filter(i => i.cartItemId !== itemId)); toast('Item removed'); return }
+    if (!user) { setGuest(readGuest().filter(i => i.cartItemId !== itemId)); toast(t('Item removed')); return }
     try {
       await apiService.cart.removeItem(itemId)
       await fetchCart()
-      toast('Item removed')
+      toast(t('Item removed'))
     } catch {
-      toast.error('Failed to remove item')
+      toast.error(t('Failed to remove item'))
     }
   }
 
@@ -133,7 +135,7 @@ export function CartProvider({ children }) {
       await apiService.cart.updateQuantity(itemId, quantity)
       await fetchCart()
     } catch {
-      toast.error('Failed to update quantity')
+      toast.error(t('Failed to update quantity'))
     }
   }
 

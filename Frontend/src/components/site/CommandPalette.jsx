@@ -7,8 +7,10 @@ import { useQuery } from '@tanstack/react-query'
 import apiService from '../../api/service'
 import { getProductThumb, handleProductImageError } from '../../lib/productImage'
 import { useCurrency } from '../../context/CurrencyContext'
+import { useT } from '../../lib/i18n'
 
 export default function CommandPalette() {
+  const { t } = useT()
   const { formatPrice } = useCurrency()
   const { paletteOpen, setPaletteOpen } = useUI()
   const [query, setQuery]     = useState('')
@@ -133,13 +135,13 @@ export default function CommandPalette() {
               padding: '16px 20px',
               borderBottom: '1px solid var(--glass-border)',
             }}>
-              <Search size={17} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+              <Search size={17} style={{ color: 'var(--accent-light)', flexShrink: 0 }} />
               <input
                 ref={inputRef}
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !activeIdx) goSearch() }}
-                placeholder="Search products, categories…"
+                placeholder={t('Search products, categories…')}
                 style={{
                   flex: 1, background: 'none', border: 'none',
                   outline: 'none', color: 'var(--text)', fontSize: 15,
@@ -151,7 +153,7 @@ export default function CommandPalette() {
                   onClick={goSearch}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
-                    fontSize: 12, color: 'var(--accent)',
+                    fontSize: 12, color: 'var(--accent-light)',
                     background: 'var(--accent-dim)',
                     border: '1px solid var(--accent-dim2)',
                     borderRadius: 8, padding: '4px 10px',
@@ -238,8 +240,8 @@ export default function CommandPalette() {
             {/* No results */}
             {!loading && query.trim() && results.length === 0 && (
               <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-                <p style={{ fontSize: 14, color: 'var(--muted-dark)', marginBottom: 8 }}>No results for <span style={{ color: 'var(--text)' }}>"{query}"</span></p>
-                <p style={{ fontSize: 12, color: 'var(--muted-dark)' }}>Try a different keyword or browse all products</p>
+                <p style={{ fontSize: 14, color: 'var(--muted-dark)', marginBottom: 8 }}>{t('No results for')} <span style={{ color: 'var(--text)' }}>"{query}"</span></p>
+                <p style={{ fontSize: 12, color: 'var(--muted-dark)' }}>{t('Try a different keyword or browse all products')}</p>
               </div>
             )}
 

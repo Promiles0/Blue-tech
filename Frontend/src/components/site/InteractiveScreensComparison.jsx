@@ -2,7 +2,7 @@ import { Reveal } from '../../lib/motion'
 import { useInteractiveScreensProducts } from '../../hooks/useInteractiveScreensProducts'
 import { useCurrency } from '../../context/CurrencyContext'
 
-const eyebrow = { fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }
+const eyebrow = { fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: 8 }
 const heading = { fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(24px,3vw,32px)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)' }
 
 const SPEC_ROWS = [

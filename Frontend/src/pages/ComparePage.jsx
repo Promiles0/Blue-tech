@@ -8,6 +8,7 @@ import { specRows } from '../lib/specTemplates'
 import { productImageList, handleProductImageError } from '../lib/productImage'
 import { openLiveChat } from '../lib/liveChat'
 import { usePageMeta } from '../hooks/usePageMeta'
+import { useT } from '../lib/i18n'
 
 const GENERAL = [
   ['Brand', (p) => p.brand],
@@ -17,6 +18,7 @@ const GENERAL = [
 ]
 
 export default function ComparePage() {
+  const { t } = useT()
   usePageMeta({ title: 'Compare products | Blue-Tech' })
   const { formatPrice } = useCurrency()
   const picked = useCompare()
@@ -37,9 +39,9 @@ export default function ComparePage() {
     return (
       <div className="container-noir" style={{ padding: '96px 0', textAlign: 'center' }}>
         <GitCompare size={36} style={{ color: 'var(--muted-dark)', marginBottom: 16 }} />
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--text)', marginBottom: 8 }}>Nothing to compare yet</h1>
-        <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 24 }}>Tap "Compare" on up to 3 products to see them side by side.</p>
-        <Link to="/products" className="noir-btn-primary" style={{ display: 'inline-flex', padding: '11px 22px', fontSize: 14 }}>Browse products</Link>
+        <h1 style={{ fontSize: 26, fontWeight: 900, color: 'var(--text)', marginBottom: 8 }}>{t('Nothing to compare yet')}</h1>
+        <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 24 }}>{t('Tap "Compare" on up to 3 products to see them side by side.')}</p>
+        <Link to="/products" className="noir-btn-primary" style={{ display: 'inline-flex', padding: '11px 22px', fontSize: 14 }}>{t('Browse products')}</Link>
       </div>
     )
   }
@@ -75,21 +77,21 @@ export default function ComparePage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap', marginBottom: 28 }}>
         <div>
           <h1 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(26px,3vw,34px)', fontWeight: 900, color: 'var(--text)', letterSpacing: '-0.02em' }}>
-            Compare products
+            {t('Compare products')}
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 4 }}>Differences are highlighted.</p>
+          <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 4 }}>{t('Differences are highlighted.')}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--muted)', cursor: 'pointer' }}>
             <input type="checkbox" checked={onlyDiff} onChange={(e) => setOnlyDiff(e.target.checked)} style={{ accentColor: 'var(--accent)' }} />
-            Only show differences
+            {t('Only show differences')}
           </label>
           {products.length > 1 && (
             <button onClick={askBlue} className="noir-btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13, padding: '9px 16px' }}>
-              <Sparkles size={14} /> Ask Blue which to pick
+              <Sparkles size={14} /> {t('Ask Blue which to pick')}
             </button>
           )}
-          <button onClick={clearCompare} className="noir-btn-outline" style={{ fontSize: 13, padding: '9px 16px' }}>Clear all</button>
+          <button onClick={clearCompare} className="noir-btn-outline" style={{ fontSize: 13, padding: '9px 16px' }}>{t('Clear all')}</button>
         </div>
       </div>
 
@@ -103,7 +105,7 @@ export default function ComparePage() {
                 return (
                   <th key={id}>
                     <div style={{ position: 'relative' }}>
-                      <button onClick={() => removeCompare(id)} aria-label={`Remove ${p.name}`} className="compare-remove"><X size={14} /></button>
+                      <button onClick={() => removeCompare(id)} aria-label={t('Remove {name}', { name: p.name })} className="compare-remove"><X size={14} /></button>
                       <Link to={`/products/${id}`} style={{ textDecoration: 'none', color: 'var(--text)' }}>
                         <div className="compare-img">
                           <img src={productImageList(p)[0]} alt="" onError={handleProductImageError} />
@@ -120,7 +122,7 @@ export default function ComparePage() {
           <tbody>
             {shown.map((r) => (
               <tr key={r.label} className={r.differs ? 'differs' : ''}>
-                <th scope="row">{r.label}</th>
+                <th scope="row">{t(r.label)}</th>
                 {r.values.map((v, i) => <td key={i} style={r.label === 'Price' ? { color: 'var(--price)', fontWeight: 700 } : undefined}>{v ?? '—'}</td>)}
               </tr>
             ))}
@@ -129,7 +131,7 @@ export default function ComparePage() {
       </div>
       {picked.length < 3 && (
         <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 16 }}>
-          You can add {3 - picked.length} more — tap "Compare" on any product. <Link to="/products" style={{ color: 'var(--accent-light, var(--accent))' }}>Browse products</Link>
+          {t('You can add {n} more — tap "Compare" on any product.', { n: 3 - picked.length })} <Link to="/products" style={{ color: 'var(--accent-light, var(--accent))' }}>{t('Browse products')}</Link>
         </p>
       )}
 

@@ -52,13 +52,13 @@ export default function CartDrawer() {
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <ShoppingBag size={18} style={{ color: 'var(--accent)' }} />
+                <ShoppingBag size={18} style={{ color: 'var(--accent-light)' }} />
                 <span style={{ fontSize: 16, fontWeight: 700 }}>{t('Your cart')}</span>
                 {items.length > 0 && (
                   <span style={{ fontSize: 12, color: 'var(--muted-dark)' }}>({items.length})</span>
                 )}
               </div>
-              <button
+              <button aria-label={t('Close cart')}
                 onClick={() => setCartOpen(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--muted)', padding: 8, borderRadius: 8, cursor: 'pointer', display: 'flex', transition: 'color 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
@@ -125,36 +125,36 @@ export default function CartDrawer() {
                           )}
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 8, padding: '4px 10px' }}>
-                              <button
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 2, border: '1px solid var(--border)', borderRadius: 8, padding: '0 2px' }}>
+                              <button type="button" className="qty-btn" aria-label={t('Decrease quantity')}
                                 onClick={() => item.quantity > 1 ? updateQuantity(iid, item.quantity - 1) : removeFromCart(iid)}
                                 style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', padding: 2, transition: 'color 0.15s' }}
                                 onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
                                 onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
                               >
-                                <Minus size={11} />
+                                <Minus size={14} />
                               </button>
                               <span style={{ fontSize: 13, color: 'var(--text)', minWidth: 16, textAlign: 'center' }}>{item.quantity}</span>
-                              <button
+                              <button type="button" className="qty-btn" aria-label={t('Increase quantity')}
                                 onClick={() => updateQuantity(iid, item.quantity + 1)}
                                 disabled={item.stockQuantity != null && item.quantity >= item.stockQuantity}
                                 style={{ background: 'none', border: 'none', color: item.stockQuantity != null && item.quantity >= item.stockQuantity ? 'var(--muted-dark)' : 'var(--muted)', cursor: item.stockQuantity != null && item.quantity >= item.stockQuantity ? 'not-allowed' : 'pointer', display: 'flex', padding: 2, transition: 'color 0.15s' }}
                                 onMouseEnter={e => { if (!(item.stockQuantity != null && item.quantity >= item.stockQuantity)) e.currentTarget.style.color = 'var(--text)' }}
                                 onMouseLeave={e => { if (!(item.stockQuantity != null && item.quantity >= item.stockQuantity)) e.currentTarget.style.color = 'var(--muted)' }}
                               >
-                                <Plus size={11} />
+                                <Plus size={14} />
                               </button>
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--price)' }}>{formatPrice(lineTotal)}</span>
-                              <button
+                              <button type="button" className="qty-btn" aria-label={t('Remove item')}
                                 onClick={() => removeFromCart(iid)}
                                 style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex', padding: 4, borderRadius: 6, transition: 'color 0.15s' }}
                                 onMouseEnter={e => e.currentTarget.style.color = 'var(--error)'}
                                 onMouseLeave={e => e.currentTarget.style.color = 'var(--muted)'}
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={15} />
                               </button>
                             </div>
                           </div>

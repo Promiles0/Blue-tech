@@ -96,7 +96,7 @@ export default function Navbar() {
                 borderRadius: 18, padding: 20, boxShadow: '0 28px 64px rgba(0,0,0,0.25)',
                 zIndex: 100,
               }}>
-                <p style={{ margin: 0, marginBottom: 14, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent)' }}>
+                <p style={{ margin: 0, marginBottom: 14, fontSize: 12, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent-light)' }}>
                   Shop by category
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12 }}>
@@ -120,7 +120,7 @@ export default function Navbar() {
                   to="/products"
                   style={{
                     display: 'inline-flex', marginTop: 16, alignItems: 'center', gap: 8,
-                    fontSize: 13, color: 'var(--accent)', textDecoration: 'none', fontWeight: 600,
+                    fontSize: 13, color: 'var(--accent-light)', textDecoration: 'none', fontWeight: 600,
                   }}
                 >
                   View all categories

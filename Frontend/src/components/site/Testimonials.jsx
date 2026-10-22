@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Star } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
 import apiService from '../../api/service'
+import { useT } from '../../lib/i18n'
 
 function Card({ name, rating, text }) {
   return (
@@ -43,6 +44,7 @@ function Row({ items, reverse = false, duration = '38s' }) {
 }
 
 export default function Testimonials() {
+  const { t } = useT()
   const [items, setItems]     = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -74,9 +76,9 @@ export default function Testimonials() {
   return (
     <section style={{ padding: '72px 0', overflow: 'hidden' }}>
       <div className="container-noir" style={{ marginBottom: 40 }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 8 }}>TESTIMONIALS</p>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent-light)', marginBottom: 8 }}>{t('Testimonials')}</p>
         <h2 style={{ fontFamily: '"Space Grotesk",sans-serif', fontSize: 28, fontWeight: 800, letterSpacing: '-0.02em' }}>
-          What customers say
+          {t('What customers say')}
         </h2>
       </div>
 

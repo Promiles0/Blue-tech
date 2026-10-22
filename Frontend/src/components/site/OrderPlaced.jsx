@@ -67,7 +67,7 @@ export default function OrderPlaced({ orderId, deliveryText, cashOnPickup }) {
         </div>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
           {order && <InvoiceButton order={order} />}
-          <Link to="/products" style={{ fontSize: 13.5, color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+          <Link to="/products" style={{ fontSize: 13.5, color: 'var(--accent-light)', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
             <ShoppingBag size={14} /> {t('Keep shopping')}
           </Link>
         </div>

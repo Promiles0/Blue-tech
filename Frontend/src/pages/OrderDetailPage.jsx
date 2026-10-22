@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { trackPurchaseOnce } from '../lib/analytics'
-import { useT } from '../lib/i18n'
+import { useT, currentIntlLocale } from '../lib/i18n'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Package, Truck, CheckCircle2, Clock, XCircle, Wallet, Star, RotateCcw } from 'lucide-react'
 import { m as motion, AnimatePresence } from 'framer-motion'
@@ -28,8 +28,8 @@ const STATUS_STYLES = {
   CANCELLED:  { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)' },
 }
 
-const fmt = (dt) => dt ? new Date(dt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : null
-const fmtDate = (dt) => dt ? new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+const fmt = (dt) => dt ? new Date(dt).toLocaleString(currentIntlLocale(), { dateStyle: 'medium', timeStyle: 'short' }) : null
+const fmtDate = (dt) => dt ? new Date(dt).toLocaleDateString(currentIntlLocale(), { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
 
 function StatusBadge({ status }) {
   const s = STATUS_STYLES[status] ?? STATUS_STYLES.PENDING
@@ -129,7 +129,7 @@ export default function OrderDetailPage() {
   if (error || !order) return (
     <div style={{ padding: '80px 24px', maxWidth: 760, margin: '0 auto', textAlign: 'center' }}>
       <p style={{ color: 'var(--text-secondary)' }}>{error || t('Order not found.')}</p>
-      <Link to="/orders" style={{ color: 'var(--accent)', fontSize: 14, marginTop: 16, display: 'inline-block', textDecoration: 'none' }}>← {t('Back to orders')}</Link>
+      <Link to="/orders" style={{ color: 'var(--accent-light)', fontSize: 14, marginTop: 16, display: 'inline-block', textDecoration: 'none' }}>← {t('Back to orders')}</Link>
     </div>
   )
 
@@ -252,7 +252,7 @@ export default function OrderDetailPage() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   border: '1px solid rgba(124,92,240,0.3)'
                 }}>
-                  <Truck size={16} style={{ color: 'var(--accent)' }} />
+                  <Truck size={16} style={{ color: 'var(--accent-light)' }} />
                 </div>
                 <span className="label-muted">{t('Delivery')}</span>
               </div>
@@ -266,7 +266,7 @@ export default function OrderDetailPage() {
             {/* Timeline */}
             <div className="dashboard-panel" style={{ background: 'var(--bg-surface)', border: '1px solid var(--card-border)', borderRadius: 20, padding: 28 }}>
               <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 20 }}>
-                {order.status === 'CANCELLED' ? 'Cancelled' : 'Timeline'}
+                {order.status === 'CANCELLED' ? t('Cancelled') : t('Timeline')}
               </p>
               {order.status === 'CANCELLED' ? (
                 <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
@@ -305,7 +305,7 @@ export default function OrderDetailPage() {
 
               {order.shipmentInfo && (
                 <div className="dashboard-panel" style={{ background: 'var(--bg-surface)', border: '1px solid var(--card-border)', borderRadius: 20, padding: 24 }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>Shipment</p>
+                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 12 }}>{t('Shipment')}</p>
                   {order.shipmentInfo.carrier && (
                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
                       <span style={{ color: 'var(--text-muted)' }}>{t('Carrier:')} </span>{order.shipmentInfo.carrier}
@@ -314,7 +314,7 @@ export default function OrderDetailPage() {
                   {order.shipmentInfo.trackingNumber && (
                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>
                       <span style={{ color: 'var(--text-muted)' }}>{t('Tracking:')} </span>
-                      <span style={{ fontFamily: 'monospace', color: 'var(--accent)' }}>{order.shipmentInfo.trackingNumber}</span>
+                      <span style={{ fontFamily: 'monospace', color: 'var(--accent-light)' }}>{order.shipmentInfo.trackingNumber}</span>
                     </p>
                   )}
                   {order.shipmentInfo.shippedAt && (
@@ -346,7 +346,7 @@ export default function OrderDetailPage() {
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: 'var(--accent)',
+                          color: 'var(--accent-light)',
                           fontSize: 12,
                           fontWeight: 600,
                           cursor: 'pointer',
@@ -478,7 +478,7 @@ export default function OrderDetailPage() {
                   style={{ padding: '8px 16px', fontSize: 13 }}
                   disabled={submittingReview}
                 >
-                  {submittingReview ? 'Submitting…' : 'Submit Review'}
+                  {submittingReview ? t('Submitting…') : t('Submit review')}
                 </button>
               </div>
             </motion.div>

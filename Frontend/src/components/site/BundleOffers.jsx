@@ -24,7 +24,7 @@ export default function BundleOffers({ productId }) {
   return (
     <section style={{ marginTop: 40 }}>
       <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <PackagePlus size={20} style={{ color: 'var(--accent)' }} /> {t('Buy together and save')}
+        <PackagePlus size={20} style={{ color: 'var(--accent-light)' }} /> {t('Buy together and save')}
       </h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {bundles.map((b) => <Bundle key={b.id} bundle={b} />)}

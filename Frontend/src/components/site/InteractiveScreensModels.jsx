@@ -6,7 +6,7 @@ import { useInteractiveScreensProducts } from '../../hooks/useInteractiveScreens
 
 export const MODELS_SECTION_ID = 'interactive-screens-models'
 
-const eyebrow = { fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }
+const eyebrow = { fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: 8 }
 const heading = { fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(24px,3vw,32px)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)' }
 
 export default function InteractiveScreensModels() {
@@ -22,7 +22,7 @@ export default function InteractiveScreensModels() {
 
         {loading ? (
           <div className="grid-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="skeleton" style={{ height: 340, borderRadius: 12 }} />)}
+            {[...Array(4)].map((_, i) => <div key={i} className="skeleton card-skeleton" />)}
           </div>
         ) : products.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 24px', border: '1px dashed var(--border)', borderRadius: 16 }}>

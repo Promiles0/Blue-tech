@@ -40,7 +40,7 @@ export default function AboutPage() {
 
   return (
     <div className="container-noir" style={{ paddingTop: 56, paddingBottom: 72, maxWidth: 1000, marginLeft: 'auto', marginRight: 'auto' }}>
-      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 10 }}>{t('About us')}</p>
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent-light)', textTransform: 'uppercase', marginBottom: 10 }}>{t('About us')}</p>
       <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text-primary, var(--text))', margin: '0 0 18px', lineHeight: 1.1 }}>
         {t('Technology you can trust, from Kigali')}
       </h1>
@@ -57,7 +57,7 @@ export default function AboutPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginBottom: 28 }}>
         {facts.map(({ Icon, title, body }) => (
           <div key={title} style={{ padding: 18, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg-surface, transparent)' }}>
-            <Icon size={18} style={{ color: 'var(--accent)', marginBottom: 10 }} />
+            <Icon size={18} style={{ color: 'var(--accent-light)', marginBottom: 10 }} />
             <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary, var(--text))', marginBottom: 4 }}>{title}</div>
             <div style={{ fontSize: 13.5, color: 'var(--text-secondary, var(--muted))', lineHeight: 1.55 }}>{body}</div>
           </div>
@@ -77,8 +77,8 @@ export default function AboutPage() {
           <h2 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 14px', color: 'var(--text-primary, var(--text))' }}>{t('Talk to us')}</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14 }}>
             <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)', textDecoration: 'none' }}><MessageCircle size={16} style={{ color: '#25D366' }} /> WhatsApp</a>
-            <a href={`tel:${phone.replace(/\s+/g, '')}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)', textDecoration: 'none' }}><Phone size={16} style={{ color: 'var(--accent)' }} /> {phone}</a>
-            <a href={`mailto:${email}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)', textDecoration: 'none' }}><Mail size={16} style={{ color: 'var(--accent)' }} /> {email}</a>
+            <a href={`tel:${phone.replace(/\s+/g, '')}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)', textDecoration: 'none' }}><Phone size={16} style={{ color: 'var(--accent-light)' }} /> {phone}</a>
+            <a href={`mailto:${email}`} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text)', textDecoration: 'none' }}><Mail size={16} style={{ color: 'var(--accent-light)' }} /> {email}</a>
             {businessInfo.tin && <span style={{ fontSize: 13, color: 'var(--muted)' }}>TIN: {businessInfo.tin}</span>}
           </div>
           <Link to="/products" className="noir-btn-primary" style={{ marginTop: 20, padding: '12px 20px', display: 'inline-flex' }}>{t('Shop now')}</Link>

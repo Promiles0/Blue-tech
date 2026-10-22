@@ -133,7 +133,7 @@ export default function MobileNav() {
               {user ? (
                 <>
                   {canUseAdmin && (
-                    <Link to="/admin" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent)', fontSize: 14, fontWeight: 700 }}>
+                    <Link to="/admin" onClick={close} style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--accent-light)', fontSize: 14, fontWeight: 700 }}>
                       <User size={15} /> {t('Admin panel')}
                     </Link>
                   )}

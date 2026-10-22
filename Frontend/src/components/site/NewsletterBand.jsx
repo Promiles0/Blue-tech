@@ -29,7 +29,7 @@ export default function NewsletterBand() {
   return (
     <section style={{ padding: '80px 0', borderTop: '1px solid var(--border)' }}>
       <div className="container-noir" style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent)', marginBottom: 12 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--accent-light)', marginBottom: 12 }}>
           STAY IN THE LOOP
         </p>
         <h2 style={{

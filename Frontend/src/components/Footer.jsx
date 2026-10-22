@@ -72,7 +72,7 @@ export default function Footer() {
             <button
               onClick={() => setShowDetails(v => !v)}
               style={{
-                fontSize: 13, color: 'var(--accent)', background: 'none',
+                fontSize: 13, color: 'var(--accent-light)', background: 'none',
                 border: 'none', padding: 0, cursor: 'pointer',
                 textAlign: 'left', transition: 'opacity 0.2s',
               }}
@@ -148,7 +148,7 @@ export default function Footer() {
                 <button
                   onClick={() => setShowAllCats(v => !v)}
                   style={{
-                    fontSize: 13, color: 'var(--accent)', background: 'none',
+                    fontSize: 13, color: 'var(--accent-light)', background: 'none',
                     border: 'none', padding: 0, cursor: 'pointer',
                     textAlign: 'left', marginTop: 2,
                     transition: 'opacity 0.2s',

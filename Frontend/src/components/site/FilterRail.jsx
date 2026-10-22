@@ -124,10 +124,10 @@ export default function FilterRail({ filters, setters, facets, activeCount, onCl
             >
               <div style={{ padding: '22px 22px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <SlidersHorizontal size={16} style={{ color: 'var(--accent)' }} />
+                  <SlidersHorizontal size={16} style={{ color: 'var(--accent-light)' }} />
                   <span style={{ fontSize: 15, fontWeight: 700 }}>{t('Filters')}</span>
                 </div>
-                <button
+                <button aria-label={t('Close filters')}
                   onClick={onMobileClose}
                   style={{ background: 'none', border: 'none', color: 'var(--muted)', padding: 6, borderRadius: 8, cursor: 'pointer', display: 'flex' }}
                 >

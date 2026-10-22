@@ -3,8 +3,6 @@ import { useLocation } from 'react-router-dom'
 import { m as motion, useReducedMotion } from 'framer-motion'
 import { Toaster } from 'sonner'
 import { useTheme } from '../../context/ThemeContext'
-import ScrollProgress   from './ScrollProgress'
-import CursorSpotlight  from './CursorSpotlight'
 import MarqueeStrip     from './MarqueeStrip'
 import Header           from '../Header'
 import Footer           from '../Footer'
@@ -70,8 +68,6 @@ export default function SiteLayout({ children }) {
 
   return (
     <>
-      <ScrollProgress />
-      <CursorSpotlight />
 
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)' }}>
         <Header />

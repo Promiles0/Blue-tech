@@ -3,6 +3,7 @@ import { Bell, X, Inbox, ArrowRight } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { m as motion, AnimatePresence } from 'framer-motion'
 import { useNotifications } from '../../context/NotificationContext'
+import { useT } from '../../lib/i18n'
 
 const SEV_COLOR = {
   success: 'var(--success)',
@@ -32,6 +33,7 @@ function timeAgo(dateStr) {
 }
 
 export default function NotificationBell() {
+  const { t } = useT()
   const { unreadCount, notifications, loading, fetchNotifications, markRead, markAllRead } = useNotifications()
   const [open, setOpen]         = useState(false)
   const [filter, setFilter]     = useState('all')
@@ -68,17 +70,13 @@ export default function NotificationBell() {
     <div ref={popoverRef} style={{ position: 'relative' }}>
       {/* Bell button */}
       <button
+        type="button"
+        className="hdr-icon"
         onClick={open ? () => setOpen(false) : handleOpen}
-        style={{
-          background: 'none', border: 'none', color: open ? 'var(--icon-color)' : 'var(--icon-muted)',
-          padding: 8, display: 'flex', alignItems: 'center',
-          transition: 'color 0.2s', borderRadius: 6, cursor: 'pointer',
-          position: 'relative',
-        }}
-        onMouseEnter={e => e.currentTarget.style.color = 'var(--icon-color)'}
-        onMouseLeave={e => { if (!open) e.currentTarget.style.color = 'var(--icon-muted)' }}
+        aria-label={unreadCount > 0 ? t('Notifications, {n} unread', { n: unreadCount }) : t('Notifications')}
+        aria-expanded={open}
       >
-        <Bell size={18} />
+        <Bell size={19} />
         {unreadCount > 0 && (
           <motion.span
             key={badgeKey}
@@ -86,10 +84,10 @@ export default function NotificationBell() {
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             style={{
-              position: 'absolute', top: 2, right: 2,
-              background: 'var(--error)', color: 'var(--brand-text)',
-              borderRadius: '50%', width: 15, height: 15,
-              fontSize: 9, fontWeight: 700,
+              position: 'absolute', top: 3, right: 2,
+              background: 'var(--error)', color: '#fff',
+              borderRadius: 9, minWidth: 18, height: 18, padding: '0 4px',
+              fontSize: 10.5, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               pointerEvents: 'none',
             }}
@@ -125,23 +123,23 @@ export default function NotificationBell() {
               borderBottom: '1px solid var(--card-border)',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>Notifications</span>
+              <span style={{ fontWeight: 700, fontSize: 14 }}>{t('Notifications')}</span>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllRead}
                     style={{
-                      fontSize: 11, color: 'var(--brand)', background: 'none', border: 'none',
+                      fontSize: 11, color: 'var(--accent-light)', background: 'none', border: 'none',
                       cursor: 'pointer', padding: '2px 6px', borderRadius: 4,
                       transition: 'opacity 0.15s',
                     }}
                     onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
                     onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                   >
-                    Mark all read
+                    {t('Mark all read')}
                   </button>
                 )}
-                <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--icon-muted)', cursor: 'pointer', padding: 2 }}>
+                <button aria-label={t('Close')} onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--icon-muted)', cursor: 'pointer', padding: 2 }}>
                   <X size={14} />
                 </button>
               </div>
@@ -160,7 +158,7 @@ export default function NotificationBell() {
                     color: filter === f ? 'var(--brand)' : 'var(--text-secondary)',
                   }}
                 >
-                  {f === 'all' ? 'All' : `Unread${unreadCount > 0 ? ` (${unreadCount})` : ''}`}
+                  {f === 'all' ? t('All') : `${t('Unread')}${unreadCount > 0 ? ` (${unreadCount})` : ''}`}
                 </button>
               ))}
             </div>
@@ -168,11 +166,11 @@ export default function NotificationBell() {
             {/* List */}
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {loading ? (
-                <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>{t('Loading…')}</div>
               ) : displayed.length === 0 ? (
                 <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-secondary)' }}>
                   <Inbox size={28} style={{ marginBottom: 8, opacity: 0.4 }} />
-                  <div style={{ fontSize: 13 }}>No notifications</div>
+                  <div style={{ fontSize: 13 }}>{t('No notifications')}</div>
                 </div>
               ) : (
                 displayed.map(n => (
@@ -232,7 +230,7 @@ export default function NotificationBell() {
               <Link
                 to="/notifications"
                 onClick={() => setOpen(false)}
-                style={{ fontSize: 12, color: 'var(--brand)', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}
+                style={{ fontSize: 12, color: 'var(--accent-light)', display: 'flex', alignItems: 'center', gap: 5, textDecoration: 'none' }}
                 onMouseEnter={e => e.currentTarget.style.opacity = '0.7'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}
               >

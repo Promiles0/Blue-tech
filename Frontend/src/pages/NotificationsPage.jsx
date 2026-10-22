@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useT, currentIntlLocale } from '../lib/i18n'
 import { useNavigate } from 'react-router-dom'
 import { Inbox, Bell, Check } from 'lucide-react'
 import { useNotifications } from '../context/NotificationContext'
@@ -31,10 +32,11 @@ function timeAgo(dateStr) {
   if (h < 24) return `${h}h ago`
   const d = Math.floor(h / 24)
   if (d < 7)  return `${d}d ago`
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return new Date(dateStr).toLocaleDateString(currentIntlLocale(), { month: 'short', day: 'numeric' })
 }
 
 export default function NotificationsPage() {
+  const { t } = useT()
   const { notifications, loading, unreadCount, fetchNotifications, markRead, markAllRead } = useNotifications()
   const [filter, setFilter]     = useState('all')
   const [readFilter, setRead]   = useState('all')
@@ -58,12 +60,12 @@ export default function NotificationsPage() {
       {/* Page header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Bell size={20} style={{ color: 'var(--brand)' }} />
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>Notifications</h1>
+          <Bell size={20} style={{ color: 'var(--accent-light)' }} />
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>{t('Notifications')}</h1>
           {unreadCount > 0 && (
             <span style={{
               fontSize: 11, fontWeight: 700, background: 'var(--brand-soft)',
-              color: 'var(--brand)', padding: '2px 8px', borderRadius: 20,
+              color: 'var(--accent-light)', padding: '2px 8px', borderRadius: 20,
             }}>
               {unreadCount} unread
             </span>
@@ -74,7 +76,7 @@ export default function NotificationsPage() {
             onClick={markAllRead}
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
-              fontSize: 12, color: 'var(--brand)', background: 'var(--brand-tint)',
+              fontSize: 12, color: 'var(--accent-light)', background: 'var(--brand-tint)',
               border: '1px solid var(--brand-border)', borderRadius: 8,
               padding: '6px 12px', cursor: 'pointer', transition: 'opacity 0.15s',
             }}
@@ -99,7 +101,7 @@ export default function NotificationsPage() {
               color: readFilter === f ? 'var(--brand)' : 'var(--text-secondary)',
             }}
           >
-            {f === 'all' ? 'All' : 'Unread'}
+            {f === 'all' ? t('All') : t('Unread')}
           </button>
         ))}
       </div>
@@ -129,7 +131,7 @@ export default function NotificationsPage() {
         ) : displayed.length === 0 ? (
           <div style={{ padding: 56, textAlign: 'center', color: 'var(--text-secondary)' }}>
             <Inbox size={32} style={{ marginBottom: 10, opacity: 0.3 }} />
-            <div style={{ fontSize: 14 }}>No notifications here</div>
+            <div style={{ fontSize: 14 }}>{t('No notifications here')}</div>
           </div>
         ) : (
           displayed.map((n, i) => (
@@ -176,7 +178,7 @@ export default function NotificationsPage() {
                       onClick={e => { e.stopPropagation(); markRead([n.notificationId]) }}
                       style={{
                         fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                        color: 'var(--brand)', background: 'var(--brand-tint)', border: 'none',
+                        color: 'var(--accent-light)', background: 'var(--brand-tint)', border: 'none',
                         padding: '2px 6px', borderRadius: 4, cursor: 'pointer',
                       }}
                     >

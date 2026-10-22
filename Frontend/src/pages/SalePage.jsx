@@ -49,7 +49,7 @@ export default function SalePage() {
             </Reveal>
             <section style={{ marginTop: 40 }}>
               {isLoading ? (
-                <div className="grid-4">{[...Array(4)].map((_, i) => <div key={i} className="skeleton" style={{ height: 300, borderRadius: 12 }} />)}</div>
+                <div className="grid-4">{[...Array(4)].map((_, i) => <div key={i} className="skeleton card-skeleton" />)}</div>
               ) : products.length ? (
                 <div className="grid-4">
                   {products.map((p, i) => (

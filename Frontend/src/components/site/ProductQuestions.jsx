@@ -40,7 +40,7 @@ export default function ProductQuestions({ productId }) {
   return (
     <section style={{ marginTop: 48 }}>
       <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <MessageCircleQuestion size={20} style={{ color: 'var(--accent)' }} /> {t('Questions and answers')}
+        <MessageCircleQuestion size={20} style={{ color: 'var(--accent-light)' }} /> {t('Questions and answers')}
       </h2>
 
       {items.length > 0 ? (
@@ -49,7 +49,7 @@ export default function ProductQuestions({ productId }) {
             <div key={q.id} style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid var(--border)' }}>
               <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: 'var(--text)' }}>{t('Q:')} {q.question}</p>
               <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--muted)', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
-                <strong style={{ color: 'var(--accent)' }}>{t('A:')}</strong> {q.answer}
+                <strong style={{ color: 'var(--accent-light)' }}>{t('A:')}</strong> {q.answer}
               </p>
               <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--muted-dark, var(--muted))' }}>{t('Answered by Blue-Tech · {date}', { date: day(q.answeredAt) })}</p>
             </div>
@@ -69,7 +69,7 @@ export default function ProductQuestions({ productId }) {
         </form>
       ) : (
         <p style={{ fontSize: 14, color: 'var(--muted)' }}>
-          <Link to="/login" state={{ from: location.pathname }} style={{ color: 'var(--accent)' }}>{t('Sign in')}</Link> {t('to ask a question about this product.')}
+          <Link to="/login" state={{ from: location.pathname }} style={{ color: 'var(--accent-light)' }}>{t('Sign in')}</Link> {t('to ask a question about this product.')}
         </p>
       )}
     </section>

@@ -26,8 +26,10 @@
 }
 
 /* ── Theme transition (applied before any selector so it fires on toggle) ── */
-*, *::before, *::after {
-  transition: background-color 0.25s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, fill 0.2s ease, stroke 0.2s ease;
+/* Only while light/dark is switching (ThemeContext adds the class for a moment). It used to be
+   on every element all the time, which made every hover and re-render animate (UX audit D1). */
+html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after {
+  transition: background-color 0.25s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, fill 0.2s ease, stroke 0.2s ease !important;
 }
 
 /* ── Legacy CSS vars — dark mode (default) ──────────────────── */
@@ -41,7 +43,7 @@
 
   --text-primary:     #ffffff;
   --text-secondary:   #aaaaaa;
-  --text-muted:       #666666;
+  --text-muted:       #8c8c8c; /* 5.9:1 on the page background (was #666, 3.4:1) */
   --text-inverse:     #0f0f0f;
 
   --brand:            #354380;
@@ -53,7 +55,7 @@
   --brand-focus:      rgba(53, 67, 128, 0.40);
   --brand-border:     rgba(53, 67, 128, 0.30);
   --brand-soft:       rgba(53, 67, 128, 0.20);
-  --brand-strong:     #5a73b0;
+  --brand-strong:     #8fa3ea; /* brand blue light enough for text on dark (was #5a73b0) */
 
   --border:           rgba(255, 255, 255, 0.08);
   --border-strong:    rgba(255, 255, 255, 0.16);
@@ -131,7 +133,7 @@
 
   --text-primary:     #0f0f0f;
   --text-secondary:   #444444;
-  --text-muted:       #888888;
+  --text-muted:       #6b6b72; /* 5:1 on the light background (was #888, 3.3:1) */
   --text-inverse:     #ffffff;
 
   --brand:            #354380;
@@ -582,7 +584,7 @@ input, textarea, select { font-family: inherit; }
   outline: none;
   transition: border-color 0.2s;
 }
-.noir-input:focus { border-color: var(--accent); }
+.noir-input:focus { border-color: var(--accent-light); box-shadow: 0 0 0 3px var(--accent-dim2); }
 .noir-input::placeholder { color: var(--muted-dark); }
 
 /* ── Button styles ─────────────────────────────────────────── */
@@ -1125,7 +1127,7 @@ input, textarea, select { font-family: inherit; }
   flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border-strong);
   display: grid; place-items: center; color: #fff;
 }
-.choice-card.on .choice-dot { background: var(--accent-light); border-color: var(--accent-light); }
+.choice-card.on .choice-dot { background: var(--accent); border-color: var(--accent-light); }
 
 /* ── Product card (UX audit A1/B2/B3): one stretched link, buttons on top ── */
 .product-card {
@@ -1437,3 +1439,20 @@ body.has-sticky-bar .compare-tray { bottom: 92px !important; }
   body:has(.checkout-paybar) .bluechat-launcher { bottom: 88px !important; }
 }
 @media (max-width: 480px) { .sticky-cart-name { display: none; } .sticky-cart-actions { flex: 1; justify-content: space-between; } }
+
+/* ── Keyboard focus, everywhere (UX audit C2) ── */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-light);
+  outline-offset: 2px;
+}
+.noir-input:focus-visible, .hdr-search input:focus-visible, .filter-price input:focus-visible { outline: none; }
+.noir-btn-primary:focus-visible, .noir-btn-cta:focus-visible, .noir-btn-outline:focus-visible { outline-offset: 3px; }
+
+/* Small +/- and remove buttons: at least 32px, 40px on touch screens (UX audit C3). */
+.qty-btn { min-width: 32px; min-height: 32px; justify-content: center; align-items: center; }
+@media (pointer: coarse) { .qty-btn { min-width: 40px; min-height: 40px; } }
+
+/* Phones: no 3-D tilt or slow zoom (they cost battery and do nothing without a mouse). */
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .ken-burns, .orb-1, .orb-2, .orb-3 { animation: none !important; }
+}

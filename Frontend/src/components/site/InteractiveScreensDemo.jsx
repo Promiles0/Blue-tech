@@ -13,7 +13,7 @@ const DEMO_VIDEO_SRC =
     ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/media/interactive-screens-demo.mp4`
     : '/videos/interactive-screens-demo.mp4')
 
-const eyebrow = { fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }
+const eyebrow = { fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent-light)', marginBottom: 8 }
 const heading = { fontFamily: '"Space Grotesk",sans-serif', fontSize: 'clamp(24px,3vw,32px)', fontWeight: 900, letterSpacing: '-0.02em', color: 'var(--text)' }
 
 export default function InteractiveScreensDemo() {
