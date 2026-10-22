@@ -30,6 +30,8 @@ if (!redis) console.warn("Rate limiting disabled: UPSTASH_REDIS_REST_URL / UPSTA
 const rateLimiters = redis ? {
   authLogin: new Ratelimit({ redis, prefix: "rl:auth-login", limiter: Ratelimit.slidingWindow(5, "15 m") }),
   authRegister: new Ratelimit({ redis, prefix: "rl:auth-register", limiter: Ratelimit.slidingWindow(3, "1 h") }),
+  // Looser than register: many shoppers share one IP (offices, cafés, mobile carriers).
+  authGuest: new Ratelimit({ redis, prefix: "rl:auth-guest", limiter: Ratelimit.slidingWindow(10, "1 h") }),
   authGoogle: new Ratelimit({ redis, prefix: "rl:auth-google", limiter: Ratelimit.slidingWindow(5, "15 m") }),
   authMfa: new Ratelimit({ redis, prefix: "rl:auth-mfa", limiter: Ratelimit.slidingWindow(10, "15 m") }),
   coupon: new Ratelimit({ redis, prefix: "rl:coupon", limiter: Ratelimit.slidingWindow(10, "1 h") }),
@@ -221,9 +223,18 @@ function authResult(user: Record<string, unknown>, token: string) {
       phone: user.phone,
       picture: user.picture,
       role: user.role,
+      isGuest: user.is_guest === true,
+      contactEmail: user.contact_email ?? null,
     },
   };
 }
+
+// Guest checkout (UX audit A2): the sign-in address of a guest account is a placeholder on a
+// reserved domain — it can't receive mail and nobody can log in with it.
+const GUEST_EMAIL_DOMAIN = "@guest.invalid";
+const isGuestEmail = (email: unknown) => String(email ?? "").toLowerCase().endsWith(GUEST_EMAIL_DOMAIN);
+// The address to write to: the one a guest typed, else the account's own.
+const reachableEmail = (row: Record<string, unknown> | null | undefined) => (row?.contact_email ?? row?.email ?? null) as string | null;
 
 function toNumber(value: unknown) {
   const n = Number(value ?? 0);
@@ -1824,7 +1835,7 @@ async function sendCartReminders(hours: number) {
       .map((i) => ((i.product_variants as Record<string, unknown> | null)?.products as Record<string, unknown> | null))
       .filter((p) => p && p.is_active !== false).map((p) => String(p!.name));
     if (!names.length) continue;
-    const { data: customer } = await adminClient.from("users").select("email,phone,name,reminders_opt_out,is_suspended").eq("id", cart.user_id).maybeSingle();
+    const { data: customer } = await adminClient.from("users").select("email,contact_email,phone,name,reminders_opt_out,is_suspended").eq("id", cart.user_id).maybeSingle();
     if (!customer || customer.reminders_opt_out || customer.is_suspended) continue;
     // Already ordered since they last touched the cart? Then it isn't abandoned.
     const { count } = await adminClient.from("orders").select("id", { count: "exact", head: true })
@@ -1833,7 +1844,7 @@ async function sendCartReminders(hours: number) {
     const what = names.length === 1 ? names[0] : `${names[0]} and ${names.length - 1} more item${names.length > 2 ? "s" : ""}`;
     const text = `You left ${what} in your cart. Your items are still waiting — complete your order: ${SITE}/cart`;
     await adminClient.from("notifications").insert({ user_id: cart.user_id, message: `You left ${what} in your cart. Complete your order whenever you're ready.` });
-    await messageCustomer("cart_reminder", { email: customer.email, phone: customer.phone }, "You left something in your cart", text);
+    await messageCustomer("cart_reminder", { email: reachableEmail(customer), phone: customer.phone }, "You left something in your cart", text);
     await adminClient.from("carts").update({ reminded_at: new Date().toISOString() }).eq("id", cart.id);
     sent++;
   }
@@ -1851,7 +1862,7 @@ async function sendReviewRequests(days: number) {
   for (const order of (orders ?? []) as Record<string, unknown>[]) {
     await adminClient.from("orders").update({ review_requested_at: new Date().toISOString() }).eq("id", order.id);
     if (!order.user_id) continue;
-    const { data: customer } = await adminClient.from("users").select("email,phone,reminders_opt_out,is_suspended").eq("id", order.user_id).maybeSingle();
+    const { data: customer } = await adminClient.from("users").select("email,contact_email,phone,reminders_opt_out,is_suspended").eq("id", order.user_id).maybeSingle();
     if (!customer || customer.reminders_opt_out || customer.is_suspended) continue;
     const { data: items } = await adminClient.from("order_items").select("product_variants(products(id,name))").eq("order_id", order.id);
     const products = ((items ?? []) as Record<string, unknown>[])
@@ -1863,7 +1874,7 @@ async function sendReviewRequests(days: number) {
     if (!todo.length) continue;
     const first = todo[0];
     await adminClient.from("notifications").insert({ user_id: order.user_id, message: `How is your ${first.name}? Rate it on your order #${order.id} page — it helps other shoppers in Rwanda choose.` });
-    await messageCustomer("review_request", { email: customer.email, phone: customer.phone }, `How is your ${first.name}?`,
+    await messageCustomer("review_request", { email: reachableEmail(customer), phone: customer.phone }, `How is your ${first.name}?`,
       `Thanks for shopping with Blue-Tech! How is your ${first.name}? A quick rating (photos welcome) helps other shoppers: ${SITE}/orders/${order.id}`);
     sent++;
   }
@@ -2058,7 +2069,7 @@ async function sendEmailMessage(to: string, subject: string, text: string) {
 // WhatsApp is preferred over SMS for the same phone number, so people don't get both.
 async function messageCustomer(kind: string, contact: { email?: unknown; phone?: unknown }, subject: string, text: string) {
   const ch = messagingChannels();
-  const email = contact.email ? String(contact.email) : null;
+  const email = contact.email && !isGuestEmail(contact.email) ? String(contact.email) : null;
   const phone = intlPhone(contact.phone);
   const jobs: Promise<void>[] = [];
   const attempt = (channel: string, to: string, fn: () => Promise<void>) => jobs.push(
@@ -2082,7 +2093,7 @@ async function messageOrderCustomer(orderId: number, text: string) {
     const { data: order } = await adminClient.from("orders").select("id,user_id,order_address_phone_number").eq("id", orderId).maybeSingle();
     if (!order) return;
     const customer = await adminOrderCustomer(order.user_id);
-    await messageCustomer("order_update", { email: customer.email, phone: order.order_address_phone_number ?? customer.phone },
+    await messageCustomer("order_update", { email: reachableEmail(customer), phone: order.order_address_phone_number ?? customer.phone },
       `Blue-Tech order #${orderId}`, `${text}\nTrack it at https://blue-tech.onrender.com/orders/${orderId}`);
   } catch (e) {
     console.error("Order message failed:", e);
@@ -2425,7 +2436,7 @@ async function markOrderPaid(orderId: number) {
 
 async function adminOrderCustomer(userId: unknown) {
   if (!userId) return {} as Record<string, unknown>;
-  const { data } = await adminClient.from("users").select("name,email,phone").eq("id", userId).maybeSingle();
+  const { data } = await adminClient.from("users").select("name,email,contact_email,phone,is_guest").eq("id", userId).maybeSingle();
   return (data ?? {}) as Record<string, unknown>;
 }
 
@@ -2434,8 +2445,8 @@ async function adminOrderListResult(order: Record<string, unknown>) {
   const { count } = await adminClient.from("order_items").select("id", { count: "exact", head: true }).eq("order_id", order.id);
   return {
     orderId: order.id,
-    customerName: customer.name ?? null,
-    customerEmail: customer.email ?? null,
+    customerName: customer.name ? `${customer.name}${customer.is_guest ? " (guest)" : ""}` : null,
+    customerEmail: reachableEmail(customer),
     itemCount: count ?? 0,
     totalAmount: toNumber(order.total_amount),
     status: statusKey(order.status),
@@ -2454,8 +2465,8 @@ async function adminOrderDetailResult(order: Record<string, unknown>) {
     totalAmount: toNumber(order.total_amount),
     status: statusKey(order.status),
     orderedAt: order.ordered_at ?? order.created_at,
-    customerName: customer.name ?? null,
-    customerEmail: customer.email ?? null,
+    customerName: customer.name ? `${customer.name}${customer.is_guest ? " (guest)" : ""}` : null,
+    customerEmail: reachableEmail(customer),
     customerPhone: order.order_address_phone_number ?? customer.phone ?? null,
     addressStreet: order.order_address_street,
     addressCity: order.order_address_city,
@@ -2533,7 +2544,7 @@ function adminShipmentResult(row: Record<string, unknown>) {
   return {
     shipmentId: row.id,
     orderId: row.order_id,
-    customerEmail: customer.email ?? null,
+    customerEmail: reachableEmail(customer),
     carrier: row.carrier,
     trackingNumber: row.tracking_number,
     status: row.status,
@@ -3702,6 +3713,54 @@ async function handle(request: Request) {
     }
     await adminClient.from("users").update({ last_login: new Date().toISOString() }).eq("id", u.id);
     return success("Login successful!", authResult(u, await signAppToken(u, { mfa: true })), request);
+  }
+
+  // Check out as a guest (UX audit A2): name and phone, email optional. Always a brand-new
+  // account — a session is never handed out for an existing one without its password.
+  if (method === "POST" && path === "/auth/guest") {
+    await enforceRateLimit(rateLimiters?.authGuest, `ip:${clientIp(request)}`, request);
+    const body = await readJson(request);
+    const name = String(body.name ?? "").trim().slice(0, 80);
+    const phone = normalizeRwandaPhone(String(body.phone ?? ""));
+    const contactEmail = String(body.email ?? "").trim().toLowerCase().slice(0, 254) || null;
+    if (!name) return failure("Please enter your name", 400, request);
+    if (!phone) return failure("Enter a valid Rwandan phone number, e.g. 0788123456", 400, request);
+    if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) return failure("That email doesn't look right", 400, request);
+
+    const { data: created, error } = await adminClient.auth.admin.createUser({
+      email: `guest-${crypto.randomUUID()}${GUEST_EMAIL_DOMAIN}`,
+      password: crypto.randomUUID() + crypto.randomUUID(),
+      email_confirm: true,
+      user_metadata: { name, guest: true },
+    });
+    if (error || !created.user) return failure(error?.message ?? "Couldn't start guest checkout", 400, request);
+    const { data: guest, error: rowError } = await adminClient.from("users").upsert({
+      id: created.user.id, email: created.user.email, name, phone, role: "user", is_guest: true, contact_email: contactEmail,
+    }, { onConflict: "id" }).select("*").single();
+    if (rowError || !guest) return failure(rowError?.message ?? "Couldn't start guest checkout", 400, request);
+    return success("Checking out as a guest", authResult(guest, await signAppToken(guest)), request);
+  }
+
+  // A guest sets an email and password after ordering, and keeps the account (and its orders).
+  if (method === "POST" && path === "/auth/guest/claim") {
+    await enforceRateLimit(rateLimiters?.authRegister, `ip:${clientIp(request)}`, request);
+    const user = await requireUser(request);
+    const { data: row } = await adminClient.from("users").select("*").eq("id", user.id).maybeSingle();
+    if (!row?.is_guest) return failure("This account already has a password", 400, request);
+    const body = await readJson(request);
+    const email = String(body.email ?? "").trim().toLowerCase();
+    const password = String(body.password ?? "");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || isGuestEmail(email)) return failure("Enter a valid email address", 400, request);
+    if (password.length < 8) return failure("Use at least 8 characters for your password", 400, request);
+    const { data: taken } = await adminClient.from("users").select("id").ilike("email", email.replace(/[%_\\]/g, "\\$&")).maybeSingle();
+    if (taken) return failure("That email already has an account. Sign in to it instead — this order stays saved under your phone number.", 409, request);
+    const { error } = await adminClient.auth.admin.updateUserById(user.id, { email, password, email_confirm: true, user_metadata: { name: row.name, guest: false } });
+    if (error) return failure(/already|registered|exists/i.test(error.message) ? "That email already has an account. Sign in to it instead." : error.message, 400, request);
+    const { data: saved, error: saveError } = await adminClient.from("users")
+      .update({ email, is_guest: false, contact_email: null }).eq("id", user.id).select("*").single();
+    if (saveError || !saved) return failure(saveError?.message ?? "Couldn't save your account", 400, request);
+    await notifyAdmins("New customer account", `${saved.name ?? ""} ${email} (after a guest order)`.trim(), { severity: "success", category: "account", href: "/admin/users" });
+    return success("Your account is ready", authResult(saved, await signAppToken(saved)), request);
   }
 
   if (method === "POST" && path === "/auth/google") {

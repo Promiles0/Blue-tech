@@ -48,6 +48,23 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
+  // Guest checkout: a session without a password, kept until they set one (claimGuest).
+  const guestCheckout = useCallback(async (name, phone, email) => {
+    const data = await authService.guest(name, phone, email)
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
+    setUser(data.user)
+    return data
+  }, [])
+
+  const claimGuest = useCallback(async (email, password) => {
+    const data = await authService.claimGuest(email, password)
+    localStorage.setItem('token', data.token)
+    localStorage.setItem('user', JSON.stringify(data.user))
+    setUser(data.user)
+    return data
+  }, [])
+
   const verifyMfa = useCallback(async (code) => {
     const data = await authService.verifyMfa(pendingMfa?.ticket, code)
     localStorage.setItem('token', data.token)
@@ -79,14 +96,17 @@ export function AuthProvider({ children }) {
     login,
     register,
     googleLogin,
+    guestCheckout,
+    claimGuest,
     logout,
     updateUser,
     isAuthenticated: !!user,
+    isGuest: user?.isGuest === true,
     isAdmin: user?.role?.toLowerCase() === 'admin',
     // Staff run day-to-day operations in the admin panel; admins also manage settings and people.
     isStaff: user?.role?.toLowerCase() === 'staff',
     canUseAdmin: ['admin', 'staff'].includes(user?.role?.toLowerCase()),
-  }), [pendingMfa, verifyMfa, cancelMfa, user, loading, login, register, googleLogin, logout, updateUser])
+  }), [pendingMfa, verifyMfa, cancelMfa, user, loading, login, register, googleLogin, guestCheckout, claimGuest, logout, updateUser])
 
   return (
     <AuthContext.Provider value={value}>

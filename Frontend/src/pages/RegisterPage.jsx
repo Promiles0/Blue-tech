@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useT } from '../lib/i18n'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import GoogleLogin from '../components/GoogleLogin'
@@ -18,6 +18,7 @@ export default function Register() {
   const [loading, setLoading]   = useState(false)
   const { register }            = useAuth()
   const navigate                = useNavigate()
+  const from                    = useLocation().state?.from ?? '/'
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -28,7 +29,7 @@ export default function Register() {
     setLoading(true)
     try {
       await register(name, email, password)
-      navigate('/')
+      navigate(from, { replace: true })
     } catch (err) {
       setError(err.response?.data?.message ?? t('Registration failed. Please try again.'))
     } finally {

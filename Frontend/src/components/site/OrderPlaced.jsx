@@ -6,6 +6,7 @@ import apiService from '../../api/service'
 import { useT } from '../../lib/i18n'
 import { WHATSAPP_NUMBER } from '../../lib/helpLinks'
 import InvoiceButton from './InvoiceButton'
+import { SaveGuestAccount } from './GuestCheckout'
 
 // The page after placing an order (1e): what was ordered, when it arrives, what happens next,
 // and the obvious next steps — track, invoice, WhatsApp, keep shopping.
@@ -70,6 +71,7 @@ export default function OrderPlaced({ orderId, deliveryText, cashOnPickup }) {
             <ShoppingBag size={14} /> {t('Keep shopping')}
           </Link>
         </div>
+        <SaveGuestAccount />
       </div>
     </div>
   )

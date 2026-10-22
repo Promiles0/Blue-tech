@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { m as motion, AnimatePresence } from 'framer-motion'
 import { useT } from '../../lib/i18n'
 import { ShoppingBag, Check } from 'lucide-react'
@@ -8,6 +9,13 @@ export default function StickyCartBar({ product, selectedVariant, onAdd, adding,
   const { formatPrice } = useCurrency()
   const price = (parseFloat(product?.price) || 0) + (parseFloat(selectedVariant?.priceAdjustment) || 0)
   const outOfStock = selectedVariant && selectedVariant.stockQuantity === 0
+
+  // Floating buttons (Blue's chat, compare tray) move up while the bar is showing,
+  // so they never sit on top of "Add to cart" (UX audit A6).
+  useEffect(() => {
+    document.body.classList.toggle('has-sticky-bar', Boolean(visible))
+    return () => document.body.classList.remove('has-sticky-bar')
+  }, [visible])
 
   return (
     <AnimatePresence>
@@ -20,10 +28,10 @@ export default function StickyCartBar({ product, selectedVariant, onAdd, adding,
           style={{
             position: 'fixed', bottom: 0, left: 0, right: 0,
             zIndex: 50,
-            background: 'rgba(10,10,10,0.92)',
-            backdropFilter: 'blur(20px)',
-            borderTop: '1px solid #1e1e1e',
-            padding: '14px 24px',
+            background: 'var(--bg-navbar)',
+            borderTop: '1px solid var(--border)',
+            boxShadow: '0 -8px 30px rgba(0,0,0,0.18)',
+            padding: '12px 16px max(12px, env(safe-area-inset-bottom))',
           }}
         >
           <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
@@ -36,13 +44,13 @@ export default function StickyCartBar({ product, selectedVariant, onAdd, adding,
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexShrink: 0 }}>
-              <span style={{ fontSize: 20, fontWeight: 900, color: 'var(--price)' }}>{formatPrice(price)}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+              <span style={{ fontSize: 'clamp(16px, 4vw, 20px)', fontWeight: 900, color: 'var(--price)', whiteSpace: 'nowrap' }}>{formatPrice(price)}</span>
               <button
                 onClick={onAdd}
                 disabled={adding || outOfStock || !selectedVariant}
                 className="noir-btn-cta"
-                style={{ padding: '11px 24px', fontSize: 14, display: 'flex', alignItems: 'center', gap: 7 }}
+                style={{ padding: '12px 20px', minHeight: 44, fontSize: 14, display: 'flex', alignItems: 'center', gap: 7, whiteSpace: 'nowrap' }}
               >
                 {added       ? <><Check size={15} /> {t('Added!')}</> :
                  outOfStock  ? t('Out of stock') :

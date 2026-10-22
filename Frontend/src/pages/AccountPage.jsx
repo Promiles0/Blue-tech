@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useCurrency } from '../context/CurrencyContext'
 import RewardsCard from '../components/site/RewardsCard'
 import InviteFriendsCard from '../components/site/InviteFriendsCard'
+import { SaveGuestAccount } from '../components/site/GuestCheckout'
 import { LANGUAGES, useT } from '../lib/i18n'
 import { openLiveChat } from '../lib/liveChat'
 import { WHATSAPP_NUMBER } from '../lib/helpLinks'
@@ -157,6 +158,8 @@ export default function Account() {
         </motion.div>
 
         {/* ── Section 1: Account Details ── */}
+        {/* Guest checkout account: offer to keep it before anything else (UX audit A2). */}
+        {user?.isGuest && <div style={{ marginBottom: 24 }}><SaveGuestAccount compact /></div>}
         <RewardsCard />
         <InviteFriendsCard />
 

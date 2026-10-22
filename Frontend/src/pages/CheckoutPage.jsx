@@ -6,7 +6,7 @@ import { usePrograms, useRewards } from "../lib/programs";
 import RwandaAddressFields from "../components/site/RwandaAddressFields";
 import { EMPTY_RW_ADDRESS, addressStreet } from "../lib/rwandaAddress";
 import { useNavigate, Link } from "react-router-dom";
-import { Clock, ArrowLeft, MapPin, Truck, Wallet } from "lucide-react";
+import { Clock, ArrowLeft, MapPin, Truck, Wallet, CreditCard, Banknote, Lock, Check } from "lucide-react";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import apiService from "../api/service";
 import { useAuth } from "../context/AuthContext";
@@ -16,6 +16,7 @@ import CouponInput from "../components/site/CouponInput";
 import { useCurrency } from "../context/CurrencyContext";
 import PayForOrder from "../components/site/PayForOrder";
 import OrderPlaced from "../components/site/OrderPlaced";
+import { GuestCheckoutGate } from "../components/site/GuestCheckout";
 import { loadCheckoutMemory, saveCheckoutMemory } from "../lib/checkoutMemory";
 import { clearReferral, storedReferral } from "../lib/referral";
 import { useQuery } from "@tanstack/react-query";
@@ -44,7 +45,7 @@ function CheckoutForm() {
   const [momoPhone, setMomoPhone] = useState("");
   const [shippingMethod, setShippingMethod] = useState("STANDARD");
   const { deliveryConfig } = useStoreSettings();
-  const [paymentMethod, setPaymentMethod] = useState("CARD");
+  const [paymentMethod, setPaymentMethod] = useState("MOMO");
   const [pendingOrderId, setPendingOrderId] = useState(null);
   const [pendingTotal, setPendingTotal] = useState(0);
   const [momoOutcome, setMomoOutcome] = useState("waiting"); // "waiting" | "timeout"
@@ -61,15 +62,13 @@ function CheckoutForm() {
   }, [cart, checkoutTracked]);
 
   useEffect(() => {
-    if (!user) {
-      navigate("/login", { state: { from: "/checkout" } });
-      return;
-    }
+    if (!user) return;
     // Returning customers start with what they chose last time (1d).
     const memory = loadCheckoutMemory(user.id);
     if (["CARD", "MOMO", "AIRTEL_MONEY"].includes(memory.paymentMethod)) setPaymentMethod(memory.paymentMethod);
     if (["STANDARD", "EXPRESS"].includes(memory.shippingMethod)) setShippingMethod(memory.shippingMethod);
     setMomoPhone(memory.momoPhone || user.phone || "");
+    if (user.phone) setNewAddress((a) => (a.phone ? a : { ...a, phone: user.phone }));
     apiService.addresses.list()
       .then(({ data }) => {
         const list = Array.isArray(data) ? data : [];
@@ -118,6 +117,17 @@ function CheckoutForm() {
     ? Math.floor(Math.min(pointsAvailable * pointValue, subtotal * programs.loyalty.maxRedeemPercent / 100, Math.max(0, subtotal - bundleDiscount - safeDiscount - referralDiscount - studentDiscount)) / pointValue) * pointValue
     : 0;
   const total = Math.max(0, subtotal - bundleDiscount - safeDiscount - referralDiscount - studentDiscount - pointsDiscount + shippingFee);
+
+  // Spot a mistyped or wrong-network number while typing, not after the order is placed.
+  const momoDigits = momoPhone.replace(/\D/g, "");
+  const momoNormalized = normalizeRwandaPhone(momoPhone);
+  const momoHint = !momoPhone.trim() || momoDigits.length < 10
+    ? ""
+    : !momoNormalized
+      ? t("Enter a valid Rwandan number, e.g. 0788123456")
+      : momoProviderFor(momoNormalized) !== paymentMethod
+        ? (paymentMethod === "MOMO" ? t("This looks like an Airtel number. Choose Airtel Money above, or use an MTN number.") : t("This looks like an MTN number. Choose MTN Mobile Money above, or use an Airtel number."))
+        : "";
 
   const buildPayload = () => {
     if (showNewAddressForm) {
@@ -354,57 +364,52 @@ function CheckoutForm() {
           <div>
             <h1 style={{ fontSize: 32, fontWeight: 900, color: "var(--text-primary)", marginBottom: 40, letterSpacing: "-0.02em" }}>{t("Checkout")}</h1>
 
-            {/* Shipping Address */}
-            <section style={{ marginBottom: 48 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10 }}>
-                  <MapPin size={18} style={{ color: "var(--brand)" }} /> {t("Delivery address")}
-                </h2>
+            {/* Delivery address */}
+            <section style={{ marginBottom: 40 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                <h2 className="checkout-h2"><MapPin size={18} /> {t("Delivery address")}</h2>
                 {addresses.length > 0 && (
-                  <button onClick={() => setShowNewAddressForm((v) => !v)}
-                    style={{ background: "none", border: "none", color: "var(--brand)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  <button type="button" onClick={() => setShowNewAddressForm((v) => !v)} className="link-btn">
                     {showNewAddressForm ? t("Use saved address") : `+ ${t("Use new address")}`}
                   </button>
                 )}
               </div>
 
               {showNewAddressForm ? (
-                <div className="fade-in" style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", borderRadius: 16, padding: 32 }}>
+                <div className="fade-in checkout-panel">
                   <RwandaAddressFields value={newAddress} onChange={setNewAddress} />
                 </div>
               ) : (
-                <select value={selectedAddressId || ""} onChange={(e) => setSelectedAddressId(Number(e.target.value))}
-                  className="noir-input"
-                  style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", color: "var(--text-primary)", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none", width: "100%", cursor: "pointer", appearance: "none" }}>
-                  {addresses.map((a) => (
-                    <option key={a.addressId} value={a.addressId} style={{ background: "var(--bg-surface)", color: "var(--text-primary)" }}>
-                      {a.streetAddress}, {a.city}{a.state ? `, ${a.state}` : ''}
-                    </option>
-                  ))}
-                </select>
+                <ChoiceGroup
+                  label={t("Delivery address")}
+                  value={selectedAddressId}
+                  onChange={setSelectedAddressId}
+                  options={addresses.map((a) => ({
+                    value: a.addressId,
+                    title: a.streetAddress,
+                    sub: [a.city, a.state, a.phoneNumber].filter(Boolean).join(" · "),
+                  }))}
+                />
               )}
             </section>
 
-            {/* Shipping Method */}
-            <section style={{ marginBottom: 32 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                <Truck size={18} style={{ color: "var(--brand)" }} /> {t("Delivery method")}
-              </h2>
-              <select value={shippingMethod}
-                onChange={(e) => {
-                  const val = e.target.value;
+            {/* Delivery method */}
+            <section style={{ marginBottom: 40 }}>
+              <h2 className="checkout-h2" style={{ marginBottom: 16 }}><Truck size={18} /> {t("Delivery method")}</h2>
+              <ChoiceGroup
+                label={t("Delivery method")}
+                value={shippingMethod}
+                onChange={(val) => {
                   setShippingMethod(val);
-                  if (val !== "PICKUP" && paymentMethod === "CASH") setPaymentMethod("CARD");
+                  if (val !== "PICKUP" && paymentMethod === "CASH") setPaymentMethod("MOMO");
                 }}
-                className="noir-input"
-                style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", color: "var(--text-primary)", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none", width: "100%", cursor: "pointer", appearance: "none" }}>
-                <option value="STANDARD">{t("Standard delivery — FREE")}{deliveryConfig ? ` · ${formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'STANDARD'), intlLocale)}` : ''}</option>
-                <option value="EXPRESS">{t("Express")} — +{formatPrice(EXPRESS_SHIPPING_FEE_RWF)}{deliveryConfig ? ` · ${formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'EXPRESS'), intlLocale)}` : ''}</option>
-                {deliveryConfig?.pickupEnabled && (
-                  <option value="PICKUP">{t("Pick up at our shop — FREE")} · {formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, 'PICKUP'), intlLocale)}</option>
-                )}
-              </select>
-              <p style={{ fontSize: 12.5, color: "var(--text-muted)", marginTop: 8 }}>
+                options={[
+                  { value: "STANDARD", title: t("Standard delivery"), sub: deliveryConfig ? formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, "STANDARD"), intlLocale) : null, right: t("Free") },
+                  { value: "EXPRESS", title: t("Express delivery"), sub: deliveryConfig ? formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, "EXPRESS"), intlLocale) : null, right: `+${formatPrice(EXPRESS_SHIPPING_FEE_RWF)}` },
+                  ...(deliveryConfig?.pickupEnabled ? [{ value: "PICKUP", title: t("Pick up at our shop"), sub: formatWindow(deliveryWindow(deliveryConfig, deliveryDistrict, "PICKUP"), intlLocale), right: t("Free") }] : []),
+                ]}
+              />
+              <p style={{ fontSize: 12.5, color: "var(--text-secondary)", marginTop: 10 }}>
                 {shippingMethod === "PICKUP" && deliveryConfig
                   ? t("Pick up at {address}. We'll call you when it's ready.", { address: deliveryConfig.pickupAddress })
                   : deliveryDistrict
@@ -413,42 +418,44 @@ function CheckoutForm() {
               </p>
             </section>
 
-            {/* Payment Method */}
+            {/* Payment method: mobile money first, it's how most customers pay */}
             <section style={{ marginBottom: 32 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                <Wallet size={18} style={{ color: "var(--brand)" }} /> {t("Payment method")}
-              </h2>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}
-                className="noir-input"
-                style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", color: "var(--text-primary)", borderRadius: 12, padding: "12px 16px", fontSize: 14, outline: "none", width: "100%", cursor: "pointer", appearance: "none" }}>
-                <option value="CARD">{t("Credit / debit card")}</option>
-                <option value="MOMO">MTN Mobile Money</option>
-                <option value="AIRTEL_MONEY">Airtel Money</option>
-                {shippingMethod === "PICKUP" && <option value="CASH">{t("Cash / cheque on pickup")}</option>}
-              </select>
+              <h2 className="checkout-h2" style={{ marginBottom: 16 }}><Wallet size={18} /> {t("Payment method")}</h2>
+              <ChoiceGroup
+                label={t("Payment method")}
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                options={[
+                  { value: "MOMO", title: "MTN Mobile Money", sub: t("Approve the payment on your phone"), logo: <PayLogo bg="#ffcb05" fg="#111">MTN</PayLogo> },
+                  { value: "AIRTEL_MONEY", title: "Airtel Money", sub: t("Approve the payment on your phone"), logo: <PayLogo bg="#e40000" fg="#fff">airtel</PayLogo> },
+                  { value: "CARD", title: t("Credit / debit card"), sub: "Visa · Mastercard", logo: <PayLogo bg="var(--accent)" fg="#fff"><CreditCard size={16} /></PayLogo> },
+                  ...(shippingMethod === "PICKUP" ? [{ value: "CASH", title: t("Cash / cheque on pickup"), sub: t("Pay when you collect your order"), logo: <PayLogo bg="var(--success)" fg="#fff"><Banknote size={16} /></PayLogo> }] : []),
+                ]}
+              />
 
-              {/* Stripe Card Element */}
               {paymentMethod === "CARD" && (
-                <div style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", borderRadius: 16, padding: "24px", marginTop: 20 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>Card Details</h3>
-                  <div style={{ padding: "12px 16px", border: "1px solid var(--card-border)", borderRadius: 10, background: "var(--bg-base)" }}>
+                <div className="checkout-panel" style={{ marginTop: 16 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 14 }}>{t("Card details")}</h3>
+                  <div style={{ padding: "12px 16px", border: "1px solid var(--input-border)", borderRadius: 10, background: "var(--input-bg)" }}>
                     <CardElement options={CARD_ELEMENT_OPTIONS} />
                   </div>
-                  <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 10 }}>
-                    🔒 Secured by Stripe. Your card details never touch our servers.
+                  <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                    <Lock size={12} /> {t("Secured by Stripe. Your card details never touch our servers.")}
                   </p>
                 </div>
               )}
 
               {(paymentMethod === "MOMO" || paymentMethod === "AIRTEL_MONEY") && (
-                <div style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", borderRadius: 16, padding: "24px", marginTop: 20 }}>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 16 }}>
+                <div className="checkout-panel" style={{ marginTop: 16 }}>
+                  <label htmlFor="momo-phone" className="field-label" style={{ marginTop: 0 }}>
                     {paymentMethod === "MOMO" ? t("MTN MoMo number") : t("Airtel Money number")}
-                  </h3>
-                  <label style={{ display: "block", fontSize: 11, color: "var(--text-muted)", marginBottom: 6, fontWeight: 600 }}>MOBILE NUMBER</label>
-                  <input className="noir-input" value={momoPhone} onChange={(e) => setMomoPhone(e.target.value)} placeholder="0788123456" />
-                  <p style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 8 }}>
-                    A payment prompt will be sent to this number to authorize the transaction.
+                  </label>
+                  <input id="momo-phone" className="noir-input" type="tel" inputMode="tel" autoComplete="tel"
+                    value={momoPhone} onChange={(e) => setMomoPhone(e.target.value)}
+                    placeholder={paymentMethod === "MOMO" ? "0788 123 456" : "0732 123 456"}
+                    aria-invalid={momoHint ? true : undefined} aria-describedby="momo-help" />
+                  <p id="momo-help" style={{ fontSize: 12, color: momoHint ? "var(--warning)" : "var(--text-secondary)", marginTop: 8 }}>
+                    {momoHint || t("A payment prompt will be sent to this number. Approve it with your PIN.")}
                   </p>
                 </div>
               )}
@@ -458,7 +465,7 @@ function CheckoutForm() {
           {/* Order Summary */}
           <aside>
             <div style={{ background: "var(--bg-surface)", border: "1px solid var(--card-border)", borderRadius: 20, padding: 32 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 24 }}>Order Summary</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 24 }}>{t("Order summary")}</h3>
 
               <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
                 {cart?.items?.map((item) => (
@@ -543,7 +550,7 @@ function CheckoutForm() {
                   border: "1px solid var(--card-border)", borderRadius: 10,
                   padding: "10px 12px", marginBottom: 16,
                 }}>
-                  Card payments are charged in USD: <strong style={{ color: "var(--text-primary)" }}>{formatUsd(total)}</strong>, converted from the RWF total at today's exchange rate.
+                  {t("Card payments are charged in USD:")} <strong style={{ color: "var(--text-primary)" }}>{formatUsd(total)}</strong>{t(", converted from the RWF total at today's exchange rate.")}
                 </p>
               )}
 
@@ -561,9 +568,44 @@ function CheckoutForm() {
 }
 
 export default function CheckoutPage() {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  // Guests give a name and phone first (UX audit A2); the form below needs a session.
+  if (!user) return <GuestCheckoutGate />;
   return (
     <Elements stripe={getStripe()}>
       <CheckoutForm />
     </Elements>
+  );
+}
+
+// Radio options shown as cards: everything visible at once, one tap to choose (UX audit A3).
+function ChoiceGroup({ label, value, onChange, options }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="choice-group">
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <label key={o.value} className={`choice-card${on ? " on" : ""}`}>
+            <input type="radio" checked={on} onChange={() => onChange(o.value)} />
+            {o.logo}
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span className="choice-title">{o.title}</span>
+              {o.sub && <span className="choice-sub">{o.sub}</span>}
+            </span>
+            {o.right && <span className="choice-right">{o.right}</span>}
+            <span className="choice-dot" aria-hidden>{on && <Check size={12} strokeWidth={3} />}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
+function PayLogo({ bg, fg, children }) {
+  return (
+    <span aria-hidden style={{ flexShrink: 0, width: 44, height: 30, borderRadius: 7, background: bg, color: fg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 900, letterSpacing: "-0.01em" }}>
+      {children}
+    </span>
   );
 }

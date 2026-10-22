@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useT } from '../lib/i18n'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Truck, Shield, RotateCcw, SlidersHorizontal, Loader2, MessageCircle } from 'lucide-react'
@@ -51,6 +51,8 @@ export default function Home() {
   })
   const [pool,    setPool]    = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [filters, setFilters] = useState(emptyFilters)
   const [facets,  setFacets]  = useState({})
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -103,6 +105,7 @@ export default function Home() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setLoadError(false)
     setPage(0)
 
     fetchProductsPage(0)
@@ -112,11 +115,11 @@ export default function Home() {
         setPool(content)
         setHasMore(data?.totalPages != null ? data.totalPages > 1 : content.length === PAGE_SIZE)
       })
-      .catch(() => { if (!cancelled) { setPool([]); setHasMore(false) } })
+      .catch(() => { if (!cancelled) { setPool([]); setHasMore(false); setLoadError(true) } })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [debouncedMin, debouncedMax, facetKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [debouncedMin, debouncedMax, facetKey, reloadKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadMore = () => {
     if (loadingMore || !hasMore) return
@@ -133,22 +136,6 @@ export default function Home() {
       .catch(() => setHasMore(false))
       .finally(() => setLoadingMore(false))
   }
-
-  // Auto-load the next batch when the shopper scrolls near the end of the grid.
-  // The button stays as a fallback (and for keyboard users).
-  const sentinelRef = useRef(null)
-  const loadMoreRef = useRef(loadMore)
-  useEffect(() => { loadMoreRef.current = loadMore })
-  useEffect(() => {
-    const el = sentinelRef.current
-    if (!el || !hasMore || loading) return
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) loadMoreRef.current() },
-      { rootMargin: '600px 0px' },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [hasMore, loading, page])
 
   const displayProducts = pool
 
@@ -174,7 +161,7 @@ export default function Home() {
       <DepartmentShelves />
 
       {/* ── Filter rail + full product grid ──────────────────── */}
-      <div id="all-products" className="container-noir shop-layout" style={{ padding: '24px 0 64px' }}>
+      <div id="all-products" className="container-noir shop-layout" style={{ paddingTop: 24, paddingBottom: 64 }}>
         <FilterRail
           filters={filters}
           setters={{ toggleFacet, setMinPrice, setMaxPrice }}
@@ -227,6 +214,12 @@ export default function Home() {
                 <div key={i} className="skeleton" style={{ height: 340, borderRadius: 12 }} />
               ))}
             </div>
+          ) : loadError ? (
+            <div role="alert" style={{ textAlign: 'center', padding: '56px 16px', border: '1px solid var(--border)', borderRadius: 12 }}>
+              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>{t("Couldn't load products")}</p>
+              <p style={{ fontSize: 13.5, color: 'var(--muted)', marginBottom: 18 }}>{t('Check your connection and try again.')}</p>
+              <button onClick={() => setReloadKey(k => k + 1)} className="noir-btn-primary" style={{ fontSize: 13 }}>{t('Try again')}</button>
+            </div>
           ) : displayProducts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 0', border: '1px solid var(--border)', borderRadius: 12 }}>
               <p style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 16 }}>{t('No products match your filters.')}</p>
@@ -243,7 +236,7 @@ export default function Home() {
           )}
 
           {!loading && displayProducts.length > 0 && (
-            <div ref={sentinelRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 40 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 40 }}>
               {hasMore ? (
                 <button
                   onClick={loadMore}
@@ -263,7 +256,7 @@ export default function Home() {
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'var(--muted-dark)'}
               >
-                View full catalog <ArrowRight size={13} />
+                {t('View full catalog')} <ArrowRight size={13} />
               </Link>
             </div>
           )}

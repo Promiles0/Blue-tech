@@ -38,6 +38,23 @@ const authService = {
   },
 
   /**
+   * Check out as a guest: POST /auth/guest { name, phone, email? }.
+   * Creates a light account (no password) and returns { token, user } like register.
+   */
+  guest: async (name, phone, email) => {
+    const res = await api.post("/auth/guest", { name, phone, email }, { skipAuthRedirect: true });
+    return res.data;
+  },
+
+  /**
+   * A guest keeps their account by setting an email and password: POST /auth/guest/claim.
+   */
+  claimGuest: async (email, password) => {
+    const res = await api.post("/auth/guest/claim", { email, password }, { skipAuthRedirect: true });
+    return res.data;
+  },
+
+  /**
    * Get the logged-in user's profile — GET /auth/me
    */
   getMe: async () => {

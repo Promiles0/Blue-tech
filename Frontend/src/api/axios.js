@@ -3,6 +3,9 @@ import axios from 'axios'
 const api = axios.create({
   baseURL: import.meta.env.VITE_SUPABASE_FUNCTIONS_URL || '/functions/v1/api',
   headers: { 'Content-Type': 'application/json' },
+  // A stalled connection should end in an error the page can show ("Try again"), not
+  // skeletons that never go away. Generous enough for a cold start or a slow 3G link.
+  timeout: 45000,
 });
 
 api.interceptors.request.use(async (config) => {

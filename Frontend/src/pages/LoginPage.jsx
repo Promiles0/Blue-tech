@@ -80,6 +80,13 @@ export default function Login() {
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: 'var(--accent)', marginBottom: 8, textTransform: 'uppercase' }}>{t('Welcome back')}</p>
         <h1 style={{ fontSize: 32, fontWeight: 900, color: 'var(--text)', marginBottom: 32, letterSpacing: '-0.02em' }}>{t('Sign in')}</h1>
 
+        {from === '/checkout' && (
+          <div style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', borderRadius: 10, padding: '11px 14px', fontSize: 13, color: 'var(--text)', marginBottom: 20, lineHeight: 1.55 }}>
+            {t('Sign in to finish your order. Your cart is saved.')}{' '}
+            <Link to="/checkout" style={{ color: 'var(--accent-light)', fontWeight: 600 }}>{t('Or check out as a guest')}</Link>
+          </div>
+        )}
+
         {error && (
           <div style={{ background: 'var(--error-dim)', border: '1px solid var(--danger-border)', borderRadius: 8, padding: '11px 14px', fontSize: 13, color: 'var(--error)', marginBottom: 20 }}>
             {error}

@@ -143,6 +143,16 @@ export function specRows(product, categoryName) {
     .map(k => ({ key: k, label: specLabel(k), value: String(specs[k]) }))
 }
 
+// One short line for product cards: "Core i5 · 16GB · 512GB SSD · 15.6"" (UX audit B2).
+export function keySpecLine(product) {
+  const specs = product?.specs && typeof product.specs === 'object' ? product.specs : {}
+  const cpu = String(specs.cpu_family ?? '').replace(/^(Intel|AMD)\s+/i, '') || null
+  return [cpu, specs.ram, specs.storage, specs.screen_size ?? product?.screenSize]
+    .filter(v => v != null && String(v).trim() !== '')
+    .slice(0, 4)
+    .join(' · ')
+}
+
 export const FILTER_FACETS = [
   { key: 'brand', label: 'Brand' },
   { key: 'cpu_family', label: 'Processor' },

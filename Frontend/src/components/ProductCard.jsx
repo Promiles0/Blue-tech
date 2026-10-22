@@ -1,37 +1,43 @@
-import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useT } from '../lib/i18n'
-import { Heart, GitCompare } from 'lucide-react'
+import { Heart, GitCompare, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { toggleCompare, useCompare, COMPARE_MAX } from '../lib/compare'
-import { Tilt } from '../lib/motion'
 import { useUI } from '../context/UIContext'
 import { useWishlist } from '../context/WishlistContext'
 import { useAuth } from '../context/AuthContext'
 import { getProductThumb, handleProductImageError, productImageList } from '../lib/productImage'
+import { keySpecLine } from '../lib/specTemplates'
 import { useCurrency } from '../context/CurrencyContext'
 
 function getStatus(product) {
+  const variants = product.variants ?? []
+  if (variants.length && variants.every(v => (v.stockQuantity ?? 1) <= 0)) return 'out'
   if (product.isNew) return 'new'
-  const qty = product.variants?.[0]?.stockQuantity
+  const qty = variants[0]?.stockQuantity
   if (qty != null && qty > 0 && qty < 5) return 'low'
   return null
 }
 
 const STATUS = {
-  new:  { label: 'New',       bg: 'var(--accent-dim2)',  ring: 'var(--accent-focus)',  color: 'var(--accent-light)' },
-  low:  { label: 'Low stock', bg: 'var(--warning-soft)', ring: 'var(--warning-border)', color: 'var(--warning)' },
+  new:  { label: 'New',          bg: 'var(--accent-dim2)',  ring: 'var(--accent-focus)',  color: 'var(--accent-light)' },
+  low:  { label: 'Low stock',    bg: 'var(--warning-soft)', ring: 'var(--warning-border)', color: 'var(--warning)' },
+  out:  { label: 'Out of stock', bg: 'var(--overlay-shade-soft)', ring: 'transparent', color: '#fff' },
 }
 
+// The whole card opens the product page (one real link, so it can be opened in a new tab or
+// shared). Quick view, wishlist and compare are separate buttons on top (UX audit A1/B2/B3).
 export default function ProductCard({ product }) {
   const { t } = useT()
+  const navigate = useNavigate()
   const { formatPrice } = useCurrency()
-  const [hover, setHover] = useState(false)
   const { setQuickViewProduct } = useUI()
   const { wishlistIds, toggle } = useWishlist()
   const { user } = useAuth()
   const compareList = useCompare()
 
   const pid        = product.productId ?? product.id
+  const href       = `/products/${pid}`
   const wishlisted = wishlistIds.has(pid)
   const comparing  = compareList.some(p => p.id === pid)
   const price      = parseFloat(product.startingPrice ?? product.price) || 0
@@ -39,173 +45,84 @@ export default function ProductCard({ product }) {
   const regular    = parseFloat(product.regularPrice) || 0
   const onSale     = Boolean(product.campaign) && regular > price
 
-  const productImages = productImageList(product)
-  const primaryImage  = getProductThumb(product)
-  const hoverImage    = productImages[1] ?? null
+  const primaryImage = getProductThumb(product)
+  const hoverImage   = productImageList(product)[1] ?? null
   const categoryName = product.category?.name ?? product.categoryName ?? ''
+  const specLine     = keySpecLine(product)
   const status       = getStatus(product)
   const sc           = status ? STATUS[status] : null
 
+  const onWishlist = () => {
+    if (user) { toggle(pid, product.name); return }
+    toast(t('Sign in to save products to your wishlist'), {
+      action: { label: t('Sign in'), onClick: () => navigate('/login', { state: { from: href } }) },
+    })
+  }
+
   return (
-    <Tilt max={6} style={{ height: '100%', display: 'block' }}>
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: `1px solid ${hover ? 'var(--accent-border)' : 'var(--card)'}`,
-          borderRadius: 12, overflow: 'hidden',
-          transition: 'border-color 0.3s, box-shadow 0.3s',
-          boxShadow: hover ? 'var(--shadow-elegant)' : 'none',
-          height: '100%', display: 'flex', flexDirection: 'column',
-          cursor: 'pointer',
-        }}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
-        {/* ── Image area ──────────────────────────────────── */}
-        <div 
-          style={{ position: 'relative', aspectRatio: '4/5', background: 'var(--card)', overflow: 'hidden', flexShrink: 0 }}
-          onClick={() => setQuickViewProduct(product)}
+    <article className={`product-card${status === 'out' ? ' is-out' : ''}`}>
+      <div className="pc-media">
+        {primaryImage && (
+          <img className="pc-img" src={primaryImage} alt="" loading="lazy" onError={handleProductImageError} />
+        )}
+        {hoverImage && (
+          <img className="pc-img pc-img-alt" src={hoverImage} alt="" loading="lazy" onError={handleProductImageError} />
+        )}
+
+        {onSale ? (
+          <span className="pc-badge" style={{ background: 'var(--danger, #ef4444)', color: '#fff', fontWeight: 800 }}>
+            {product.campaign.label}
+          </span>
+        ) : sc && (
+          <span className="pc-badge" style={{ background: sc.bg, border: `1px solid ${sc.ring}`, color: sc.color }}>
+            {t(sc.label)}
+          </span>
+        )}
+
+        <button
+          type="button"
+          className={`pc-icon-btn pc-heart${wishlisted ? ' on' : ''}`}
+          onClick={onWishlist}
+          aria-pressed={wishlisted}
+          aria-label={wishlisted ? t('Remove from wishlist') : t('Add to wishlist')}
         >
+          <Heart size={15} fill={wishlisted ? 'currentColor' : 'none'} />
+        </button>
+        <button
+          type="button"
+          className="pc-icon-btn pc-quick"
+          onClick={() => setQuickViewProduct(product)}
+          aria-label={t('Quick view: {name}', { name: product.name })}
+        >
+          <Eye size={15} />
+        </button>
+      </div>
 
-          {primaryImage && (
-            <img
-              src={primaryImage}
-              alt={product.name}
-              loading="lazy"
-              onError={handleProductImageError}
-              style={{
-                width: '100%', height: '100%', objectFit: 'cover',
-                position: 'absolute', inset: 0,
-                transform: hover ? 'scale(1.10)' : 'scale(1)',
-                transition: 'transform 0.7s ease, opacity 0.7s ease',
-                opacity: hover && hoverImage ? 0 : 1,
-              }}
-            />
-          )}
-
-          {hoverImage && (
-            <img
-              src={hoverImage}
-              alt={product.name}
-              loading="lazy"
-              onError={handleProductImageError}
-              style={{
-                width: '100%', height: '100%', objectFit: 'cover',
-                position: 'absolute', inset: 0,
-                opacity: hover ? 1 : 0,
-                transition: 'opacity 0.7s ease',
-              }}
-            />
-          )}
-
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 50%)',
-            opacity: hover ? 1 : 0,
-            transition: 'opacity 0.3s',
-            pointerEvents: 'none',
-          }} />
-
-          {onSale ? (
-            <div style={{
-              position: 'absolute', top: 10, left: 10,
-              background: 'var(--danger, #ef4444)', color: '#fff', borderRadius: 100,
-              padding: '3px 10px', fontSize: 10.5, fontWeight: 800, letterSpacing: '0.04em',
-            }}>
-              {product.campaign.label}
-            </div>
-          ) : sc && (
-            <div style={{
-              position: 'absolute', top: 10, left: 10,
-              background: sc.bg, border: `1px solid ${sc.ring}`,
-              color: sc.color, borderRadius: 100,
-              padding: '3px 10px', fontSize: 10, fontWeight: 700,
-              letterSpacing: '0.08em',
-            }}>
-              {t(sc.label)}
-            </div>
-          )}
-
-          {/* Wishlist button */}
-          <div
-            onClick={e => { 
-              e.preventDefault(); 
-              e.stopPropagation();
-              if (user) {
-                toggle(pid, product.name);
-              }
-            }}
-            style={{
-              position: 'absolute', top: 10, right: 10,
-              background: wishlisted ? 'var(--danger-soft)' : 'var(--glass-bg2)',
-              backdropFilter: 'blur(8px)',
-              border: `1px solid ${wishlisted ? 'var(--danger-border)' : 'var(--glass-border)'}`,
-              borderRadius: '50%', width: 34, height: 34,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: wishlisted ? 'var(--brand)' : 'var(--icon-color)', cursor: 'pointer',
-              opacity: 1,
-              transition: 'opacity 0.25s, background 0.2s, color 0.2s',
-              zIndex: 100,
-            }}
-            title={user ? (wishlisted ? t('Remove from wishlist') : t('Add to wishlist')) : t('Sign in to save')}
-            onMouseEnter={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--overlay-hover)' }}
-            onMouseLeave={e => { if (!wishlisted) e.currentTarget.style.background = 'var(--glass-bg2)' }}
-          >
-            <Heart size={14} fill={wishlisted ? 'currentColor' : 'none'} />
-          </div>
-        </div>
-
-        {/* ── Body ─────────────────────────────────────────── */}
-        <div style={{ padding: '14px 16px 18px', flex: 1 }}>
-          {categoryName && (
-            <p style={{
-              fontSize: 10, fontWeight: 700,
-              letterSpacing: '0.12em', color: 'var(--muted-dark)',
-              marginBottom: 5, textTransform: 'uppercase',
-            }}>
-              {categoryName}
-            </p>
-          )}
-          <p style={{
-            fontFamily: '"Space Grotesk",sans-serif',
-            fontSize: 15, fontWeight: 600,
-            color: hover ? 'var(--accent-light)' : 'var(--text)',
-            marginBottom: 8, lineHeight: 1.3,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            transition: 'color 0.25s',
-          }}>
-            {product.name}
+      <div className="pc-body">
+        {categoryName && <p className="pc-cat">{categoryName}</p>}
+        <h3 className="pc-name">
+          <Link to={href} className="pc-link">{product.name}</Link>
+        </h3>
+        {specLine && <p className="pc-specs">{specLine}</p>}
+        <div className="pc-foot">
+          <p className="pc-price">
+            {formatPrice(price)}
+            {onSale && <s className="pc-was">{formatPrice(regular)}</s>}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--price)' }}>
-              {formatPrice(price)}
-              {onSale && (
-                <span style={{ marginLeft: 7, fontSize: 12, fontWeight: 500, color: 'var(--muted-dark)', textDecoration: 'line-through' }}>
-                  {formatPrice(regular)}
-                </span>
-              )}
-            </p>
-            <button
-              onClick={e => {
-                e.stopPropagation()
-                const result = toggleCompare(product)
-                if (result === 'full') toast.info(t('You can compare up to {n} products — remove one first.', { n: COMPARE_MAX }))
-              }}
-              aria-pressed={comparing}
-              title={comparing ? t('Remove from compare') : t('Add to compare')}
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600,
-                padding: '5px 9px', borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
-                border: `1px solid ${comparing ? 'var(--accent)' : 'var(--border)'}`,
-                background: comparing ? 'var(--accent-dim)' : 'transparent',
-                color: comparing ? 'var(--accent-light)' : 'var(--muted)',
-              }}
-            >
-              <GitCompare size={12} /> {comparing ? t('Added') : t('Compare')}
-            </button>
-          </div>
+          <button
+            type="button"
+            className={`pc-compare${comparing ? ' on' : ''}`}
+            onClick={() => {
+              const result = toggleCompare(product)
+              if (result === 'full') toast.info(t('You can compare up to {n} products — remove one first.', { n: COMPARE_MAX }))
+            }}
+            aria-pressed={comparing}
+            aria-label={comparing ? t('Remove from compare') : t('Add to compare')}
+          >
+            <GitCompare size={12} /> {comparing ? t('Added') : t('Compare')}
+          </button>
         </div>
       </div>
-    </Tilt>
+    </article>
   )
 }
