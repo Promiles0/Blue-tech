@@ -37,7 +37,7 @@ export function SaleCountdown({ endsAt }) {
   if (!endsAt || left <= 0) return null
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 700, color: 'var(--danger, #ef4444)' }}>
-      <Timer size={13} /> {t('Ends in {time}', { time: timeLeft(left) })}
+      <Timer size={13} /> {t('Ends in {time}', { time: '#' }).split('#').map((part, i) => i === 0 ? part : <span key={i}><span key={timeLeft(left)} className="tick">{timeLeft(left)}</span>{part}</span>)}
     </span>
   )
 }

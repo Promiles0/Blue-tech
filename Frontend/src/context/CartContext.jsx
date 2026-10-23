@@ -4,6 +4,10 @@ import { toast } from 'sonner'
 import apiService from '../api/service'
 import { useAuth } from './AuthContext'
 import { useT } from '../lib/i18n'
+import { getProductThumb } from '../lib/productImage'
+
+// Lets the motion layer fly the product photo into the cart icon.
+const announceAdded = (snapshot) => window.dispatchEvent(new CustomEvent('bt:added-to-cart', { detail: { image: snapshot ? getProductThumb(snapshot.product ?? snapshot) : null } }))
 
 const CartContext = createContext(null)
 
@@ -97,6 +101,7 @@ export function CartProvider({ children }) {
         : [...current, { cartItemId: `guest-${variantId}`, variantId, quantity, ...(snapshot ?? {}) }]
       setGuest(next)
       toast.success(t('Added to cart'))
+      announceAdded(snapshot)
       track('add_to_cart', { value: (snapshot?.unitPrice ?? 0) * quantity, items: [{ id: snapshot?.product?.productId ?? variantId, name: snapshot?.productName, price: snapshot?.unitPrice, quantity }] })
       return
     }
@@ -104,6 +109,7 @@ export function CartProvider({ children }) {
       await apiService.cart.addItem({ variantId, quantity })
       await fetchCart()
       toast.success(t('Added to cart'))
+      announceAdded(snapshot)
       track('add_to_cart', { value: (snapshot?.unitPrice ?? 0) * quantity, items: [{ id: snapshot?.product?.productId ?? variantId, name: snapshot?.productName, price: snapshot?.unitPrice, quantity }] })
     } catch (err) {
       const status = err.response?.status

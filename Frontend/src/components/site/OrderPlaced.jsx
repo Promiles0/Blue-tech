@@ -7,12 +7,16 @@ import { useT } from '../../lib/i18n'
 import { WHATSAPP_NUMBER } from '../../lib/helpLinks'
 import InvoiceButton from './InvoiceButton'
 import { SaveGuestAccount } from './GuestCheckout'
+import { burstConfetti } from '../../lib/motion'
 
 // The page after placing an order (1e): what was ordered, when it arrives, what happens next,
 // and the obvious next steps — track, invoice, WhatsApp, keep shopping.
 export default function OrderPlaced({ orderId, deliveryText, cashOnPickup }) {
   const { t } = useT()
   const [order, setOrder] = useState(null)
+
+  // A small celebration when the order goes through (motion round M13).
+  useEffect(() => { burstConfetti() }, [])
 
   useEffect(() => {
     if (!orderId) return

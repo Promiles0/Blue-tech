@@ -7,7 +7,7 @@ import Testimonials from '../components/site/Testimonials'
 import RecentlyViewed from '../components/site/RecentlyViewed'
 import PromoCarousel from '../components/site/PromoCarousel'
 import DepartmentShelves from '../components/site/DepartmentShelves'
-import { Reveal } from '../lib/motion'
+import { Reveal, SplitWords } from '../lib/motion'
 import apiService from '../api/service'
 import { openLiveChat } from '../lib/liveChat'
 import { usePageMeta, storeJsonLd, SITE_URL } from '../hooks/usePageMeta'
@@ -66,9 +66,9 @@ export default function Home() {
   return (
     <div>
       {/* ── What the shop is, in one line (UX audit B9) ── */}
-      <section className="container-noir home-intro">
+      <section className="container-noir home-intro ambient">
         <div>
-          <h1>{t('Genuine laptops & tech, delivered across Rwanda')}</h1>
+          <h1><SplitWords text={t('Genuine laptops & tech, delivered across Rwanda')} /></h1>
           <p>{t('Warranty on every product. Pay with MTN MoMo, Airtel Money or card.')}</p>
         </div>
         <div className="home-intro-ctas">
@@ -149,8 +149,8 @@ export default function Home() {
       <Reveal>
         <section style={{ padding: '0 0 72px' }}>
           <div className="container-noir">
-            <div style={{
-              position: 'relative', overflow: 'hidden',
+            <div className="ambient" style={{
+              position: 'relative', overflow: 'hidden', isolation: 'isolate',
               borderRadius: 20, border: '1px solid var(--border)',
               background: 'var(--surface)',
               padding: 'clamp(36px, 5vw, 56px) 24px',

@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useT } from '../lib/i18n'
 import { Heart, GitCompare, Eye } from 'lucide-react'
@@ -52,6 +53,14 @@ export default function ProductCard({ product }) {
   const status       = getStatus(product)
   const sc           = status ? STATUS[status] : null
 
+  // Name this card's photo just before navigating, so the browser morphs it into the product
+  // page photo (motion round M14). Only one element may carry the name at a time.
+  const mediaRef = useRef(null)
+  const onOpen = () => {
+    document.querySelectorAll('.pc-media[style*="view-transition-name"]').forEach(el => { el.style.viewTransitionName = '' })
+    if (mediaRef.current) mediaRef.current.style.viewTransitionName = 'product-photo'
+  }
+
   const onWishlist = () => {
     if (user) { toggle(pid, product.name); return }
     toast(t('Sign in to save products to your wishlist'), {
@@ -61,7 +70,7 @@ export default function ProductCard({ product }) {
 
   return (
     <article className={`product-card${status === 'out' ? ' is-out' : ''}`}>
-      <div className="pc-media">
+      <div className="pc-media" ref={mediaRef}>
         {primaryImage && (
           <img className="pc-img" src={primaryImage} alt="" loading="lazy" onError={handleProductImageError} />
         )}
@@ -70,7 +79,7 @@ export default function ProductCard({ product }) {
         )}
 
         {onSale ? (
-          <span className="pc-badge" style={{ background: 'var(--danger, #ef4444)', color: '#fff', fontWeight: 800 }}>
+          <span className="pc-badge pc-badge-sale" style={{ background: 'var(--danger, #ef4444)', color: '#fff', fontWeight: 800 }}>
             {product.campaign.label}
           </span>
         ) : sc && (
@@ -101,7 +110,7 @@ export default function ProductCard({ product }) {
       <div className="pc-body">
         {categoryName && <p className="pc-cat">{categoryName}</p>}
         <h3 className="pc-name">
-          <Link to={href} className="pc-link">{product.name}</Link>
+          <Link to={href} className="pc-link" viewTransition onClick={onOpen}>{product.name}</Link>
         </h3>
         {specLine && <p className="pc-specs">{specLine}</p>}
         <div className="pc-foot">

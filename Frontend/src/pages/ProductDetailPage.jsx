@@ -18,6 +18,7 @@ import { buildWhatsAppLink } from '../lib/helpLinks'
 import { useCurrency } from '../context/CurrencyContext'
 import ProductSpecs from '../components/site/ProductSpecs'
 import { specRows } from '../lib/specTemplates'
+import { CountUp } from '../lib/motion'
 import RelatedProducts from '../components/site/RelatedProducts'
 import PairsWellWith from '../components/site/PairsWellWith'
 import ProductQuestions from '../components/site/ProductQuestions'
@@ -123,7 +124,7 @@ export default function ProductDetail() {
   if (loading) return (
     <div style={{ padding: '80px 24px', maxWidth: 1200, margin: '0 auto' }}>
       <div className="pdp-grid">
-        <div className="skeleton" style={{ height: 480, borderRadius: 16 }} />
+        <div className="skeleton" style={{ height: 480, borderRadius: 16, viewTransitionName: 'product-photo' }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {[80, 32, 48, 120, 56, 56].map((h, i) => (
             <div key={i} className="skeleton" style={{ height: h, borderRadius: 8 }} />
@@ -345,7 +346,7 @@ export default function ProductDetail() {
               <>
                 <div className="review-summary">
                   <div style={{ textAlign: 'center', minWidth: 110 }}>
-                    <p style={{ fontSize: 40, fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}>{avgRating}</p>
+                    <p style={{ fontSize: 40, fontWeight: 900, color: 'var(--text)', lineHeight: 1 }}><CountUp to={Number(avgRating)} decimals={1} duration={0.9} /></p>
                     <StarDisplay rating={Number(avgRating)} size={14} />
                     <p style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>{reviews.length === 1 ? t('1 review') : t('{n} reviews', { n: reviews.length })}</p>
                   </div>
@@ -436,7 +437,7 @@ function ProductGallery({ images, name, active, onChange, t }) {
 
   return (
     <div className="pdp-gallery">
-      <div className="pdp-photo pdp-photo-desktop">
+      <div className="pdp-photo pdp-photo-desktop" style={{ viewTransitionName: 'product-photo' }}>
         {images[active]?.imageUrl && <LensZoom src={images[active].imageUrl} alt={name} />}
       </div>
 

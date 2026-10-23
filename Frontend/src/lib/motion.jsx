@@ -199,3 +199,31 @@ export function CountUp({ to, duration = 1.5, prefix = '', suffix = '', classNam
     </span>
   )
 }
+
+// ── Words that rise in one after another (motion round M7) ─────────────────────────
+export function SplitWords({ text }) {
+  return text.split(' ').map((word, i) => (
+    <span key={`${word}-${i}`} className="split-word" style={{ '--w': i }}>{word}{' '}</span>
+  ))
+}
+
+// ── A short confetti burst from the top of the screen (M13) ───────────────────────
+export function burstConfetti() {
+  if (typeof window === 'undefined' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const colors = ['#5a73b0', '#8fa3ea', '#f59e0b', '#22c55e', '#ffffff', '#354380']
+  const layer = document.createElement('div')
+  layer.className = 'confetti-layer'
+  layer.setAttribute('aria-hidden', 'true')
+  for (let i = 0; i < 70; i++) {
+    const piece = document.createElement('span')
+    piece.style.left = `${Math.random() * 100}%`
+    piece.style.background = colors[i % colors.length]
+    piece.style.setProperty('--dx', `${(Math.random() - 0.5) * 220}px`)
+    piece.style.setProperty('--rot', `${Math.random() * 720 - 360}deg`)
+    piece.style.animationDelay = `${Math.random() * 0.35}s`
+    piece.style.animationDuration = `${1.6 + Math.random() * 1.1}s`
+    layer.appendChild(piece)
+  }
+  document.body.appendChild(layer)
+  setTimeout(() => layer.remove(), 3400)
+}

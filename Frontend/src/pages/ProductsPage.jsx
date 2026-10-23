@@ -9,6 +9,7 @@ import FilterRail from '../components/site/FilterRail'
 import { FILTER_FACETS } from '../lib/specTemplates'
 import apiService from '../api/service'
 import { usePageMeta } from '../hooks/usePageMeta'
+import { CountUp } from '../lib/motion'
 
 const PRODUCTS_PER_PAGE = 12
 const SORT_OPTIONS = [
@@ -156,7 +157,7 @@ export default function Products() {
         <div style={{ marginBottom: 18 }}>
           <h1 style={{ fontSize: 'clamp(26px, 3.4vw, 32px)', fontWeight: 900, color: 'var(--text)', marginBottom: 4, letterSpacing: '-0.02em' }}>{title}</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }} aria-live="polite">
-            {loading ? t('Loading…') : totalItems === 0 ? t('No products found') : t('{n} products', { n: totalItems })}
+            {loading ? t('Loading…') : totalItems === 0 ? t('No products found') : <>{t('{n} products', { n: '#' }).split('#').map((part, i) => i === 0 ? part : <span key={i}><CountUp to={totalItems} duration={0.8} />{part}</span>)}</>}
           </p>
         </div>
 

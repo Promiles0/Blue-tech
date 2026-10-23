@@ -24,7 +24,7 @@ export default function MobileTabBar() {
       <button type="button" className="tabbar-item" onClick={() => setMobileNavOpen(true)}>
         <LayoutGrid size={20} /><span>{t('Categories')}</span>
       </button>
-      <button type="button" className="tabbar-item" onClick={() => setCartOpen(true)} aria-label={count > 0 ? t('Cart, {n} items', { n: count }) : t('Cart')}>
+      <button type="button" data-cart-target className="tabbar-item" onClick={() => setCartOpen(true)} aria-label={count > 0 ? t('Cart, {n} items', { n: count }) : t('Cart')}>
         <span style={{ position: 'relative', display: 'inline-flex' }}>
           <ShoppingBag size={20} />
           {count > 0 && <span className="tabbar-badge" aria-hidden>{count > 9 ? '9+' : count}</span>}

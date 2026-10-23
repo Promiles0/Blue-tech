@@ -126,9 +126,11 @@ export default function PromoCarousel() {
                       src={slide.image}
                       alt=""
                       draggable={false}
+                      data-parallax="0.12"
+                      className="parallax-img"
                       style={{
-                        position: 'absolute', inset: 0,
-                        width: '100%', height: '100%', objectFit: 'cover',
+                        position: 'absolute', inset: '-8% 0',
+                        width: '100%', height: '116%', objectFit: 'cover',
                       }}
                     />
                   )}

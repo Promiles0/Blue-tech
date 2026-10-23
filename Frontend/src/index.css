@@ -1456,3 +1456,106 @@ body.has-sticky-bar .compare-tray { bottom: 92px !important; }
 @media (hover: none), (prefers-reduced-motion: reduce) {
   .ken-burns, .orb-1, .orb-2, .orb-3 { animation: none !important; }
 }
+
+/* ═════════ Motion round (M1–M16): the site moves, but only where it helps shoppers ═════════ */
+/* M1 cursor glow (desktop with a mouse; MotionLayer moves it) */
+.cursor-glow { display: none; }
+html.has-cursor-glow .cursor-glow {
+  display: block; position: fixed; top: 0; left: 0; z-index: 0; pointer-events: none;
+  width: 520px; height: 520px; border-radius: 50%; will-change: transform;
+  background: radial-gradient(circle, rgba(90,115,176,.38) 0%, rgba(53,67,128,.18) 35%, transparent 70%);
+  filter: blur(36px); mix-blend-mode: screen;
+}
+[data-theme="light"] .cursor-glow { background: radial-gradient(circle, rgba(53,67,128,.16) 0%, rgba(53,67,128,.07) 40%, transparent 70%) !important; mix-blend-mode: multiply !important; }
+
+/* M2 magnetic buttons: smooth return */
+.noir-btn-cta, .noir-btn-primary, .home-intro-ctas > * { transition: transform .25s cubic-bezier(.2,.8,.2,1), background .2s, box-shadow .25s; }
+
+/* M3/M4 product cards: border spotlight, gentle tilt, shine sweep */
+@media (hover: hover) and (pointer: fine) {
+  .product-card { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .25s, box-shadow .25s; }
+  .product-card.is-pointed { transition: transform .08s linear, border-color .25s, box-shadow .25s; }
+  .product-card::before {
+    content: ""; position: absolute; inset: 0; z-index: 3; border-radius: inherit; pointer-events: none; padding: 1px;
+    background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(143,163,234,.9), transparent 60%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+    opacity: 0; transition: opacity .3s;
+  }
+  .product-card:hover::before { opacity: 1; }
+  .pc-media::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%);
+    transform: translateX(-120%);
+  }
+  .product-card:hover .pc-media::after { transform: translateX(120%); transition: transform .9s ease; }
+}
+
+/* M15 glow shadows instead of flat grey */
+@media (hover: hover) {
+  .product-card:hover { box-shadow: 0 18px 50px -18px rgba(90,115,176,.6), 0 2px 10px rgba(0,0,0,.25); }
+  .noir-btn-cta:hover:not(:disabled), .noir-btn-primary:hover:not(:disabled) { box-shadow: 0 10px 30px -8px rgba(90,115,176,.75); }
+  [data-theme="light"] .noir-btn-cta:hover:not(:disabled) { box-shadow: 0 10px 30px -8px rgba(245,158,11,.6); }
+}
+.choice-card.on { box-shadow: 0 10px 34px -16px rgba(90,115,176,.7); }
+
+/* M5 parallax hero photos */
+.parallax-img { transform: translate3d(0, var(--parallax, 0px), 0); will-change: transform; }
+
+/* M6 staggered reveals (classes added by MotionLayer) */
+.reveal-ready { opacity: 0; translate: 0 22px; }
+.reveal-ready.is-in { opacity: 1; translate: 0 0; transition: opacity .55s ease, translate .55s cubic-bezier(.2,.8,.2,1); transition-delay: calc(var(--i, 0) * 60ms); }
+
+/* M7 headline words rise in */
+.split-word { display: inline-block; opacity: 0; transform: translateY(14px); animation: word-up .6s cubic-bezier(.2,.8,.2,1) forwards; animation-delay: calc(var(--w) * 70ms + 120ms); }
+
+/* M8 header deepens once you scroll */
+.site-header { transition: box-shadow .3s; }
+html.is-scrolled .site-header { box-shadow: 0 10px 30px -12px rgba(0,0,0,.5); }
+html.is-scrolled .site-header::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(143,163,234,.9), transparent);
+}
+
+/* M10 fly-to-cart + bump */
+.fly-to-cart { position: fixed; z-index: 400; width: 64px; height: 64px; border-radius: 14px; object-fit: contain; background: #fff; padding: 6px; pointer-events: none; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+@keyframes cart-bump { 0%,100% { transform: scale(1); } 35% { transform: scale(1.28) rotate(-8deg); } 65% { transform: scale(.92) rotate(4deg); } }
+.cart-bump { animation: cart-bump .5s ease; }
+
+/* M11 heart burst */
+@keyframes heart-pop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: scale(1); } }
+@keyframes heart-ring { 0% { box-shadow: 0 0 0 0 rgba(225,29,72,.55), 0 0 0 0 rgba(245,158,11,.5); } 100% { box-shadow: 0 0 0 14px rgba(225,29,72,0), 0 0 0 22px rgba(245,158,11,0); } }
+.heart-burst { animation: heart-pop .45s ease, heart-ring .6s ease-out; }
+
+/* M12 sale badges pulse; countdown digits tick */
+@keyframes sale-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.55); } 50% { box-shadow: 0 0 0 7px rgba(239,68,68,0); } }
+.pc-badge-sale { animation: sale-pulse 2.2s ease-in-out infinite; }
+@keyframes tick-in { from { opacity: .2; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
+.tick { display: inline-block; animation: tick-in .35s ease; }
+
+/* M13 confetti */
+.confetti-layer { position: fixed; inset: 0; z-index: 500; pointer-events: none; overflow: hidden; }
+.confetti-layer span { position: absolute; top: -12px; width: 8px; height: 13px; border-radius: 2px; animation: confetti-fall 2s cubic-bezier(.25,.6,.35,1) forwards; }
+@keyframes confetti-fall { to { transform: translate(var(--dx), 105vh) rotate(var(--rot)); opacity: .2; } }
+
+/* M14 card photo morphs into the product page */
+::view-transition-group(product-photo) { animation-duration: .45s; animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
+
+/* M16 slow-moving background light */
+.ambient { position: relative; isolation: isolate; }
+.ambient::before, .ambient::after {
+  content: ""; position: absolute; z-index: -1; pointer-events: none; border-radius: 50%; filter: blur(60px);
+  width: 340px; height: 340px; opacity: .55;
+}
+.ambient::before { top: -140px; left: -60px; background: rgba(53,67,128,.55); animation: drift-a 18s ease-in-out infinite alternate; }
+.ambient::after { bottom: -160px; right: -40px; background: rgba(90,115,176,.4); animation: drift-b 22s ease-in-out infinite alternate; }
+@keyframes drift-a { to { transform: translate(140px, 60px) scale(1.15); } }
+@keyframes drift-b { to { transform: translate(-160px, -50px) scale(.9); } }
+[data-theme="light"] .ambient::before, [data-theme="light"] .ambient::after { opacity: .18; }
+
+/* Everything above stops for people who ask their device for less motion */
+@media (prefers-reduced-motion: reduce) {
+  .split-word, .pc-badge-sale, .tick, .ambient::before, .ambient::after, .cart-bump, .heart-burst { animation: none !important; opacity: 1; transform: none; }
+  .reveal-ready { opacity: 1; translate: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

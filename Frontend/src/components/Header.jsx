@@ -57,7 +57,7 @@ export default function Header() {
           )}
           {user && !isAdmin && <NotificationBell />}
           {!isAdmin && (
-            <button type="button" className="hdr-icon hdr-hide-phone" onClick={() => setCartOpen(true)}
+            <button type="button" data-cart-target className="hdr-icon hdr-hide-phone" onClick={() => setCartOpen(true)}
               aria-label={count > 0 ? t('Cart, {n} items', { n: count }) : t('Cart')} title={t('Cart')}>
               <ShoppingBag size={19} />
               {count > 0 && <span className="hdr-badge" aria-hidden>{count > 9 ? '9+' : count}</span>}

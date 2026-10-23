@@ -26,6 +26,7 @@ function useOnceTrue(on) {
 }
 import CompareTray      from './CompareTray'
 import MobileTabBar     from './MobileTabBar'
+import MotionLayer      from './MotionLayer'
 
 // Toasts sit at the bottom on phones, clear of the header and cart (UX audit C5).
 function usePhone() {
@@ -103,6 +104,7 @@ export default function SiteLayout({ children }) {
       </Suspense>
       <MobileNav />
       <MobileTabBar />
+      <MotionLayer />
       <AnalyticsManager />
       <CompareTray />
 
