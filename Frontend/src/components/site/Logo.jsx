@@ -14,14 +14,17 @@ const maskLayer = (src, backgroundColor) => ({
   maskPosition: 'left center',
 })
 
-// Renders the wordmark as two CSS-mask layers so each part recolors:
-// the dot + "Blue" (/logo-mark-blue.svg) take the brand blue, and the outlined
-// "-Tech" (/logo-mark-tech.svg) takes `color` (defaults to var(--text), matching
-// the site's light/dark theme). Passing `color` without `accent` paints the
-// whole logo one color, e.g. all white on the navy panels.
+// The brand navy, fixed in both light and dark themes.
+const BRAND_BLUE = '#354380'
+
+// Renders the wordmark as two CSS-mask layers so each part can recolor:
+// the dot + "Blue" (/logo-mark-blue.svg) and the outlined "-Tech"
+// (/logo-mark-tech.svg). Both default to the brand navy in every theme.
+// Passing `color` paints the whole logo one color, e.g. all white on the navy
+// panels; `accent` overrides just the dot + "Blue".
 export default function Logo({ height = 15, color, accent, style, ...rest }) {
-  const techColor = color ?? 'var(--text)'
-  const blueColor = accent ?? color ?? 'var(--brand-strong)'
+  const techColor = color ?? BRAND_BLUE
+  const blueColor = accent ?? color ?? BRAND_BLUE
   return (
     <span
       role="img"
