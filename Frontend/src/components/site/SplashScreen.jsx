@@ -1,12 +1,35 @@
 import { useEffect, useState } from 'react'
 import { m as motion, useReducedMotion } from 'framer-motion'
-import Logo from './Logo'
+import { LogoSymbol } from './Logo'
+import {
+  SYMBOL_VIEWBOX, SYMBOL_ASPECT, SYMBOL_STROKE, BLUE_DEEP, BLUE_SKY, MIDDLE_BAR,
+} from './logoSymbol'
 
-const REVEAL_HOLD_MS = 900
+const WORDMARK_HOLD_MS = 500
+const FALLBACK_HOLD_MS = 4000
 const REDUCED_MOTION_HOLD_MS = 300
-const PROGRESS_CAP = 94
-const PROGRESS_TICK_MS = 100
-const PROGRESS_EASE = 0.12
+const DRAW_S = 0.7
+const BAR_S = 0.3
+
+// The two loops traced from the middle diagonal outward (the reverse of
+// LOOP_LEFT / LOOP_RIGHT), so the draw-in starts at the centre of the symbol.
+const DRAW_LEFT = 'M 383 255.8 L 289.9 348.9 A 55 55 0 1 1 286.4 267.9'
+const DRAW_RIGHT = 'M 366 364.2 L 459.1 271.1 A 55 55 0 1 1 462.6 352.1'
+
+function Wordmark() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, color: 'var(--text)' }}>
+      <span style={{
+        fontFamily: '"Montserrat", var(--font-sans)', fontWeight: 600,
+        fontSize: 'clamp(22px, 4vw, 34px)', letterSpacing: '0.08em', lineHeight: 1,
+      }}>BLUETECH</span>
+      <span style={{
+        fontFamily: '"Montserrat", var(--font-sans)', fontWeight: 500,
+        fontSize: 'clamp(10px, 1.4vw, 13px)', letterSpacing: '0.45em', paddingLeft: '0.45em', lineHeight: 1,
+      }}>LTD</span>
+    </div>
+  )
+}
 
 // Full-screen preloader. Theme-correct with zero extra logic — `data-theme` is
 // already set on <html> (Frontend/index.html) before React mounts, so `var(--bg-page)` /
@@ -17,25 +40,22 @@ const PROGRESS_EASE = 0.12
 // (App.jsx's SplashGate) only stops rendering this component once onExited actually fires.
 export default function SplashScreen({ exiting, onTypingDone, onExited }) {
   const reduce = useReducedMotion()
-  const [progress, setProgress] = useState(0)
+  // Once the intro has played, the symbol "breathes" until the app is ready.
+  // The intro is timed from the middle bar's animation actually finishing (the
+  // motion features load lazily, so a mount-time timer could cut the draw short),
+  // with a fallback in case the animation never reports back.
+  const [done, setDone] = useState(false)
+  const finish = () => {
+    if (done) return
+    setDone(true)
+    onTypingDone?.()
+  }
 
   useEffect(() => {
-    const t = setTimeout(() => onTypingDone?.(), reduce ? REDUCED_MOTION_HOLD_MS : REVEAL_HOLD_MS)
+    const t = setTimeout(finish, reduce ? REDUCED_MOTION_HOLD_MS : FALLBACK_HOLD_MS)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduce])
-
-  // There's no real multi-step loading signal to report (SplashGate only has one boolean),
-  // so this eases toward PROGRESS_CAP while waiting and snaps to 100 the instant `exiting`
-  // (the real completion signal) fires, rather than reaching 100 on a fake timer.
-  useEffect(() => {
-    if (reduce) return
-    if (exiting) { setProgress(100); return }
-    const id = setInterval(() => {
-      setProgress(p => p + (PROGRESS_CAP - p) * PROGRESS_EASE)
-    }, PROGRESS_TICK_MS)
-    return () => clearInterval(id)
-  }, [reduce, exiting])
 
   return (
     <motion.div
@@ -50,32 +70,69 @@ export default function SplashScreen({ exiting, onTypingDone, onExited }) {
         pointerEvents: exiting ? 'none' : 'auto',
       }}
     >
-      <motion.div
-        initial={reduce ? false : { opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}
-      >
-        <Logo height="clamp(32px, 6vw, 56px)" />
-
-        {!reduce && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 140, height: 2, borderRadius: 1, background: 'var(--border)', overflow: 'hidden' }}>
-              <div style={{
-                width: `${progress}%`, height: '100%', borderRadius: 1,
-                background: 'var(--accent)',
-                transition: 'width 120ms linear',
-              }} />
-            </div>
-            <span style={{
-              fontSize: 11, color: 'var(--muted)', letterSpacing: '0.05em',
-              fontVariantNumeric: 'tabular-nums',
-            }}>
-              {Math.round(progress)}%
-            </span>
-          </div>
-        )}
-      </motion.div>
+      {reduce ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+          <LogoSymbol height="clamp(56px, 11vw, 96px)" />
+          <Wordmark />
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
+          <motion.svg
+            viewBox={SYMBOL_VIEWBOX}
+            fill="none"
+            strokeWidth={SYMBOL_STROKE}
+            strokeLinecap="round"
+            aria-label="Blue-Tech"
+            role="img"
+            style={{ height: 'clamp(56px, 11vw, 96px)', aspectRatio: SYMBOL_ASPECT, overflow: 'visible' }}
+            initial={{ filter: 'drop-shadow(0 0 0px rgba(68,142,205,0))' }}
+            animate={{
+              filter: [
+                'drop-shadow(0 0 0px rgba(68,142,205,0))',
+                'drop-shadow(0 0 18px rgba(68,142,205,0.7))',
+                'drop-shadow(0 0 6px rgba(68,142,205,0.25))',
+              ],
+            }}
+            transition={{ delay: DRAW_S + BAR_S, duration: 0.6, ease: 'easeOut' }}
+          >
+            <defs>
+              <linearGradient id="splash-grad" gradientUnits="userSpaceOnUse" x1="185" y1="0" x2="564" y2="0">
+                <stop offset="0" stopColor={BLUE_DEEP} />
+                <stop offset="1" stopColor={BLUE_SKY} />
+              </linearGradient>
+            </defs>
+            <motion.g
+              stroke="url(#splash-grad)"
+              animate={done ? { opacity: [1, 0.72, 1] } : undefined}
+              transition={done ? { duration: 1.8, repeat: Infinity, ease: 'easeInOut' } : undefined}
+            >
+              {[DRAW_LEFT, DRAW_RIGHT].map(d => (
+                <motion.path
+                  key={d}
+                  d={d}
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: DRAW_S, ease: [0.65, 0, 0.35, 1] }}
+                />
+              ))}
+              <motion.path
+                d={MIDDLE_BAR}
+                initial={{ opacity: 0, x: 40, y: -40 }}
+                animate={{ opacity: 1, x: 0, y: 0 }}
+                transition={{ delay: DRAW_S * 0.85, type: 'spring', stiffness: 380, damping: 18 }}
+                onAnimationComplete={() => setTimeout(finish, WORDMARK_HOLD_MS)}
+              />
+            </motion.g>
+          </motion.svg>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: DRAW_S + BAR_S, duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <Wordmark />
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   )
 }

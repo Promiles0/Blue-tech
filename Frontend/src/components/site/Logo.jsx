@@ -1,46 +1,70 @@
-const LOGO_ASPECT_RATIO = 1272.8 / 233.115
+import { useId } from 'react'
+import {
+  SYMBOL_VIEWBOX, SYMBOL_ASPECT, SYMBOL_STROKE, BLUE_DEEP, BLUE_SKY,
+  LOOP_LEFT, LOOP_RIGHT, MIDDLE_BAR,
+} from './logoSymbol'
 
-const maskLayer = (src, backgroundColor) => ({
-  position: 'absolute',
-  inset: 0,
-  backgroundColor,
-  WebkitMaskImage: `url(${src})`,
-  maskImage: `url(${src})`,
-  WebkitMaskRepeat: 'no-repeat',
-  maskRepeat: 'no-repeat',
-  WebkitMaskSize: 'contain',
-  maskSize: 'contain',
-  WebkitMaskPosition: 'left center',
-  maskPosition: 'left center',
-})
+// The symbol on its own, filled with the deep→sky brand gradient (or one flat
+// `color`, e.g. white on the navy panels).
+export function LogoSymbol({ height = 24, color, style, ...rest }) {
+  const gradId = useId()
+  const stroke = color ?? `url(#${gradId})`
+  return (
+    <svg
+      viewBox={SYMBOL_VIEWBOX}
+      height={height}
+      width={typeof height === 'number' ? height * SYMBOL_ASPECT : undefined}
+      fill="none"
+      stroke={stroke}
+      strokeWidth={SYMBOL_STROKE}
+      strokeLinecap="round"
+      aria-hidden="true"
+      style={{ display: 'block', flexShrink: 0, aspectRatio: SYMBOL_ASPECT, ...style }}
+      {...rest}
+    >
+      {!color && (
+        <defs>
+          <linearGradient id={gradId} gradientUnits="userSpaceOnUse" x1="185" y1="0" x2="564" y2="0">
+            <stop offset="0" stopColor={BLUE_DEEP} />
+            <stop offset="1" stopColor={BLUE_SKY} />
+          </linearGradient>
+        </defs>
+      )}
+      <path d={LOOP_LEFT} />
+      <path d={MIDDLE_BAR} />
+      <path d={LOOP_RIGHT} />
+    </svg>
+  )
+}
 
-// The brand navy, fixed in both light and dark themes.
-const BRAND_BLUE = '#354380'
-
-// Renders the wordmark as two CSS-mask layers so each part can recolor:
-// the dot + "Blue" (/logo-mark-blue.svg) and the outlined "-Tech"
-// (/logo-mark-tech.svg). Both default to the brand navy in every theme.
-// Passing `color` paints the whole logo one color, e.g. all white on the navy
-// panels; `accent` overrides just the dot + "Blue".
-export default function Logo({ height = 15, color, accent, style, ...rest }) {
-  const techColor = color ?? BRAND_BLUE
-  const blueColor = accent ?? color ?? BRAND_BLUE
+// Symbol + "BLUETECH" wordmark. `height` is the wordmark's cap size reference
+// (kept compatible with the old wordmark sizes); the symbol is drawn 1.5× taller.
+// The word follows the theme (var(--text)); passing `color` paints everything
+// that one color, symbol included.
+export default function Logo({ height = 15, color, style, ...rest }) {
+  const symbolHeight = typeof height === 'number' ? height * 1.5 : `calc(${height} * 1.5)`
+  const fontSize = typeof height === 'number' ? height * 1.05 : `calc(${height} * 1.05)`
   return (
     <span
       role="img"
       aria-label="Blue-Tech"
       style={{
-        display: 'inline-block',
-        position: 'relative',
-        flexShrink: 0,
-        height,
-        aspectRatio: LOGO_ASPECT_RATIO,
+        display: 'inline-flex', alignItems: 'center', flexShrink: 0,
+        gap: '0.45em', fontSize, lineHeight: 1,
         ...style,
       }}
       {...rest}
     >
-      <span style={maskLayer('/logo-mark-blue.svg', blueColor)} />
-      <span style={maskLayer('/logo-mark-tech.svg', techColor)} />
+      <LogoSymbol height={symbolHeight} color={color} />
+      <span
+        aria-hidden="true"
+        style={{
+          fontFamily: '"Montserrat", var(--font-sans)', fontWeight: 600,
+          letterSpacing: '0.06em', color: color ?? 'var(--text)', whiteSpace: 'nowrap',
+        }}
+      >
+        BLUETECH
+      </span>
     </span>
   )
 }
