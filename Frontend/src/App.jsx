@@ -91,12 +91,15 @@ function ScrollToTop() {
 // underneath (real data-fetching starts in parallel). Once both conditions are met, `exiting`
 // tells the splash to start its fade-out; it only actually stops being rendered once the splash
 // reports the fade has finished (onExited), so the transition can't get cut short.
-// The animated splash is a first-visit welcome; returning shoppers go straight to the store.
-const SPLASH_KEY = 'bt-splash-seen'
+// The animated splash plays at most once an hour per device; within the hour,
+// shoppers go straight to the store.
+const SPLASH_KEY = 'bt-splash-last-shown'
+const SPLASH_INTERVAL_MS = 60 * 60 * 1000
 function splashAlreadySeen() {
   try {
-    const seen = localStorage.getItem(SPLASH_KEY) === '1'
-    if (!seen) localStorage.setItem(SPLASH_KEY, '1')
+    const last = Number(localStorage.getItem(SPLASH_KEY)) || 0
+    const seen = Date.now() - last < SPLASH_INTERVAL_MS
+    if (!seen) localStorage.setItem(SPLASH_KEY, String(Date.now()))
     return seen
   } catch { return false }
 }
